@@ -1,0 +1,194 @@
+:root {
+  --bg-color: #0d1117;
+  --sidebar-bg: rgba(22, 27, 34, 0.8);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --accent-color: #58a6ff;
+  --editor-bg: #0d1117;
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --active-bg: rgba(255, 255, 255, 0.1);
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Sidebar Styling */
+.sidebar {
+  width: 260px;
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 12px;
+  z-index: 10;
+}
+
+.sidebar-header {
+  margin-bottom: 30px;
+  padding: 0 8px;
+}
+
+.sidebar-header h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  letter-spacing: 0.5px;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+}
+
+.menu-item:hover {
+  background: var(--hover-bg);
+}
+
+.menu-item.active {
+  background: var(--active-bg);
+  border-color: var(--sidebar-border);
+}
+
+.menu-item svg {
+  color: var(--text-secondary);
+  width: 18px;
+  height: 18px;
+}
+
+.menu-item:hover svg {
+  color: var(--accent-color);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 10px 8px;
+  border-top: 1px solid var(--sidebar-border);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Editor Styling */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--editor-bg);
+  position: relative;
+}
+
+.editor-header {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--sidebar-border);
+  background: rgba(13, 17, 23, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.file-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  background: var(--active-bg);
+}
+
+.editor-container {
+  flex: 1;
+  width: 100%;
+  position: relative;
+}
+
+.editor-textarea {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 30px;
+  resize: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-border) transparent;
+}
+
+.editor-textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.editor-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-textarea::-webkit-scrollbar-thumb {
+  background: var(--sidebar-border);
+  border-radius: 10px;
+}
+
+.editor-textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.main-area {
+  animation: fadeIn 0.4s ease-out;
+}

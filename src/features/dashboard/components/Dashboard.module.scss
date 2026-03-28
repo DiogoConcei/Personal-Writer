@@ -1,0 +1,46 @@
+@use '@/shared/styles/variables' as *;
+@use '@/shared/styles/mixins' as *;
+
+.container {
+  height: 100%;
+  padding: var(--spacing-xl);
+  overflow-y: auto;
+  @include scrollbar;
+}
+
+.header {
+  margin-bottom: var(--spacing-xl);
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  
+  span {
+    font-size: var(--font-size-md);
+    color: var(--color-text-muted);
+    font-weight: 400;
+    margin-left: var(--spacing-sm);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty {
+  @include flex-center;
+  flex-direction: column;
+  height: 100%;
+  color: var(--color-text-muted);
+  gap: var(--spacing-md);
+}

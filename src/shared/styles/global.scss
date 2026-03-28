@@ -1,0 +1,94 @@
+@use './variables' as *;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+}
+
+button, input, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+ul {
+  list-style: none;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Estilos para WikiLinks no Editor (NodeView)
+.wiki-link {
+  padding: 0 2px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  font-weight: 500;
+  
+  &.exists {
+    color: var(--color-accent);
+    
+    &:hover {
+      background-color: var(--color-accent-glow);
+    }
+  }
+
+  &.broken {
+    color: var(--color-danger);
+    text-decoration: underline dotted;
+
+    &:hover {
+      background-color: rgba(224, 92, 114, 0.1);
+    }
+  }
+
+  &.is-selected {
+    background-color: var(--color-accent-glow);
+    outline: 1px solid var(--color-accent);
+  }
+}
+
+.wiki-link__bracket {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-weight: normal;
+  
+  &.is-hidden {
+    display: none;
+  }
+
+  &.is-visible {
+    opacity: 0.5;
+    margin: 0 1px;
+  }
+}

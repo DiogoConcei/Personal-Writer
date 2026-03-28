@@ -1,0 +1,151 @@
+@use '@/shared/styles/variables' as *;
+@use '@/shared/styles/mixins' as *;
+
+.wrapper {
+  user-select: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding-right: var(--spacing-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  @include interactive-hover;
+
+  &:hover {
+    .actions {
+      opacity: 1;
+    }
+  }
+
+  &--active {
+    background-color: var(--color-accent-glow) !important;
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: default;
+    &:hover {
+      background-color: transparent;
+    }
+  }
+
+  &__arrow {
+    @include flex-center;
+    width: 20px;
+    height: 20px;
+    margin-right: 2px;
+    color: var(--color-text-muted);
+  }
+
+  &__folder {
+    @include flex-center;
+    margin-right: 6px;
+    color: var(--color-accent);
+  }
+
+  &__name {
+    @include truncate;
+    flex: 1;
+  }
+
+  &__empty {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+
+  button {
+    @include flex-center;
+    width: 20px;
+    height: 20px;
+    border-radius: 2px;
+    color: var(--color-text-muted);
+
+    &:hover {
+      background-color: var(--color-bg-elevated);
+      color: var(--color-text-primary);
+    }
+  }
+
+  &__delete:hover {
+    color: var(--color-danger) !important;
+  }
+
+  &__pinned {
+    color: var(--color-accent) !important;
+  }
+}
+
+.editForm {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding-right: var(--spacing-sm);
+}
+
+.editInput {
+  flex: 1;
+  height: 22px;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-accent);
+  border-radius: 2px;
+  font-size: var(--font-size-sm);
+  padding: 0 4px;
+  color: var(--color-text-primary);
+  width: 100%;
+}
+
+.editFormContainer {
+  padding: 4px var(--spacing-sm) 4px 0;
+}
+
+.editInputWrapper {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  gap: 4px;
+}
+
+.editSelect {
+  width: 100%;
+  font-size: 10px;
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.btnConfirm { color: var(--color-success); }
+.btnCancel { color: var(--color-danger); }
+
+.children {
+  display: flex;
+  flex-direction: column;
+}

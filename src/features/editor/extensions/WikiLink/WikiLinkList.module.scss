@@ -1,0 +1,38 @@
+@use '@/shared/styles/variables' as *;
+
+.container {
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  padding: var(--spacing-xs);
+  min-width: 180px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  
+  &--selected {
+    background-color: var(--color-accent);
+    color: white;
+  }
+
+  &:hover:not(&--selected) {
+    background-color: var(--color-bg-hover);
+  }
+
+  &__empty {
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+}

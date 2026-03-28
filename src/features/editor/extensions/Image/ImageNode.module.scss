@@ -1,0 +1,106 @@
+@use '@/shared/styles/variables' as *;
+@use '@/shared/styles/mixins' as *;
+
+.wrapper {
+  margin: var(--spacing-md) 0;
+  display: flex;
+  position: relative;
+  max-width: 100%;
+
+  &--align-left { justify-content: flex-start; }
+  &--align-center { justify-content: center; }
+  &--align-right { justify-content: flex-end; }
+
+  &--float-left {
+    float: left;
+    margin-right: var(--spacing-md);
+  }
+
+  &--float-right {
+    float: right;
+    margin-left: var(--spacing-md);
+  }
+
+  &--selected {
+    .imageContainer {
+      outline: 2px solid var(--color-accent);
+      border-radius: var(--radius-sm);
+    }
+  }
+}
+
+.imageContainer {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+}
+
+.handle {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 24px;
+  background-color: var(--color-accent);
+  border-radius: var(--radius-sm);
+  transform: translateY(-50%);
+  cursor: ew-resize;
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
+
+  &--right { right: -6px; }
+  &--left { left: -6px; }
+}
+
+.toolbar {
+  position: absolute;
+  top: var(--spacing-sm);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: var(--shadow-md);
+  z-index: 20;
+
+  &__group {
+    display: flex;
+    gap: 2px;
+  }
+
+  &__divider {
+    width: 1px;
+    height: 16px;
+    background-color: var(--color-border);
+    margin: 0 2px;
+  }
+
+  button {
+    @include flex-center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    transition: all var(--transition-fast);
+
+    &:hover {
+      background-color: var(--color-bg-hover);
+      color: var(--color-text-primary);
+    }
+
+    &.active {
+      color: var(--color-accent);
+      background-color: var(--color-accent-glow);
+    }
+  }
+}

@@ -73,8 +73,12 @@ pub async fn rename_item(old_path: String, new_path: String) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub async fn copy_image_to_assets(source_path: String, workspace_root: String) -> Result<String, String> {
-    let assets_dir = Path::new(&workspace_root).join("assets");
+pub async fn copy_image_to_assets(source_path: String, workspace_root: String, sub_folder: Option<String>) -> Result<String, String> {
+    let mut assets_dir = Path::new(&workspace_root).join("assets");
+    
+    if let Some(ref sub) = sub_folder {
+        assets_dir = assets_dir.join(sub);
+    }
     
     if !assets_dir.exists() {
         fs::create_dir_all(&assets_dir).map_err(|e| e.to_string())?;
@@ -86,7 +90,37 @@ pub async fn copy_image_to_assets(source_path: String, workspace_root: String) -
 
     fs::copy(source, &dest_path).map_err(|e| e.to_string())?;
 
-    Ok(format!("./assets/{}", file_name.to_string_lossy()))
+    let relative_prefix = if let Some(sub) = sub_folder {
+        format!("./assets/{}/", sub.replace("\\", "/"))
+    } else {
+        "./assets/".to_string()
+    };
+
+    Ok(format!("{}{}", relative_prefix, file_name.to_string_lossy()))
+}
+
+#[tauri::command]
+pub async fn save_image_from_bytes(file_name: String, bytes: Vec<u8>, workspace_root: String, sub_folder: Option<String>) -> Result<String, String> {
+    let mut assets_dir = Path::new(&workspace_root).join("assets");
+    
+    if let Some(ref sub) = sub_folder {
+        assets_dir = assets_dir.join(sub);
+    }
+    
+    if !assets_dir.exists() {
+        fs::create_dir_all(&assets_dir).map_err(|e| e.to_string())?;
+    }
+
+    let dest_path = assets_dir.join(&file_name);
+    fs::write(dest_path, bytes).map_err(|e| e.to_string())?;
+
+    let relative_prefix = if let Some(sub) = sub_folder {
+        format!("./assets/{}/", sub.replace("\\", "/"))
+    } else {
+        "./assets/".to_string()
+    };
+
+    Ok(format!("{}{}", relative_prefix, file_name))
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -148,4 +182,19 @@ pub async fn read_snapshot(path: String, workspace_root: String, snapshot_id: St
         .join(format!("{}.txt", snapshot_id));
 
     fs::read_to_string(snapshot_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_snapshot(path: String, workspace_root: String, snapshot_id: String) -> Result<(), String> {
+    let file_name = Path::new(&path).file_name().ok_or("Invalid path")?.to_string_lossy();
+    let snapshot_path = Path::new(&workspace_root)
+        .join(".snapshots")
+        .join(&*file_name)
+        .join(format!("{}.txt", snapshot_id));
+
+    if snapshot_path.exists() {
+        fs::remove_file(snapshot_path).map_err(|e| e.to_string())
+    } else {
+        Err("Snapshot not found".to_string())
+    }
 }

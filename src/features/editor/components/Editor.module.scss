@@ -3,12 +3,20 @@
 
 .container {
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: block; // Removido flex para que floats funcionem
   overflow-y: auto;
-  padding: var(--spacing-md);
+  padding: var(--spacing-xl) var(--spacing-md);
   @include scrollbar;
+  width: 100%;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+
+  &:focus, &:focus-within, &:active {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
 
   &--sans { font-family: var(--font-sans); }
   &--serif { font-family: var(--font-serif); }
@@ -16,10 +24,10 @@
 
 .editorHeader {
   width: 100%;
-  max-width: var(--editor-max-width);
   display: flex;
   justify-content: flex-end;
   margin-bottom: var(--spacing-sm);
+  outline: none !important;
 
   &__actions {
     display: flex;
@@ -29,6 +37,7 @@
 
 .templateDropdown {
   position: relative;
+  outline: none !important;
 }
 
 .templateMenu {
@@ -79,18 +88,36 @@
 
 .editor {
   width: 100%;
-  max-width: var(--editor-max-width);
-  min-height: 100%;
+  outline: none !important;
 }
 
 .prose {
-  outline: none;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
   line-height: var(--line-height-body);
   font-size: var(--font-size-lg);
   color: var(--color-text-primary);
+  padding-bottom: 20vh;
+  width: 100%;
+  max-width: var(--editor-max-width); // Centralizar conteúdo para conforto
+  margin: 0 auto;
+
+  &:focus, &:active, :global(.ProseMirror-focused) {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
 
   p {
     margin-bottom: var(--spacing-md);
+    display: block; // Garante que floats funcionem dentro do P
+    clear: none;
+  }
+
+  // Previne que outros elementos limpem o float sem necessidade
+  h1, h2, h3, ul, ol, blockquote {
+    clear: none;
   }
 
   h1, h2, h3 {
@@ -107,6 +134,7 @@
   ul, ol {
     margin-bottom: var(--spacing-md);
     padding-left: var(--spacing-lg);
+    display: block;
   }
 
   li {
@@ -128,6 +156,7 @@
     overflow-x: auto;
     margin-bottom: var(--spacing-md);
     border: 1px solid var(--color-border);
+    clear: both; // Blocos de código devem limpar o float
 
     code {
       background: transparent;

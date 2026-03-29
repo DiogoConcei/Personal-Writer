@@ -2,29 +2,40 @@
 @use '@/shared/styles/mixins' as *;
 
 .wrapper {
-  margin: var(--spacing-md) 0;
-  display: flex;
+  display: inline-block;
   position: relative;
   max-width: 100%;
+  user-select: none;
+  line-height: normal; // Reset para não afetar o texto ao lado
 
-  &--align-left { justify-content: flex-start; }
-  &--align-center { justify-content: center; }
-  &--align-right { justify-content: flex-end; }
-
-  &--float-left {
+  // Layouts de envolvimento (Wrap)
+  &--layout-wrap-left {
+    display: block; 
     float: left;
-    margin-right: var(--spacing-md);
+    margin: 4px 20px 8px 0;
+    vertical-align: top;
   }
 
-  &--float-right {
+  &--layout-wrap-right {
+    display: block;
     float: right;
-    margin-left: var(--spacing-md);
+    margin: 4px 0 8px 20px;
+    vertical-align: top;
+  }
+
+  // No modo "Na linha", a imagem age como um caractere (Glyph)
+  &--layout-inline {
+    display: inline-block;
+    margin: 0 8px;
+    float: none;
+    vertical-align: middle; // Alinha o texto pelo meio da imagem para melhor harmonia
   }
 
   &--selected {
     .imageContainer {
       outline: 2px solid var(--color-accent);
-      border-radius: var(--radius-sm);
+      outline-offset: 1px;
+      border-radius: 2px;
     }
   }
 }
@@ -32,35 +43,53 @@
 .imageContainer {
   position: relative;
   display: inline-block;
-  line-height: 0;
+  line-height: 0; // Remove espaços fantasmas abaixo da img
   max-width: 100%;
 
   img {
     max-width: 100%;
     height: auto;
-    display: block;
+    display: block; 
+    border-radius: 2px;
   }
 }
 
 .handle {
   position: absolute;
-  top: 50%;
-  width: 12px;
-  height: 24px;
+  width: 8px;
+  height: 8px;
   background-color: var(--color-accent);
-  border-radius: var(--radius-sm);
-  transform: translateY(-50%);
-  cursor: ew-resize;
-  z-index: 10;
-  box-shadow: var(--shadow-sm);
+  border: 1px solid white;
+  border-radius: 50%;
+  z-index: 30;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s ease;
 
-  &--right { right: -6px; }
-  &--left { left: -6px; }
+  &:hover {
+    transform: scale(1.5);
+  }
+
+  &--tl { top: -4px; left: -4px; cursor: nwse-resize; }
+  &--tr { top: -4px; right: -4px; cursor: nesw-resize; }
+  &--bl { bottom: -4px; left: -4px; cursor: nesw-resize; }
+  &--br { bottom: -4px; right: -4px; cursor: nwse-resize; }
+}
+
+.errorPlaceholder {
+  background-color: var(--color-bg-base);
+  border: 1px dashed var(--color-border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm);
+  color: var(--color-text-muted);
+  min-height: 40px;
+  border-radius: 2px;
 }
 
 .toolbar {
   position: absolute;
-  top: var(--spacing-sm);
+  top: -42px; 
   left: 50%;
   transform: translateX(-50%);
   background-color: var(--color-bg-elevated);
@@ -70,13 +99,9 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  box-shadow: var(--shadow-md);
-  z-index: 20;
-
-  &__group {
-    display: flex;
-    gap: 2px;
-  }
+  box-shadow: var(--shadow-lg);
+  z-index: 40;
+  animation: fadeIn 0.1s ease-out;
 
   &__divider {
     width: 1px;
@@ -87,11 +112,14 @@
 
   button {
     @include flex-center;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: var(--radius-sm);
     color: var(--color-text-secondary);
     transition: all var(--transition-fast);
+    background: transparent;
+    border: none;
+    cursor: pointer;
 
     &:hover {
       background-color: var(--color-bg-hover);
@@ -102,5 +130,50 @@
       color: var(--color-accent);
       background-color: var(--color-accent-glow);
     }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.fullscreenOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  cursor: zoom-out;
+
+  img {
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.fullscreenClose {
+  position: absolute;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  width: 40px;
+  height: 40px;
+  @include flex-center;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 24px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.2);
   }
 }

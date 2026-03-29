@@ -1,72 +1,70 @@
 export interface Template {
   id: string;
   name: string;
+  description: string;
   content: string;
 }
 
 export const DEFAULT_TEMPLATES: Template[] = [
   {
+    id: 'empty',
+    name: 'Nota Vazia',
+    description: 'Comece do zero',
+    content: ''
+  },
+  {
     id: 'character',
-    name: '👤 Ficha de Personagem',
+    name: 'Personagem',
+    description: 'Ficha de personagem com ícone e atributos',
     content: `---
-Nome: 
-Idade: 
-Ocupação: 
-Classe: 
-Localização: 
+type: character
+icon: ""
+fields:
+  Classe: ""
+  Raça: ""
+  Nível: 1
+  Status: "Vivo"
 ---
 
-# Descrição Física
-Escreva aqui...
+# Novo Personagem
 
-# Personalidade
-Escreva aqui...
-
-# História (Backstory)
-Escreva aqui...
-
-# Motivações e Objetivos
-Escreva aqui...`
+Escreva a história e detalhes aqui...`
   },
   {
-    id: 'chapter',
-    name: '📖 Estrutura de Capítulo',
+    id: 'location',
+    name: 'Localização',
+    description: 'Cidades, masmorras ou pontos de interesse',
     content: `---
-Capítulo: 
-Ponto de Vista: 
-Local: 
+type: location
+icon: "📍"
+fields:
+  Região: ""
+  População: ""
+  Perigo: "Baixo"
 ---
 
-# Resumo do Capítulo
-*O que acontece aqui?*
+# Nova Localização
 
-# Objetivo da Cena
-*Qual a mudança de estado dos personagens?*
-
----
-
-# Início da Escrita
-Comece aqui...`
+Descreva o local aqui...`
   },
   {
-    id: 'worldbuilding',
-    name: '🌍 Worldbuilding Log',
+    id: 'session',
+    name: 'Sessão de Jogo',
+    description: 'Resumo de sessões e eventos',
     content: `---
-Tipo: 
-Região: 
-Época: 
+type: session
+data: "${new Date().toLocaleDateString('pt-BR')}"
 ---
 
-# Descrição Geral
-Escreva aqui...
+# Sessão de Hoje
 
-# Regras e Leis
-Escreva aqui...
+### Resumo dos Eventos
+- 
 
-# Cultura e Tradições
-Escreva aqui...
+### NPCs Encontrados
+- 
 
-# Geografia/Clima
-Escreva aqui...`
+### Itens Obtidos
+- `
   }
 ];

@@ -14,9 +14,12 @@ pub fn run() {
             commands::fs::delete_item,
             commands::fs::rename_item,
             commands::fs::copy_image_to_assets,
+            commands::fs::save_image_from_bytes,
             commands::fs::create_snapshot,
+
             commands::fs::list_snapshots,
-            commands::fs::read_snapshot
+            commands::fs::read_snapshot,
+            commands::fs::delete_snapshot
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

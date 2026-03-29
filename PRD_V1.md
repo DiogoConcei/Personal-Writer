@@ -1,5 +1,5 @@
 # PRD — Editor Híbrido (V1)
-**Versão:** 1.3 (Atualizado com Refatorações de Extensão e WikiLinks)  
+**Versão:** 1.4 (Notas Estruturadas e Imagens Refinadas)  
 **Stack:** Tauri 2 · React 19 · TypeScript · TipTap 2 · Zustand · SCSS Modules · Rust  
 **Objetivo:** Definir o escopo mínimo completo e verificar o progresso real.
 
@@ -26,7 +26,7 @@ Um editor de notas local-first para uso pessoal dual: estudo de Ciência da Comp
 - [x] Árvore hierárquica com distinção entre pastas e arquivos
 - [x] **Limpeza de Sidebar:** Pastas/arquivos ocultos (iniciados com `.`) são filtrados automaticamente
 - [x] Criar, Renomear e Excluir arquivos/pastas (Unificado para `.md`)
-- [x] Persistência do workspace entre sessões
+- [x] **Persistência:** O último workspace aberto é carregado automaticamente ao iniciar o app.
 
 ### Feature 3 — WikiLinks (`[[Nota]]`)
 **Status:** 🟢 **Concluído (Refatorado)**
@@ -40,44 +40,55 @@ Um editor de notas local-first para uso pessoal dual: estudo de Ciência da Comp
 **Status:** 🟢 **Concluído**
 - [x] Alternância entre Modo Editor e Modo Dashboard
 - [x] Grid de cards com ordenação por `modified_at` (mais recente primeiro)
-- [x] Filtro automático de arquivos `.md`
+- [x] **Visualização de Entidades:** Cards mostram Ícone (Foto/Emoji) e atributos YAML (ex: Nível, Classe) para notas de personagens ou locais.
+- [x] **Layout Fluido:** O dashboard e o editor se adaptam automaticamente à largura da tela.
 
 ### Feature 5 — Imagens Inline
-**Status:** 🟡 **Parcial**
-- [x] Inserção por Drag-and-drop de arquivos do SO
-- [x] Cópia automática para a pasta `/assets/` do workspace via Rust
-- [ ] Handles de resize proporcional (precisa validar UI do `ImageNode.tsx`)
-- [ ] Toolbar contextual para alinhamento e float
+**Status:** 🟢 **Concluído**
+- [x] Inserção por Drag-and-drop e Paste (Ctrl+V) com cópia automática para `/assets/`
+- [x] **Redimensionamento Proporcional:** Handles nos 4 cantos com preservação de aspecto.
+- [x] **Layout Google Docs:** Opções de Inline, Wrap-Left e Wrap-Right para fluidez do texto ao redor da imagem.
+- [x] **Toolbar de Imagem:** Alinhamento, layout e modo tela cheia.
+- [x] Placeholder visual para imagens com caminho quebrado.
 
 ---
 
 ## 3. Funcionalidades "Bônus" (Já Implementadas)
 
-### Feature 6 — Sistema de Templates
-- [x] Três modelos padrão: Ficha de Personagem, Capítulo e Worldbuilding
-- [x] Uso de **YAML Frontmatter** para atributos (Nome, Idade, Classe, etc.)
-- [x] Botão "Modelo" no Editor para aplicação rápida
-- [x] Suporte a templates na criação de novos arquivos pela FileTree
+### Feature 6 — Notas Estruturadas (Metadata Header)
+**Status:** 🟢 **Concluído**
+- [x] **Cabeçalho Visual:** Metadados YAML transformados em interface visual no topo da nota.
+- [x] **Identidade Visual:** Suporte a ícones grandes (Emoji ou Imagens Locais).
+- [x] **Edição Dinâmica:** Adição e remoção de campos customizados direto no cabeçalho.
+- [x] Sincronização automática entre cabeçalho visual e arquivo Markdown.
 
 ### Feature 7 — Histórico de Versões (Snapshots)
+**Status:** 🟢 **Concluído**
 - [x] Backend Rust para salvar snapshots datados em `.snapshots/`
 - [x] Interface lateral para visualizar e restaurar versões anteriores
-- [x] Criação automática de snapshot ao salvar manualmente (`Ctrl+S`)
+- [x] **Preview Realista:** Visualização das versões usa o mesmo motor do editor (TipTap) em modo leitura.
+- [x] **Snapshots de Segurança:** Criação automática de snapshot ao restaurar uma versão antiga, evitando perda do trabalho atual.
+- [x] **Gestão de Espaço:** Possibilidade de excluir versões individuais do histórico.
 
 ### Feature 8 — Sidebar de Referências
 - [x] Painel lateral para visualização de metadados YAML (Draft funcional)
 
+### Feature 9 — Layout "Zen" e Foco
+- [x] **Esconder Sidebar:** Alternância via ícone no header ou atalho `Ctrl + \`.
+- [x] **Escrita Infinita:** Área de escrita ocupa 100% da largura e altura disponível, permitindo cliques em qualquer ponto para focar.
+- [x] **Zero Distrações:** Remoção de outlines, bordas e elementos de foco agressivos durante a escrita.
+
 ---
 
 ## 4. UI Global e UX
-- [x] **Breadcrumb:** Exibe o caminho do arquivo no header
-- [x] **Contador de palavras:** Exibido na StatusBar
-- [x] **Atalhos de Teclado:** Implementação de Ctrl+S e Ctrl+\ (Foco)
+- [x] **Breadcrumb:** Exibe o caminho do arquivo no header.
+- [x] **Contador de palavras:** Exibido na StatusBar.
+- [x] **Atalhos de Teclado:** Implementação de `Ctrl + S` (Save/Snapshot) e `Ctrl + \` (Toggle Sidebar).
 
 ---
 
 ## 5. Próximos Passos Imediatos
 
-1.  **Evolução da Ficha de Personagem:** Transformar a `ReferenceSidebar` em uma interface que permite editar os atributos YAML do frontmatter de forma visual (inputs organizados em vez de texto puro).
-2.  **Refinamento de Imagens:** Implementar a toolbar de alinhamento/float.
-3.  **Busca Full-text:** Implementar busca pelo conteúdo interno das notas (V2).
+1.  **Busca por Nome (Ctrl + F):** Implementar modal de busca rápida para navegar entre notas pelo nome do arquivo.
+2.  **Breadcrumbs Interativos:** Permitir clicar nos níveis do caminho para navegar até as pastas.
+3.  **Refinamento Final de Estilo:** Ajustes de espaçamento e consistência de cores.

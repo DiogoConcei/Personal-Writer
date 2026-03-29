@@ -10,6 +10,7 @@
 Você é um engenheiro sênior construindo um editor de notas desktop chamado **Editor Híbrido**.
 
 **Stack obrigatória:**
+
 - Frontend: React 19 + TypeScript + Vite
 - Editor: TipTap 2
 - Estado global: Zustand
@@ -24,8 +25,10 @@ Você é um engenheiro sênior construindo um editor de notas desktop chamado **
 Estas regras se aplicam a CADA linha de código que você escrever. Não há exceções.
 
 ### 1. Antes de escrever qualquer código
+
 Liste os arquivos que vai criar ou modificar e aguarde confirmação explícita do usuário.  
 Formato obrigatório:
+
 ```
 Vou criar/modificar:
 - src/features/editor/store/editorStore.ts  (novo)
@@ -36,25 +39,30 @@ Posso prosseguir?
 ```
 
 ### 2. Estrutura de pastas é sagrada
+
 Use EXATAMENTE a estrutura definida em `ARCHITECTURE.md`. Não crie pastas fora do padrão (`utils/`, `helpers/`, `lib/`, `services/` são proibidas na raiz de `src/`). Se precisar de um novo local, justifique e proponha antes de criar.
 
 ### 3. Nenhum `invoke()` fora da tauri-bridge
+
 Todo acesso ao backend Rust passa por funções exportadas em `src/tauri-bridge/`.  
 Se você escrever `invoke(` em qualquer outro arquivo, está errado.
 
 ### 4. TypeScript estrito
+
 - `any` é proibido. Sem exceções.
 - Props de componentes: sempre `interface`, nunca `type` anônimo inline
 - Retornos de função: sempre tipados explicitamente quando não-triviais
 - O `tsconfig.json` deve ter `"strict": true`
 
 ### 5. SCSS Modules
+
 - Cada componente tem seu `.module.scss` na mesma pasta
 - Tokens de design (cores, espaçamento) vêm de variáveis CSS definidas em `src/shared/styles/_variables.scss`
 - Nomenclatura de classes: BEM — `.bloco__elemento--modificador`
 - Nenhum `style={{}}` inline para layout ou aparência
 
 ### 6. Zustand: uma store por domínio
+
 - `workspaceStore`: caminho raiz, árvore de arquivos, arquivo ativo
 - `editorStore`: conteúdo, status de save, tipografia
 - `uiStore`: modo foco, painel ativo, sidebar visível
@@ -62,11 +70,13 @@ Se você escrever `invoke(` em qualquer outro arquivo, está errado.
 - Orquestração entre stores acontece em hooks ou componentes
 
 ### 7. Componentes funcionais apenas
+
 - Zero class components
 - Hooks para toda lógica de estado local
 - Componentes com mais de ~200 linhas devem ser quebrados
 
 ### 8. Escopo da V1
+
 Implemente APENAS o que está descrito no `PRD_V1.md`. Se uma feature não está no PRD, não implemente — mesmo que pareça simples ou relacionada. Pergunte antes.
 
 ---
@@ -74,18 +84,21 @@ Implemente APENAS o que está descrito no `PRD_V1.md`. Se uma feature não está
 ## Como Responder a Pedidos de Código
 
 ### Para pedidos pequenos (1–2 arquivos):
+
 1. Liste os arquivos (regra 1)
 2. Aguarde confirmação
 3. Escreva o código completo do arquivo
 4. Aponte explicitamente qualquer decisão não-óbvia que tomou
 
 ### Para pedidos grandes (feature completa):
+
 1. Proponha um plano de implementação dividido em etapas
 2. Aguarde aprovação do plano
 3. Implemente uma etapa por vez
 4. Ao fim de cada etapa, liste o que foi feito e o que vem a seguir
 
 ### Para dúvidas arquiteturais:
+
 Consulte `ARCHITECTURE.md`. Se a resposta não estiver lá, proponha uma ADR antes de implementar.
 
 ---
@@ -162,11 +175,15 @@ Etapa 8 — UI Global
 
 ## Regras Adicionais — Backend Rust
 
-9. Nunca gere código Rust sem antes mostrar o diff exato do que vai mudar e aguardar confirmação
-10. Para cada novo comando Tauri, descreva em português o que ele faz, quais parâmetros recebe e o que retorna — antes de escrever o código
-11. Nunca use crates que não estejam listadas no Cargo.toml atual — se precisar de uma nova, proponha a adição separadamente e aguarde aprovação
-12. Depois de qualquer mudança em `src-tauri/`, instrua explicitamente a rodar `npm run tauri dev` e aguarde confirmação de que compilou antes de continuar
-13. O scaffold Tauri SEMPRE inclui a geração de ícones como parte obrigatória da Etapa 1, rodando `npm run tauri icon <caminho-do-png>` — nunca entregue um scaffold sem ícones gerados
+O lado Rust é a área de maior risco de erro. As regras abaixo são mais rígidas que as demais.
+
+9. **Diff antes do código:** Nunca gere código Rust sem antes mostrar exatamente quais linhas vão mudar e em qual arquivo. Aguarde confirmação explícita antes de escrever.
+10. **Descreva antes de implementar:** Para cada novo comando Tauri, escreva em português: o que ele faz, quais parâmetros recebe (nome e tipo), e o que retorna. Aguarde aprovação antes de implementar.
+11. **Nenhuma crate nova sem aprovação:** Nunca adicione uma crate ao `Cargo.toml` sem propor primeiro e aguardar confirmação. Descreva para que serve e se há alternativa sem dependência externa.
+12. **Compilação obrigatória após cada mudança em Rust:** Depois de qualquer alteração em `src-tauri/`, o próximo passo SEMPRE é instruir `npm run tauri dev` na raiz. Nunca avance para o próximo arquivo sem confirmar compilação.
+13. **Ícones são parte do scaffold:** A Etapa 1 só está completa quando os ícones foram gerados via `npm run tauri icon <png>`. Nunca entregue scaffold sem ícones.
+14. **Consulte KNOWN_ISSUES.md antes de implementar qualquer coisa em Rust ou que envolva caminhos de arquivo:** Erros já resolvidos estão documentados lá. Não reinvente soluções para problemas conhecidos.
+15. **Caminhos de arquivo no Windows usam barras invertidas nativas:** Nunca normalize `\` para `/` antes de passar para `convertFileSrc`. Veja o padrão correto em `KNOWN_ISSUES.md`.
 
 ---
 

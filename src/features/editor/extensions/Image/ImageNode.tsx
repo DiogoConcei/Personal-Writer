@@ -2,22 +2,27 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import styles from './ImageNode.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { Maximize2, AlignLeft, AlignCenter, AlignRight, PanelLeft, PanelRight, StretchVertical } from 'lucide-react';
+import { Maximize2, AlignLeft, AlignRight, StretchVertical, ImageOff } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 export default function ImageNode({ node, updateAttributes, selected }: NodeViewProps) {
   const { rootPath } = useWorkspaceStore();
   const [isResizing, setIsResizing] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // Converte o caminho relativo para um caminho de recurso Tauri
-  const src = node.attrs.src.startsWith('./') 
-    ? convertFileSrc(`${rootPath}/${node.attrs.src.replace('./', '')}`)
-    : node.attrs.src;
+  let src = node.attrs.src;
+  if (src.startsWith('./')) {
+    const relativePart = src.replace('./', '');
+    const fullPath = `${rootPath}\\${relativePart.replace(/\//g, '\\')}`;
+    src = convertFileSrc(fullPath);
+  }
 
-  const onResize = (direction: 'left' | 'right', event: React.MouseEvent) => {
+  const onResizeStart = (direction: 'tl' | 'tr' | 'bl' | 'br', event: React.MouseEvent) => {
     event.preventDefault();
+    event.stopPropagation();
     setIsResizing(true);
 
     const startX = event.clientX;
@@ -25,9 +30,19 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const currentX = moveEvent.clientX;
-      const diff = direction === 'right' ? currentX - startX : startX - currentX;
-      const newWidth = Math.max(50, startWidth + diff);
-      updateAttributes({ width: `${newWidth}px` });
+      let diff = 0;
+
+      if (direction === 'tr' || direction === 'br') {
+        diff = currentX - startX;
+      } else {
+        diff = startX - currentX;
+      }
+      
+      const newWidth = Math.max(40, startWidth + diff);
+      updateAttributes({ 
+        width: `${newWidth}px`, 
+        height: 'auto'
+      });
     };
 
     const onMouseUp = () => {
@@ -44,50 +59,91 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
     updateAttributes({ [attr]: value });
   };
 
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isFullscreen]);
+
   return (
     <NodeViewWrapper 
+      as="span"
       className={`
         ${styles.wrapper} 
-        ${styles[`wrapper--align-${node.attrs.align}`]} 
-        ${styles[`wrapper--float-${node.attrs.float}`]}
+        ${styles[`wrapper--layout-${node.attrs.layout}`]}
         ${selected ? styles['wrapper--selected'] : ''}
       `}
     >
-      <div 
+      <span 
         className={styles.imageContainer}
         onMouseEnter={() => setShowToolbar(true)}
         onMouseLeave={() => setShowToolbar(false)}
       >
-        <img 
-          ref={imgRef}
-          src={src} 
-          alt={node.attrs.alt} 
-          style={{ width: node.attrs.width, height: node.attrs.height }}
-        />
+        {hasError ? (
+          <span className={styles.errorPlaceholder} style={{ width: node.attrs.width }}>
+            <ImageOff size={20} />
+          </span>
+        ) : (
+          <img 
+            ref={imgRef}
+            src={src} 
+            alt={node.attrs.alt} 
+            style={{ width: node.attrs.width, height: 'auto' }}
+            onDoubleClick={() => setIsFullscreen(true)}
+            onError={() => setHasError(true)}
+            onLoad={() => setHasError(false)}
+          />
+        )}
 
-        {selected && !isResizing && (
+        {selected && !isResizing && !hasError && (
           <>
-            <div className={`${styles.handle} ${styles['handle--right']}`} onMouseDown={(e) => onResize('right', e)} />
-            <div className={`${styles.handle} ${styles['handle--left']}`} onMouseDown={(e) => onResize('left', e)} />
+            <div className={`${styles.handle} ${styles['handle--tl']}`} onMouseDown={(e) => onResizeStart('tl', e)} />
+            <div className={`${styles.handle} ${styles['handle--tr']}`} onMouseDown={(e) => onResizeStart('tr', e)} />
+            <div className={`${styles.handle} ${styles['handle--bl']}`} onMouseDown={(e) => onResizeStart('bl', e)} />
+            <div className={`${styles.handle} ${styles['handle--br']}`} onMouseDown={(e) => onResizeStart('br', e)} />
           </>
         )}
 
-        {showToolbar && (
-          <div className={styles.toolbar}>
-            <div className={styles.toolbar__group}>
-              <button onClick={() => handleAction('align', 'left')} className={node.attrs.align === 'left' ? styles.active : ''}><AlignLeft size={14} /></button>
-              <button onClick={() => handleAction('align', 'center')} className={node.attrs.align === 'center' ? styles.active : ''}><AlignCenter size={14} /></button>
-              <button onClick={() => handleAction('align', 'right')} className={node.attrs.align === 'right' ? styles.active : ''}><AlignRight size={14} /></button>
-            </div>
+        {(showToolbar || selected) && !isResizing && (
+          <span className={styles.toolbar}>
+            <button 
+              onClick={() => handleAction('layout', 'inline')} 
+              className={node.attrs.layout === 'inline' ? styles.active : ''}
+              title="Na linha"
+            >
+              <StretchVertical size={14} />
+            </button>
+            <button 
+              onClick={() => handleAction('layout', 'wrap-left')} 
+              className={node.attrs.layout === 'wrap-left' ? styles.active : ''}
+              title="Texto à direita"
+            >
+              <AlignLeft size={14} />
+            </button>
+            <button 
+              onClick={() => handleAction('layout', 'wrap-right')} 
+              className={node.attrs.layout === 'wrap-right' ? styles.active : ''}
+              title="Texto à esquerda"
+            >
+              <AlignRight size={14} />
+            </button>
             <div className={styles.toolbar__divider} />
-            <div className={styles.toolbar__group}>
-              <button onClick={() => handleAction('float', 'left')} className={node.attrs.float === 'left' ? styles.active : ''}><PanelLeft size={14} /></button>
-              <button onClick={() => handleAction('float', 'none')} className={node.attrs.float === 'none' ? styles.active : ''}><StretchVertical size={14} /></button>
-              <button onClick={() => handleAction('float', 'right')} className={node.attrs.float === 'right' ? styles.active : ''}><PanelRight size={14} /></button>
-            </div>
-          </div>
+            <button onClick={() => setIsFullscreen(true)} title="Tela Cheia">
+              <Maximize2 size={14} />
+            </button>
+          </span>
         )}
-      </div>
+      </span>
+
+      {isFullscreen && (
+        <span className={styles.fullscreenOverlay} onClick={() => setIsFullscreen(false)}>
+          <img src={src} alt={node.attrs.alt} onClick={(e) => e.stopPropagation()} />
+          <button className={styles.fullscreenClose} onClick={() => setIsFullscreen(false)}>×</button>
+        </span>
+      )}
     </NodeViewWrapper>
   );
 }

@@ -9,6 +9,7 @@ interface WorkspaceState {
   
   // Actions
   setRootPath: (path: string) => Promise<void>;
+  selectWorkspace: () => Promise<void>;
   refreshFiles: () => Promise<void>;
   setActiveFile: (path: string | null) => void;
   createFile: (name: string, parentPath?: string, initialContent?: string) => Promise<void>;
@@ -17,15 +18,26 @@ interface WorkspaceState {
   renameItem: (oldPath: string, newName: string) => Promise<void>;
 }
 
+const STORAGE_KEY = 'hybrid-editor-root-path';
+
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
-  rootPath: null,
+  rootPath: localStorage.getItem(STORAGE_KEY),
   files: [],
   activeFile: null,
   isLoading: false,
 
   setRootPath: async (path: string) => {
+    localStorage.setItem(STORAGE_KEY, path);
     set({ rootPath: path, isLoading: true });
     try {
+      const { createDirectory, listDirectory } = await import('@/tauri-bridge');
+      const separator = path.includes('\\') ? '\\' : '/';
+      const assetsPath = `${path}${separator}assets`;
+      
+      try {
+        await createDirectory(assetsPath);
+      } catch (e) {}
+
       const files = await listDirectory(path);
       const filteredFiles = files.filter(node => !node.name.startsWith('.'));
       const sortedFiles = filteredFiles.sort((a, b) => {
@@ -45,6 +57,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     
     set({ isLoading: true });
     try {
+      const { listDirectory } = await import('@/tauri-bridge');
       const files = await listDirectory(rootPath);
       const filteredFiles = files.filter(node => !node.name.startsWith('.'));
       const sortedFiles = filteredFiles.sort((a, b) => {
@@ -60,6 +73,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   setActiveFile: (path: string | null) => {
     set({ activeFile: path });
+  },
+
+  selectWorkspace: async () => {
+    const { selectDirectory } = await import('@/tauri-bridge');
+    const path = await selectDirectory();
+    if (path) {
+      const { setRootPath } = get();
+      await setRootPath(path);
+      set({ activeFile: null });
+    }
   },
 
   createFile: async (name: string, parentPath?: string, initialContent: string = '') => {

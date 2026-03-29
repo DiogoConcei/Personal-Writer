@@ -3,31 +3,23 @@ import { ReactNodeViewRenderer } from '@tiptap/react';
 import ImageNode from './ImageNode';
 
 export const CustomImage = Image.extend({
+  // Permite que a imagem seja renderizada dentro de parágrafos (inline)
+  inline: true,
+  group: 'inline',
+
   addAttributes() {
     return {
       ...this.parent?.(),
       width: {
-        default: '100%',
+        default: '300px',
         renderHTML: attributes => ({
-          width: attributes.width,
+          style: `width: ${attributes.width}; height: auto;`,
         }),
       },
-      height: {
-        default: 'auto',
+      layout: {
+        default: 'inline', // 'inline', 'wrap-left', 'wrap-right'
         renderHTML: attributes => ({
-          height: attributes.height,
-        }),
-      },
-      align: {
-        default: 'center', // left, center, right
-        renderHTML: attributes => ({
-          'data-align': attributes.align,
-        }),
-      },
-      float: {
-        default: 'none', // left, right, none
-        renderHTML: attributes => ({
-          'data-float': attributes.float,
+          'data-layout': attributes.layout,
         }),
       },
     };

@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { listDirectory, FileNode } from '@/tauri-bridge';
+import { FileNode } from '@/tauri-bridge';
 
 interface WorkspaceState {
   rootPath: string | null;
   files: FileNode[];
   activeFile: string | null;
+  dashboardFilterPath: string | null;
   isLoading: boolean;
   
   // Actions
@@ -12,6 +13,7 @@ interface WorkspaceState {
   selectWorkspace: () => Promise<void>;
   refreshFiles: () => Promise<void>;
   setActiveFile: (path: string | null) => void;
+  setDashboardFilterPath: (path: string | null) => void;
   createFile: (name: string, parentPath?: string, initialContent?: string) => Promise<void>;
   createDirectory: (name: string, parentPath?: string) => Promise<void>;
   deleteItem: (path: string) => Promise<void>;
@@ -24,11 +26,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   rootPath: localStorage.getItem(STORAGE_KEY),
   files: [],
   activeFile: null,
+  dashboardFilterPath: null,
   isLoading: false,
 
   setRootPath: async (path: string) => {
     localStorage.setItem(STORAGE_KEY, path);
-    set({ rootPath: path, isLoading: true });
+    set({ rootPath: path, isLoading: true, dashboardFilterPath: null });
     try {
       const { createDirectory, listDirectory } = await import('@/tauri-bridge');
       const separator = path.includes('\\') ? '\\' : '/';
@@ -75,13 +78,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set({ activeFile: path });
   },
 
+  setDashboardFilterPath: (path: string | null) => {
+    set({ dashboardFilterPath: path });
+  },
+
   selectWorkspace: async () => {
     const { selectDirectory } = await import('@/tauri-bridge');
     const path = await selectDirectory();
     if (path) {
       const { setRootPath } = get();
       await setRootPath(path);
-      set({ activeFile: null });
+      set({ activeFile: null, dashboardFilterPath: null });
     }
   },
 

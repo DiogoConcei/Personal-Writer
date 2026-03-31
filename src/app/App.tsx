@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import styles from './App.module.scss';
 import FileTree from '@/features/workspace/components/FileTree';
 import Editor from '@/features/editor/components/Editor';
@@ -6,10 +6,11 @@ import ImageViewer from '@/features/editor/components/ImageViewer';
 import Dashboard from '@/features/dashboard/components/Dashboard';
 import StatusBar from '@/features/editor/components/StatusBar';
 import ReferenceSidebar from '@/features/references/components/ReferenceSidebar';
+import CommandPalette from '@/features/search/components/CommandPalette';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { useUIStore } from '@/store/uiStore';
-import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen } from 'lucide-react';
+import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search } from 'lucide-react';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
 
@@ -22,7 +23,8 @@ export default function App() {
     isSidebarVisible, 
     toggleSidebar,
     isRightSidebarVisible, 
-    toggleRightSidebar 
+    toggleRightSidebar,
+    setCommandPaletteOpen
   } = useUIStore();
 
   const isImage = activeFile && IMAGE_EXTENSIONS.some(ext => activeFile.toLowerCase().endsWith(ext));
@@ -58,15 +60,62 @@ export default function App() {
     setTypography(typography === 'sans' ? 'serif' : 'sans');
   };
 
-  const getBreadcrumb = () => {
-    if (activePanel === 'dashboard') return 'Dashboard';
-    if (!activeFile) return 'Selecione uma nota';
-    
-    // Mostra apenas o nome do arquivo, removendo o caminho raiz se possível
-    if (rootPath && activeFile.startsWith(rootPath)) {
-      return activeFile.replace(rootPath, '').replace(/^[\\/]/, '').replace(/\\/g, ' / ');
+  const handleBreadcrumbClick = (path: string | null) => {
+    const { setDashboardFilterPath } = useWorkspaceStore.getState();
+    setDashboardFilterPath(path);
+    setActivePanel('dashboard');
+  };
+
+  const renderBreadcrumb = () => {
+    if (activePanel === 'dashboard') {
+      const { dashboardFilterPath } = useWorkspaceStore.getState();
+      if (!dashboardFilterPath || !rootPath) return <span>Dashboard</span>;
+      
+      const relativePath = dashboardFilterPath.replace(rootPath, '').replace(/^[\\/]/, '');
+      const parts = relativePath.split(/[\\/]/);
+      
+      return (
+        <div className={styles.app__breadcrumbList}>
+          <button onClick={() => handleBreadcrumbClick(null)}>Dashboard</button>
+          {parts.map((part, index) => {
+            const currentPath = rootPath + (rootPath.includes('\\') ? '\\' : '/') + parts.slice(0, index + 1).join(rootPath.includes('\\') ? '\\' : '/');
+            return (
+              <React.Fragment key={currentPath}>
+                <span className={styles.app__breadcrumbSeparator}>/</span>
+                <button onClick={() => handleBreadcrumbClick(currentPath)}>{part}</button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      );
     }
-    return activeFile;
+
+    if (!activeFile) return <span>Selecione uma nota</span>;
+    
+    if (rootPath && activeFile.startsWith(rootPath)) {
+      const relativePath = activeFile.replace(rootPath, '').replace(/^[\\/]/, '');
+      const parts = relativePath.split(/[\\/]/);
+      const fileName = parts.pop();
+      
+      return (
+        <div className={styles.app__breadcrumbList}>
+          <button onClick={() => handleBreadcrumbClick(null)}>Dashboard</button>
+          {parts.map((part, index) => {
+            const currentPath = rootPath + (rootPath.includes('\\') ? '\\' : '/') + parts.slice(0, index + 1).join(rootPath.includes('\\') ? '\\' : '/');
+            return (
+              <React.Fragment key={currentPath}>
+                <span className={styles.app__breadcrumbSeparator}>/</span>
+                <button onClick={() => handleBreadcrumbClick(currentPath)}>{part}</button>
+              </React.Fragment>
+            );
+          })}
+          <span className={styles.app__breadcrumbSeparator}>/</span>
+          <span className={styles.app__breadcrumbActive}>{fileName}</span>
+        </div>
+      );
+    }
+
+    return <span>{activeFile}</span>;
   };
 
   return (
@@ -86,11 +135,19 @@ export default function App() {
               <PanelLeft size={18} />
             </button>
             <div className={styles.app__breadcrumb}>
-              {getBreadcrumb()}
+              {renderBreadcrumb()}
             </div>
           </div>
           
           <div className={styles.app__actions}>
+            <button 
+              className={styles.app__iconBtn} 
+              onClick={() => setCommandPaletteOpen(true)}
+              title="Busca Rápida e Comandos (Ctrl+P)"
+            >
+              <Search size={18} />
+            </button>
+
             <button 
               className={styles.app__iconBtn} 
               onClick={selectWorkspace}
@@ -147,6 +204,8 @@ export default function App() {
           <ReferenceSidebar />
         </aside>
       )}
+
+      <CommandPalette />
     </div>
   );
 }

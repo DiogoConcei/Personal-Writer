@@ -22,8 +22,19 @@
 
   &--active {
     background-color: var(--color-accent-glow) !important;
-    color: var(--color-accent);
-    font-weight: 500;
+    color: var(--color-text-primary);
+    font-weight: 600;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--color-accent);
+    }
   }
 
   &--disabled {

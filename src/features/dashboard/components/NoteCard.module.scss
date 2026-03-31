@@ -17,16 +17,20 @@
 
   &:hover {
     border-color: var(--color-accent);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
   }
 
   &--character {
-    border-left: 4px solid #e05c72; // Cor temática para personagens
+    border-left: 4px solid var(--color-accent);
   }
 
   &--location {
-    border-left: 4px solid #5ca0e0; // Cor temática para locais
+    border-left: 4px solid var(--color-success);
+  }
+
+  &--session {
+    border-left: 4px solid var(--color-warning);
   }
 
   &__visual {

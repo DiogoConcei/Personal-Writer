@@ -90,9 +90,9 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
       setChildren(sorted);
 
       // Checar por imagens espelhadas em assets
-      if (node.is_dir && node.name !== 'assets' && !node.isVirtual && rootPath) {
+      if (node.is_dir && node.name !== 'assets' && node.name !== '.snapshots' && !node.isVirtual && rootPath) {
         // Normaliza caminhos para comparação segura no Windows
-        const normalize = (p: string) => p.replace(/\\/g, '/').toLowerCase();
+        const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
         const normRoot = normalize(rootPath);
         const normNode = normalize(node.path);
         const separator = rootPath.includes('\\') ? '\\' : '/';
@@ -101,8 +101,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
           let relativePath = normNode.substring(normRoot.length);
           if (relativePath.startsWith('/')) relativePath = relativePath.substring(1);
           
-          // Monta o caminho real para a subpasta em assets usando o separador nativo
-          // Se a relativePath for vazia (estamos na raiz), aponta direto para assets
+          // Monta o caminho real para a subpasta em assets
           const nativeRelativePath = relativePath.replace(/\//g, separator);
           const nodeAssetsPath = nativeRelativePath 
             ? `${rootPath}${separator}assets${separator}${nativeRelativePath}`
@@ -121,7 +120,6 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
               setHasVirtualImages(false);
             }
           } catch (e) {
-            // Se a pasta não existe em assets, tudo bem, apenas não mostra a virtual
             setHasVirtualImages(false);
           }
         }

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useEditorStore } from '../store/editorStore';
 import styles from './StatusBar.module.scss';
 import { Cloud, CloudOff, Loader2 } from 'lucide-react';

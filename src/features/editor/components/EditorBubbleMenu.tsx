@@ -1,0 +1,91 @@
+import { BubbleMenu } from '@tiptap/react/menus';
+import { Bold, Italic, Strikethrough, Code, Heading1, Heading2, Heading3, Quote } from 'lucide-react';
+import styles from './EditorBubbleMenu.module.scss';
+
+interface EditorBubbleMenuProps {
+  editor: any;
+}
+
+export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
+  if (!editor) return null;
+
+  return (
+    <BubbleMenu 
+      editor={editor} 
+      options={{ 
+        maxWidth: 'none',
+        zIndex: 9999,
+      }} 
+      className={styles.bubbleMenu}
+    >
+      <div className={styles.group}>
+        <button
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={editor.isActive('bold') ? styles.active : ''}
+          title="Negrito (Ctrl+B)"
+        >
+          <Bold size={14} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={editor.isActive('italic') ? styles.active : ''}
+          title="Itálico (Ctrl+I)"
+        >
+          <Italic size={14} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className={editor.isActive('strike') ? styles.active : ''}
+          title="Riscado"
+        >
+          <Strikethrough size={14} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          className={editor.isActive('code') ? styles.active : ''}
+          title="Código (Ctrl+E)"
+        >
+          <Code size={14} />
+        </button>
+      </div>
+
+      <div className={styles.divider} />
+
+      <div className={styles.group}>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={editor.isActive('heading', { level: 1 }) ? styles.active : ''}
+          title="Título 1 (Ctrl+Alt+1)"
+        >
+          <Heading1 size={14} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={editor.isActive('heading', { level: 2 }) ? styles.active : ''}
+          title="Título 2 (Ctrl+Alt+2)"
+        >
+          <Heading2 size={14} />
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          className={editor.isActive('heading', { level: 3 }) ? styles.active : ''}
+          title="Título 3 (Ctrl+Alt+3)"
+        >
+          <Heading3 size={14} />
+        </button>
+      </div>
+
+      <div className={styles.divider} />
+
+      <div className={styles.group}>
+        <button
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          className={editor.isActive('blockquote') ? styles.active : ''}
+          title="Citação"
+        >
+          <Quote size={14} />
+        </button>
+      </div>
+    </BubbleMenu>
+  );
+}

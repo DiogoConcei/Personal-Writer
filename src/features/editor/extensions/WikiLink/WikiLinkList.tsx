@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useState } from 'react';
 import styles from './WikiLinkList.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 

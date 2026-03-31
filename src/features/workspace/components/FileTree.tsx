@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import FileTreeItem from './FileTreeItem';
 import styles from './FileTree.module.scss';
-import { FolderOpen, RefreshCw, FilePlus, FolderPlus, X, Check } from 'lucide-react';
+import { FolderOpen, RefreshCw, FilePlus, FolderPlus } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 
 import { DEFAULT_TEMPLATES } from '@/features/templates/data/defaultTemplates';

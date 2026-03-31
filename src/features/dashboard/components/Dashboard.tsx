@@ -1,14 +1,13 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { useUIStore } from '@/store/uiStore';
 import NoteCard from './NoteCard';
 import styles from './Dashboard.module.scss';
-import { LayoutGrid, Search } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 
 export default function Dashboard() {
-  const { files } = useWorkspaceStore();
+  const { files, dashboardFilterPath, rootPath, setDashboardFilterPath } = useWorkspaceStore();
   
-  // Flatten files recursively to get all .txt notes
+  // Flatten files recursively to get all .md notes, filtered by path if needed
   const allNotes = useMemo(() => {
     const notes: any[] = [];
     const recurse = (nodeList: any[]) => {
@@ -16,20 +15,34 @@ export default function Dashboard() {
         if (node.is_dir) {
           recurse(node.children || []);
         } else if (node.name.endsWith('.md')) {
-          notes.push(node);
+          // Filtrar por dashboardFilterPath se existir
+          if (!dashboardFilterPath || node.path.startsWith(dashboardFilterPath)) {
+            notes.push(node);
+          }
         }
       });
     };
     recurse(files);
     // Ordenar por data de modificação (mais recente primeiro)
     return notes.sort((a, b) => b.modified_at - a.modified_at);
-  }, [files]);
+  }, [files, dashboardFilterPath]);
+
+  const getTitle = () => {
+    if (!dashboardFilterPath || !rootPath) return 'Minhas Notas';
+    const folderName = dashboardFilterPath.split(/[\\/]/).pop();
+    return `Notas em: ${folderName}`;
+  };
 
   if (allNotes.length === 0) {
     return (
       <div className={styles.empty}>
         <LayoutGrid size={48} />
-        <p>Nenhuma nota encontrada no workspace.</p>
+        <p>Nenhuma nota encontrada {dashboardFilterPath ? 'nesta pasta' : 'no workspace'}.</p>
+        {dashboardFilterPath && (
+          <button className={styles.clearFilter} onClick={() => setDashboardFilterPath(null)}>
+            Ver todas as notas
+          </button>
+        )}
       </div>
     );
   }
@@ -37,7 +50,14 @@ export default function Dashboard() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h2 className={styles.title}>Minhas Notas <span>({allNotes.length})</span></h2>
+        <div className={styles.header__left}>
+          <h2 className={styles.title}>{getTitle()} <span>({allNotes.length})</span></h2>
+          {dashboardFilterPath && (
+            <button className={styles.clearFilter} onClick={() => setDashboardFilterPath(null)}>
+              Limpar Filtro
+            </button>
+          )}
+        </div>
       </header>
       
       <div className={styles.grid}>

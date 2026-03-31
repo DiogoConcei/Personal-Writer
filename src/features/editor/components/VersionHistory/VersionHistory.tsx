@@ -3,7 +3,6 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { WikiLink } from '../../extensions/WikiLink/WikiLink';
 import { CustomImage } from '../../extensions/Image/Image';
-import { MetadataHeader } from '../../extensions/MetadataHeader/MetadataHeader';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { listSnapshots, readSnapshot, SnapshotInfo, writeFile, createSnapshot, deleteSnapshot } from '@/tauri-bridge';
@@ -18,7 +17,7 @@ interface VersionHistoryProps {
 
 export default function VersionHistory({ onClose, editor }: VersionHistoryProps) {
   const { activeFile, rootPath } = useWorkspaceStore();
-  const { setContent, content: currentContent } = useEditorStore();
+  const { setMarkdownContent, markdownContent: currentContent } = useEditorStore();
   const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -31,21 +30,11 @@ export default function VersionHistory({ onClose, editor }: VersionHistoryProps)
       StarterKit,
       WikiLink.configure({
         onLinkClick: () => {}, // Desabilitado no preview
-        checkFileExists: (noteName: string) => {
-          const checkRecursive = (nodeList: any[]): boolean => {
-            return nodeList.some(node => {
-              if (node.is_dir) return checkRecursive(node.children || []);
-              return node.name.replace(/\.md$/, '') === noteName;
-            });
-          };
-          return checkRecursive(useWorkspaceStore.getState().files);
-        }
-      }),
+      } as any),
       CustomImage.configure({
         inline: false,
         allowBase64: true,
       }),
-      MetadataHeader,
     ],
     content: '',
     editable: false,
@@ -106,14 +95,14 @@ export default function VersionHistory({ onClose, editor }: VersionHistoryProps)
 
   const confirmRestore = async () => {
     if (!activeFile || !previewContent || !rootPath) return;
-    
+
     try {
       // 1. Snapshot de Segurança: Salva o estado ATUAL antes de restaurar
       await createSnapshot(activeFile, rootPath, currentContent || '');
-      
+
       // 2. Restaura a versão selecionada
       await writeFile(activeFile, previewContent);
-      setContent(previewContent);
+      setMarkdownContent(previewContent);
       editor?.commands.setContent(previewContent);
       onClose();
     } catch (error) {

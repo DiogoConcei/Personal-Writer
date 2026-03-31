@@ -6,29 +6,39 @@
   position: relative;
   max-width: 100%;
   user-select: none;
-  line-height: normal; // Reset para não afetar o texto ao lado
+  line-height: 0; // Evita espaçamentos extras de linha
 
   // Layouts de envolvimento (Wrap)
   &--layout-wrap-left {
     display: block; 
     float: left;
-    margin: 4px 20px 8px 0;
-    vertical-align: top;
+    margin: 0.5rem 1.5rem 0.5rem 0;
+    clear: left;
   }
 
   &--layout-wrap-right {
     display: block;
     float: right;
-    margin: 4px 0 8px 20px;
-    vertical-align: top;
+    margin: 0.5rem 0 0.5rem 1.5rem;
+    clear: right;
   }
 
-  // No modo "Na linha", a imagem age como um caractere (Glyph)
+  // No modo "Na linha", a imagem flui como texto
   &--layout-inline {
-    display: inline-block;
-    margin: 0 8px;
+    display: inline; // Permite fluxo real
+    margin: 0 4px;
     float: none;
-    vertical-align: middle; // Alinha o texto pelo meio da imagem para melhor harmonia
+    vertical-align: baseline;
+
+    .imageContainer {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    img {
+      display: inline-block; // Não quebra linha
+      vertical-align: middle;
+    }
   }
 
   &--selected {

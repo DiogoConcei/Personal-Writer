@@ -91,7 +91,7 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
             ref={imgRef}
             src={src} 
             alt={node.attrs.alt} 
-            style={{ width: node.attrs.width, height: 'auto' }}
+            style={{ width: node.attrs.width, height: 'auto', display: 'inherit' }}
             onDoubleClick={() => setIsFullscreen(true)}
             onError={() => setHasError(true)}
             onLoad={() => setHasError(false)}

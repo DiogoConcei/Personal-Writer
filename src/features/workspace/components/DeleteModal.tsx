@@ -1,4 +1,3 @@
-import React from 'react';
 import Modal from '@/shared/components/Modal/Modal';
 import styles from './DeleteModal.module.scss';
 import { AlertTriangle } from 'lucide-react';

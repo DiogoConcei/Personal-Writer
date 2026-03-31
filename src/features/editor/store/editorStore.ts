@@ -4,25 +4,93 @@ import { readFile, writeFile } from '@/tauri-bridge';
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type Typography = 'sans' | 'serif';
 
+export interface FieldConfig {
+  type: 'text' | 'number' | 'select';
+  options?: string[];
+}
+
+export interface Metadata {
+  type?: string;
+  icon?: string;
+  config?: Record<string, FieldConfig>;
+  fields?: Record<string, any>;
+}
+
 interface EditorState {
-  content: string;
-  lastSavedContent: string;
+  metadata: Metadata;
+  markdownContent: string;
   saveStatus: SaveStatus;
   lastSavedAt: Date | null;
   typography: Typography;
   wordCount: number;
-  
+
   // Actions
   loadContent: (path: string) => Promise<void>;
-  setContent: (content: string) => void;
+  setMarkdownContent: (content: string) => void;
+  setMetadata: (metadata: Metadata) => void;
   save: (path: string) => Promise<void>;
   setTypography: (typography: Typography) => void;
   setWordCount: (count: number) => void;
 }
 
+const parseMarkdownMetadata = (content: string) => {
+  const yamlMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!yamlMatch) return { metadata: {}, markdown: content };
+
+  const yamlStr = yamlMatch[1];
+  const markdown = content.replace(yamlMatch[0], '').trim();
+  const data: Metadata = { fields: {} };
+
+  const typeMatch = yamlStr.match(/type:\s*["']?([^"'\r\n]+)["']?/i);
+  const iconMatch = yamlStr.match(/icon:\s*["']?([^"'\r\n]+)["']?/i);
+  const configMatch = yamlStr.match(/config:\s*'(.*?)'/i);
+
+  if (typeMatch) data.type = typeMatch[1].trim();
+  if (iconMatch) data.icon = iconMatch[1].trim();
+  if (configMatch) {
+    try {
+      data.config = JSON.parse(configMatch[1]);
+    } catch (e) {}
+  }
+
+  const fieldsBlock = yamlStr.match(/fields:\r?\n([\s\S]*?)(?=\r?\n[a-z]|$)/i);
+  if (fieldsBlock) {
+    const lines = fieldsBlock[1].split('\n');
+    lines.forEach(line => {
+      const parts = line.split(':');
+      if (parts.length >= 2) {
+        const k = parts[0].trim();
+        const v = parts.slice(1).join(':').trim().replace(/["']/g, '');
+        if (k) data.fields![k] = isNaN(Number(v)) ? v : Number(v);
+      }
+    });
+  }
+  return { metadata: data, markdown };
+};
+
+const stringifyYAML = (metadata: Metadata) => {
+  if (Object.keys(metadata).length === 0) return '';
+
+  let yaml = '---\n';
+  if (metadata.type) yaml += `type: ${metadata.type}\n`;
+  if (metadata.icon) yaml += `icon: "${metadata.icon}"\n`;
+  if (metadata.config && Object.keys(metadata.config).length > 0) {
+    yaml += `config: '${JSON.stringify(metadata.config)}'\n`;
+  }
+  if (metadata.fields && Object.keys(metadata.fields).length > 0) {
+    yaml += `fields:\n`;
+    Object.entries(metadata.fields).forEach(([k, v]) => {
+      const formattedValue = typeof v === 'string' ? `"${v}"` : v;
+      yaml += `  ${k}: ${formattedValue}\n`;
+    });
+  }
+  yaml += '---';
+  return yaml;
+};
+
 export const useEditorStore = create<EditorState>((set, get) => ({
-  content: '',
-  lastSavedContent: '',
+  metadata: {},
+  markdownContent: '',
   saveStatus: 'idle',
   lastSavedAt: null,
   typography: 'sans',
@@ -31,10 +99,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   loadContent: async (path: string) => {
     set({ saveStatus: 'idle' });
     try {
-      const content = await readFile(path);
+      const fullContent = await readFile(path);
+      const { metadata, markdown } = parseMarkdownMetadata(fullContent);
       set({ 
-        content, 
-        lastSavedContent: content,
+        metadata,
+        markdownContent: markdown,
         saveStatus: 'idle',
         lastSavedAt: new Date() 
       });
@@ -44,20 +113,25 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
   },
 
-  setContent: (content: string) => {
-    set({ content });
+  setMarkdownContent: (markdownContent: string) => {
+    set({ markdownContent });
+  },
+
+  setMetadata: (metadata: Metadata) => {
+    set({ metadata });
   },
 
   save: async (path: string) => {
-    const { content } = get();
+    const { metadata, markdownContent } = get();
     set({ saveStatus: 'saving' });
-    
+
     try {
-      await writeFile(path, content);
+      const yaml = stringifyYAML(metadata);
+      const fullContent = yaml ? `${yaml}\n\n${markdownContent}` : markdownContent;
+      await writeFile(path, fullContent);
       set({ 
         saveStatus: 'saved', 
-        lastSavedAt: new Date(),
-        lastSavedContent: content 
+        lastSavedAt: new Date()
       });
     } catch (error) {
       console.error('Erro ao salvar arquivo:', error);
@@ -70,6 +144,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   setWordCount: (count: number) => {
-    set({ count });
+    set({ wordCount: count });
   },
 }));

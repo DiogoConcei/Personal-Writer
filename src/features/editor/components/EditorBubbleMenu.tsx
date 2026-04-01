@@ -9,15 +9,67 @@ interface EditorBubbleMenuProps {
 export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
   if (!editor) return null;
 
+  const currentFont = editor.getAttributes('textStyle').fontFamily || '';
+  const currentSize = editor.getAttributes('textStyle').fontSize || '';
+
   return (
     <BubbleMenu 
       editor={editor} 
+      shouldShow={({ editor, from, to }) => {
+        if (from === to) return false;
+        if (editor.isActive('image') || editor.isActive('customImage')) return false;
+        return editor.view.state.selection.empty === false;
+      }}
       options={{ 
         maxWidth: 'none',
         zIndex: 9999,
       }} 
       className={styles.bubbleMenu}
     >
+      <div className={styles.group}>
+        <select 
+          className={`${styles.select} ${styles['select--font']}`}
+          value={currentFont}
+          onChange={(e) => {
+            if (e.target.value) {
+              editor.chain().focus().setFontFamily(e.target.value).run();
+            } else {
+              editor.chain().focus().unsetFontFamily().run();
+            }
+          }}
+        >
+          <option value="">Fonte Padrão</option>
+          <option value="Inter, sans-serif">Inter (Sans)</option>
+          <option value="'Lora', serif">Lora (Serif)</option>
+          <option value="'JetBrains Mono', monospace">JetBrains (Mono)</option>
+          <option value="cursive">Escrita</option>
+        </select>
+
+        <select 
+          className={`${styles.select} ${styles['select--size']}`}
+          value={currentSize}
+          onChange={(e) => {
+            if (e.target.value) {
+              editor.chain().focus().setFontSize(e.target.value).run();
+            } else {
+              editor.chain().focus().unsetFontSize().run();
+            }
+          }}
+        >
+          <option value="">Tam.</option>
+          <option value="12px">12px</option>
+          <option value="14px">14px</option>
+          <option value="16px">16px</option>
+          <option value="18px">18px</option>
+          <option value="20px">20px</option>
+          <option value="24px">24px</option>
+          <option value="30px">30px</option>
+          <option value="36px">36px</option>
+        </select>
+      </div>
+
+      <div className={styles.divider} />
+
       <div className={styles.group}>
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}

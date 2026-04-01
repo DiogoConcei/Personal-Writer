@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Nova Editor",
         "width": 1000,
-        "height": 700
+        "height": 700,
+        "dragDropEnabled": true
       }
     ],
     "security": {

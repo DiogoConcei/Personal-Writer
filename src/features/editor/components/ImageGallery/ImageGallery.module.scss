@@ -42,6 +42,73 @@
     align-items: center;
     gap: var(--spacing-md);
   }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+}
+
+.uploadBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-md);
+  height: 32px;
+  background-color: var(--color-accent);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  transition: all var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-accent-dim);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.folderBtn {
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background-color: var(--color-bg-elevated);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+}
+
+.emptyUploadBtn {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--color-accent-glow);
+  color: var(--color-accent);
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background-color: var(--color-accent);
+    color: white;
+    border-style: solid;
+  }
 }
 
 .title {

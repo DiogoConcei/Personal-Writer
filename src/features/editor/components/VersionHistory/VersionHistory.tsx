@@ -1,89 +1,88 @@
 import React, { useState, useEffect } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import { WikiLink } from '../../extensions/WikiLink/WikiLink';
-import { CustomImage } from '../../extensions/Image/Image';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
-import { listSnapshots, readSnapshot, SnapshotInfo, writeFile, createSnapshot, deleteSnapshot } from '@/tauri-bridge';
+import { 
+  listSnapshots, 
+  readSnapshot, 
+  SnapshotInfo, 
+  createSnapshot, 
+  deleteSnapshot,
+  toggleSnapshotLock 
+} from '@/tauri-bridge';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
 import styles from './VersionHistory.module.scss';
-import { History, RotateCcw, Clock, Eye, X, Trash2 } from 'lucide-react';
+import { 
+  History, 
+  RotateCcw, 
+  Clock, 
+  X, 
+  Trash2, 
+  Lock, 
+  Unlock, 
+  FileClock,
+  AlertTriangle
+} from 'lucide-react';
 
 interface VersionHistoryProps {
   onClose: () => void;
   editor: any;
 }
 
+/**
+ * NOTA DE DESENVOLVIMENTO: 
+ * O Preview foi removido temporariamente por problemas de renderização e escala.
+ * REVISAR O PREVIEW OBRIGATORIAMENTE na próxima iteração de UX.
+ */
 export default function VersionHistory({ onClose, editor }: VersionHistoryProps) {
   const { activeFile, rootPath } = useWorkspaceStore();
-  const { setMarkdownContent, markdownContent: currentContent } = useEditorStore();
+  const { setMarkdownContent, markdownContent: currentContent, setMetadata, loadContent } = useEditorStore();
+  
   const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
-  const [previewContent, setPreviewContent] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [snapshotToDelete, setSnapshotToDelete] = useState<string | null>(null);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<SnapshotInfo | null>(null);
+  
+  const [isConfirmingRestore, setIsConfirmingRestore] = useState(false);
+  const [snapshotToDelete, setSnapshotToDelete] = useState<SnapshotInfo | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Editor para Preview (Read Only)
-  const previewEditor = useEditor({
-    extensions: [
-      StarterKit,
-      WikiLink.configure({
-        onLinkClick: () => {}, // Desabilitado no preview
-      } as any),
-      CustomImage.configure({
-        inline: false,
-        allowBase64: true,
-      }),
-    ],
-    content: '',
-    editable: false,
-    editorProps: {
-      attributes: {
-        class: styles.prosePreview,
-      }
-    }
-  }, []);
+  const noteName = activeFile ? activeFile.split(/[\\/]/).pop()?.replace('.md', '') : '';
 
   useEffect(() => {
-    if (activeFile && rootPath) {
-      loadSnapshots();
-    }
+    if (activeFile && rootPath) loadSnapshots();
   }, [activeFile, rootPath]);
 
   const loadSnapshots = async () => {
     if (activeFile && rootPath) {
+      setLoading(true);
       const list = await listSnapshots(activeFile, rootPath);
       setSnapshots(list);
+      setLoading(false);
     }
   };
 
-  const handlePreview = async (id: string) => {
-    if (!activeFile || !rootPath || !previewEditor) return;
-    const content = await readSnapshot(activeFile, rootPath, id);
-    setPreviewContent(content);
-    setSelectedId(id);
-    previewEditor.commands.setContent(content);
-  };
-
-  const handleRestore = () => {
-    if (!activeFile || !previewContent) return;
-    setIsConfirming(true);
-  };
-
-  const handleDeleteSnapshot = (e: React.MouseEvent, id: string) => {
+  const handleToggleLock = async (e: React.MouseEvent, snapshot: SnapshotInfo) => {
     e.stopPropagation();
-    setSnapshotToDelete(id);
+    if (!activeFile || !rootPath) return;
+    
+    try {
+      await toggleSnapshotLock(activeFile, rootPath, snapshot.id);
+      await loadSnapshots();
+    } catch (error) {
+      console.error('Erro ao alternar trava:', error);
+    }
   };
 
-  const confirmDeleteSnapshot = async () => {
+  const handleDeleteClick = (e: React.MouseEvent, snapshot: SnapshotInfo) => {
+    e.stopPropagation();
+    if (snapshot.is_locked) return;
+    setSnapshotToDelete(snapshot);
+  };
+
+  const confirmDelete = async () => {
     if (!activeFile || !rootPath || !snapshotToDelete) return;
     try {
-      await deleteSnapshot(activeFile, rootPath, snapshotToDelete);
-      if (selectedId === snapshotToDelete) {
-        setPreviewContent(null);
-        setSelectedId(null);
-        if (previewEditor) previewEditor.commands.setContent('');
+      await deleteSnapshot(activeFile, rootPath, snapshotToDelete.id);
+      if (selectedSnapshot?.id === snapshotToDelete.id) {
+        setSelectedSnapshot(null);
       }
       await loadSnapshots();
     } catch (error) {
@@ -94,105 +93,152 @@ export default function VersionHistory({ onClose, editor }: VersionHistoryProps)
   };
 
   const confirmRestore = async () => {
-    if (!activeFile || !previewContent || !rootPath) return;
+    if (!activeFile || !rootPath || !selectedSnapshot) return;
 
     try {
-      // 1. Snapshot de Segurança: Salva o estado ATUAL antes de restaurar
+      // 1. Backup do estado atual
       await createSnapshot(activeFile, rootPath, currentContent || '');
-
-      // 2. Restaura a versão selecionada
-      await writeFile(activeFile, previewContent);
-      setMarkdownContent(previewContent);
-      editor?.commands.setContent(previewContent);
+      
+      // 2. Carrega o conteúdo do snapshot selecionado
+      const fullContent = await readSnapshot(activeFile, rootPath, selectedSnapshot.id);
+      
+      // 3. Persiste no arquivo real
+      const { writeFile } = await import('@/tauri-bridge');
+      await writeFile(activeFile, fullContent);
+      
+      // 4. Recarrega a store e o editor
+      await loadContent(activeFile);
+      if (editor) {
+        const { parseMarkdownMetadata } = await import('@/features/editor/store/editorStore');
+        const { markdown } = parseMarkdownMetadata(fullContent);
+        editor.commands.setContent(markdown);
+      }
+      
       onClose();
     } catch (error) {
-      console.error('Erro ao restaurar versão:', error);
+      console.error('Erro ao restaurar:', error);
     }
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString(undefined, {
-      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-    });
+    const date = new Date(timestamp * 1000);
+    return {
+      full: date.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      relative: getRelativeTime(date)
+    };
+  };
+
+  const getRelativeTime = (date: Date) => {
+    const diff = (new Date().getTime() - date.getTime()) / 1000;
+    if (diff < 60) return 'Agora mesmo';
+    if (diff < 3600) return `Há ${Math.floor(diff / 60)} min`;
+    if (diff < 86400) return `Há ${Math.floor(diff / 3600)} h`;
+    return `Há ${Math.floor(diff / 86400)} d`;
   };
 
   return (
     <div className={styles.overlay}>
-      <div className={styles.panel}>
+      <div className={`${styles.panel} ${styles['panel--simple']}`}>
         <header className={styles.header}>
           <div className={styles.title}>
-            <History size={18} />
-            <span>Histórico de Versões</span>
+            <div className={styles.iconBox}><History size={20} /></div>
+            <div className={styles.titleText}>
+              <h1>Histórico de Versões</h1>
+              <span>Selecione uma versão de <strong>{noteName}</strong> para restaurar</span>
+            </div>
           </div>
-          <button onClick={onClose} className={styles.btnClose}><X size={18} /></button>
+          <button onClick={onClose} className={styles.btnClose}><X size={20} /></button>
         </header>
 
         <div className={styles.body}>
-          <aside className={styles.list}>
-            {snapshots.length === 0 ? (
-              <p className={styles.empty}>Nenhuma versão salva ainda.</p>
-            ) : (
-              snapshots.map((s) => (
-                <div 
-                  key={s.id} 
-                  className={`${styles.item} ${selectedId === s.id ? styles['item--active'] : ''}`}
-                  onClick={() => handlePreview(s.id)}
-                >
-                  <Clock size={14} />
-                  <div className={styles.item__info}>
-                    <span className={styles.item__date}>{formatDate(s.timestamp)}</span>
-                    <span className={styles.item__id}>ID: {s.id}</span>
-                  </div>
-                  <button 
-                    className={styles.item__delete} 
-                    onClick={(e) => handleDeleteSnapshot(e, s.id)}
-                    title="Excluir Versão"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              ))
-            )}
-          </aside>
+          <div className={styles.listFull}>
+            <div className={styles.listHeader}>
+              <FileClock size={14} />
+              <span>{snapshots.length} versões disponíveis</span>
+            </div>
+            
+            <div className={styles.scrollArea}>
+              {loading ? (
+                <div className={styles.empty}>Carregando histórico...</div>
+              ) : snapshots.length === 0 ? (
+                <div className={styles.empty}>Nenhuma versão salva ainda.</div>
+              ) : (
+                snapshots.map((s) => {
+                  const date = formatDate(s.timestamp);
+                  const isSelected = selectedSnapshot?.id === s.id;
+                  return (
+                    <div 
+                      key={s.id} 
+                      className={`
+                        ${styles.item} 
+                        ${isSelected ? styles['item--active'] : ''}
+                        ${s.is_locked ? styles['item--locked'] : ''}
+                      `}
+                      onClick={() => setSelectedSnapshot(s)}
+                    >
+                      <div className={styles.item__main}>
+                        <div className={styles.item__indicator} />
+                        <div className={styles.item__info}>
+                          <span className={styles.item__date}>{date.full}</span>
+                          <span className={styles.item__relative}>{date.relative}</span>
+                        </div>
+                      </div>
 
-          <main className={styles.preview}>
-            {previewContent !== null ? (
-              <>
-                <div className={styles.preview__content}>
-                  <EditorContent editor={previewEditor} />
+                      <div className={styles.item__actions}>
+                        <button 
+                          className={`${styles.actionBtn} ${s.is_locked ? styles['actionBtn--locked'] : ''}`}
+                          onClick={(e) => handleToggleLock(e, s)}
+                          title={s.is_locked ? "Descongelar versão" : "Congelar versão (milestone)"}
+                        >
+                          {s.is_locked ? <Lock size={12} /> : <Unlock size={12} />}
+                        </button>
+                        {!s.is_locked && (
+                          <button 
+                            className={styles.actionBtn} 
+                            onClick={(e) => handleDeleteClick(e, s)}
+                            title="Excluir versão"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {selectedSnapshot && (
+              <div className={styles.simpleFooter}>
+                <div className={styles.warning}>
+                  <AlertTriangle size={14} />
+                  <span>O preview está desabilitado. Revise os dados antes de restaurar.</span>
                 </div>
-                <footer className={styles.preview__footer}>
-                  <button className={styles.btnRestore} onClick={handleRestore}>
-                    <RotateCcw size={14} /> Restaurar esta versão
-                  </button>
-                </footer>
-              </>
-            ) : (
-              <div className={styles.preview__empty}>
-                <Eye size={32} />
-                <p>Selecione uma versão para visualizar</p>
+                <button className={styles.btnRestore} onClick={() => setIsConfirmingRestore(true)}>
+                  <RotateCcw size={16} /> Restaurar versão selecionada
+                </button>
               </div>
             )}
-          </main>
+          </div>
         </div>
       </div>
 
       <ConfirmModal 
-        isOpen={isConfirming}
-        onClose={() => setIsConfirming(false)}
+        isOpen={isConfirmingRestore}
+        onClose={() => setIsConfirmingRestore(false)}
         onConfirm={confirmRestore}
         title="Restaurar Versão"
-        message="Deseja restaurar esta versão? Um snapshot do seu conteúdo atual será criado automaticamente para que você não perca seu trabalho."
-        confirmLabel="Restaurar Versão"
+        message={`Deseja restaurar a versão de ${selectedSnapshot ? formatDate(selectedSnapshot.timestamp).full : ''}? O conteúdo atual será substituído.`}
+        confirmLabel="Confirmar Restauração"
       />
 
       <ConfirmModal 
         isOpen={!!snapshotToDelete}
         onClose={() => setSnapshotToDelete(null)}
-        onConfirm={confirmDeleteSnapshot}
+        onConfirm={confirmDelete}
         title="Excluir Versão"
-        message="Tem certeza que deseja excluir permanentemente esta versão do histórico? Esta ação não pode ser desfeita."
-        confirmLabel="Excluir Versão"
+        message="Deseja excluir permanentemente esta versão do histórico?"
+        confirmLabel="Excluir"
         variant="danger"
       />
     </div>

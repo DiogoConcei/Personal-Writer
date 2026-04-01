@@ -12,6 +12,7 @@
   padding-right: var(--spacing-sm);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
   @include interactive-hover;
 
   &:hover {
@@ -35,6 +36,17 @@
       width: 3px;
       background-color: var(--color-accent);
     }
+  }
+
+  &--dragover {
+    background-color: var(--color-bg-hover) !important;
+    outline: 2px dashed var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  &--dragging-source {
+    opacity: 0.4;
+    background-color: var(--color-bg-hover);
   }
 
   &--disabled {

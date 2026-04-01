@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { readFile, writeFile } from '@/tauri-bridge';
+import { readFile, writeFile, createSnapshot } from '@/tauri-bridge';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type Typography = 'sans' | 'serif';
@@ -21,6 +21,7 @@ interface EditorState {
   markdownContent: string;
   saveStatus: SaveStatus;
   lastSavedAt: Date | null;
+  lastSnapshotAt: Date | null;
   typography: Typography;
   wordCount: number;
 
@@ -28,12 +29,12 @@ interface EditorState {
   loadContent: (path: string) => Promise<void>;
   setMarkdownContent: (content: string) => void;
   setMetadata: (metadata: Metadata) => void;
-  save: (path: string) => Promise<void>;
+  save: (path: string, workspaceRoot?: string) => Promise<void>;
   setTypography: (typography: Typography) => void;
   setWordCount: (count: number) => void;
 }
 
-const parseMarkdownMetadata = (content: string) => {
+export const parseMarkdownMetadata = (content: string) => {
   const yamlMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!yamlMatch) return { metadata: {}, markdown: content };
 
@@ -93,11 +94,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   markdownContent: '',
   saveStatus: 'idle',
   lastSavedAt: null,
+  lastSnapshotAt: null,
   typography: 'sans',
   wordCount: 0,
 
   loadContent: async (path: string) => {
-    set({ saveStatus: 'idle' });
+    set({ saveStatus: 'idle', lastSnapshotAt: null });
     try {
       const fullContent = await readFile(path);
       const { metadata, markdown } = parseMarkdownMetadata(fullContent);
@@ -121,17 +123,25 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ metadata });
   },
 
-  save: async (path: string) => {
-    const { metadata, markdownContent } = get();
+  save: async (path: string, workspaceRoot?: string) => {
+    const { metadata, markdownContent, lastSnapshotAt } = get();
     set({ saveStatus: 'saving' });
 
     try {
       const yaml = stringifyYAML(metadata);
       const fullContent = yaml ? `${yaml}\n\n${markdownContent}` : markdownContent;
       await writeFile(path, fullContent);
+      
+      const now = new Date();
+      // Snapshot automático a cada 10 min
+      if (workspaceRoot && (!lastSnapshotAt || now.getTime() - lastSnapshotAt.getTime() > 10 * 60 * 1000)) {
+        await createSnapshot(path, workspaceRoot, fullContent);
+        set({ lastSnapshotAt: now });
+      }
+
       set({ 
         saveStatus: 'saved', 
-        lastSavedAt: new Date()
+        lastSavedAt: now
       });
     } catch (error) {
       console.error('Erro ao salvar arquivo:', error);

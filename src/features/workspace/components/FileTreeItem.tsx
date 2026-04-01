@@ -48,6 +48,8 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
     rootPath
   } = useWorkspaceStore();
 
+  const { dragInfo, setDragInfo } = useUIStore();
+
   const [hasVirtualImages, setHasVirtualImages] = useState(node.hasVirtualImages || false);
   const [virtualImagesPath, setVirtualImagesPath] = useState<string | null>(node.virtualImagesPath || null);
 
@@ -59,6 +61,9 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const isSelectable = isEditableFile || isImageFile;
   const isActive = activeFile === node.path;
   const isPinned = pinnedNotes.includes(node.path);
+  const isDragTarget = dragInfo.targetPath === node.path && node.is_dir && !node.isVirtual;
+  const isDraggingThis = dragInfo.sourcePath === node.path;
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -89,9 +94,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
       });
       setChildren(sorted);
 
-      // Checar por imagens espelhadas em assets
       if (node.is_dir && node.name !== 'assets' && node.name !== '.snapshots' && !node.isVirtual && rootPath) {
-        // Normaliza caminhos para comparação segura no Windows
         const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
         const normRoot = normalize(rootPath);
         const normNode = normalize(node.path);
@@ -101,7 +104,6 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
           let relativePath = normNode.substring(normRoot.length);
           if (relativePath.startsWith('/')) relativePath = relativePath.substring(1);
           
-          // Monta o caminho real para a subpasta em assets
           const nativeRelativePath = relativePath.replace(/\//g, separator);
           const nodeAssetsPath = nativeRelativePath 
             ? `${rootPath}${separator}assets${separator}${nativeRelativePath}`
@@ -184,6 +186,20 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
     setTempName('');
   };
 
+  // --- Custom Drag Handlers (Mouse Events) ---
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Apenas clique esquerdo e não em botões/inputs
+    if (e.button !== 0 || (e.target as HTMLElement).closest('button, input, select') || node.isVirtual) return;
+
+    // Aguardar um pequeno movimento para iniciar o drag real (opcional, mas evita cliques acidentais)
+    setDragInfo({
+      sourcePath: node.path,
+      sourceName: node.name,
+      currentX: e.clientX,
+      currentY: e.clientY
+    });
+  };
+
   const getIcon = () => {
     if (node.is_dir) return isOpen ? ChevronDown : ChevronRight;
     if (isEditableFile) return FileText;
@@ -192,7 +208,6 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   };
 
   const Icon = getIcon();
-
   const FolderIcon = node.is_dir ? Folder : null;
 
   return (
@@ -219,9 +234,15 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
             ${isActive ? styles['item--active'] : ''}
             ${!node.is_dir && !isSelectable ? styles['item--disabled'] : ''}
             ${node.isVirtual ? styles['item--virtual'] : ''}
+            ${isDragTarget ? styles['item--dragover'] : ''}
+            ${isDraggingThis ? styles['item--dragging-source'] : ''}
           `}
           style={{ paddingLeft: `${depth * 12 + 12}px` }}
           onClick={handleToggle}
+          onMouseDown={handleMouseDown}
+          // Atributos para o document.elementFromPoint
+          data-path={node.path}
+          data-is-dir={node.is_dir && !node.isVirtual ? "true" : "false"}
         >
           <span className={styles.item__arrow}>
             <Icon size={14} />

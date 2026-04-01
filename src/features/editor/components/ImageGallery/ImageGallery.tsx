@@ -1,10 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { listDirectory, FileNode, deleteItem, renameItem } from '@/tauri-bridge';
-import { convertFileSrc } from '@tauri-apps/api/core';
+import { listDirectory, FileNode, deleteItem, renameItem, copyImageToAssets } from '@/tauri-bridge';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
 import DeleteModal from '@/features/workspace/components/DeleteModal';
 import styles from './ImageGallery.module.scss';
-import { Folder, Image as ImageIcon, X, ChevronLeft, Search, ArrowUpDown, Trash2, Move } from 'lucide-react';
+import { 
+  Folder, 
+  Image as ImageIcon, 
+  X, 
+  ChevronLeft, 
+  Search, 
+  ArrowUpDown, 
+  Trash2, 
+  Move,
+  Upload,
+  Plus
+} from 'lucide-react';
 
 interface ImageGalleryProps {
   onSelect: (src: string) => void;
@@ -21,6 +33,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
   const [imagesFirst, setImagesFirst] = useState(true);
   const [draggedItem, setDraggedItem] = useState<FileNode | null>(null);
   const [itemToDelete, setItemToDelete] = useState<FileNode | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const ASSETS_DIR = 'assets';
 
@@ -44,6 +57,58 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
       setItems([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!rootPath) return;
+    
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{
+          name: 'Imagens',
+          extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']
+        }]
+      });
+
+      if (selected && typeof selected === 'string') {
+        setIsUploading(true);
+        
+        // Calcular subpasta relativa a 'assets'
+        // currentPath: C:/notes/assets/sub
+        // rootPath: C:/notes
+        // assetsBase: C:/notes/assets
+        const separator = rootPath.includes('\\') ? '\\' : '/';
+        const assetsBase = `${rootPath}${separator}${ASSETS_DIR}`;
+        
+        let subFolder: string | undefined = undefined;
+        if (currentPath !== assetsBase && currentPath.startsWith(assetsBase)) {
+          subFolder = currentPath.replace(assetsBase, '').replace(/^[\\/]/, '');
+        }
+
+        await copyImageToAssets(selected, rootPath, subFolder);
+        await loadFolder(currentPath);
+      }
+    } catch (error) {
+      console.error('Erro no upload:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCreateFolder = async () => {
+    const name = prompt('Nome da nova pasta:');
+    if (!name || !name.trim()) return;
+
+    const separator = currentPath.includes('\\') ? '\\' : '/';
+    const newPath = `${currentPath}${separator}${name.trim()}`;
+
+    try {
+      await invoke('create_directory', { path: newPath });
+      await loadFolder(currentPath);
+    } catch (error) {
+      console.error('Erro ao criar pasta:', error);
     }
   };
 
@@ -148,9 +213,18 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
               <span>{getDisplayPath()}</span>
             </div>
           </div>
-          <button className={styles.closeBtn} onClick={onClose}>
-            <X size={20} />
-          </button>
+          <div className={styles.header__actions}>
+            <button className={styles.uploadBtn} onClick={handleUpload} disabled={isUploading}>
+              <Upload size={16} />
+              <span>{isUploading ? 'Enviando...' : 'Upload'}</span>
+            </button>
+            <button className={styles.folderBtn} onClick={handleCreateFolder} title="Nova Pasta">
+              <Plus size={16} />
+            </button>
+            <button className={styles.closeBtn} onClick={onClose}>
+              <X size={20} />
+            </button>
+          </div>
         </header>
 
         <div className={styles.searchBar}>
@@ -179,6 +253,9 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
             <div className={styles.empty}>
               <ImageIcon size={48} />
               <p>Nenhuma imagem encontrada nesta pasta.</p>
+              <button className={styles.emptyUploadBtn} onClick={handleUpload}>
+                Fazer Upload da Primeira Imagem
+              </button>
             </div>
           ) : (
             <div className={styles.grid}>

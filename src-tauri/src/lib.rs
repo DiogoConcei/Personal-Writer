@@ -19,7 +19,8 @@ pub fn run() {
 
             commands::fs::list_snapshots,
             commands::fs::read_snapshot,
-            commands::fs::delete_snapshot
+            commands::fs::delete_snapshot,
+            commands::fs::toggle_snapshot_lock
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

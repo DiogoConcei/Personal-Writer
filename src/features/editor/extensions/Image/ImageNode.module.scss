@@ -6,7 +6,7 @@
   position: relative;
   max-width: 100%;
   user-select: none;
-  line-height: 0; // Evita espaçamentos extras de linha
+  line-height: 0;
 
   // Layouts de envolvimento (Wrap)
   &--layout-wrap-left {
@@ -23,9 +23,23 @@
     clear: right;
   }
 
+  // Layout Centralizado
+  &--layout-center {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 1.5rem 0;
+    float: none;
+    clear: both;
+
+    .imageContainer {
+      margin: 0 auto;
+    }
+  }
+
   // No modo "Na linha", a imagem flui como texto
   &--layout-inline {
-    display: inline; // Permite fluxo real
+    display: inline;
     margin: 0 4px;
     float: none;
     vertical-align: baseline;
@@ -36,7 +50,7 @@
     }
 
     img {
-      display: inline-block; // Não quebra linha
+      display: inline-block;
       vertical-align: middle;
     }
   }
@@ -53,7 +67,7 @@
 .imageContainer {
   position: relative;
   display: inline-block;
-  line-height: 0; // Remove espaços fantasmas abaixo da img
+  line-height: 0;
   max-width: 100%;
 
   img {

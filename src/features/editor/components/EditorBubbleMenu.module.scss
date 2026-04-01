@@ -46,3 +46,28 @@
   background-color: var(--color-border);
   margin: 0 4px;
 }
+
+.select {
+  height: 28px;
+  background-color: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  padding: 0 4px;
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-accent);
+  }
+
+  &--font {
+    width: 90px;
+  }
+
+  &--size {
+    width: 55px;
+  }
+}

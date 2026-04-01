@@ -4,49 +4,33 @@ Este documento registra erros que já aconteceram durante o desenvolvimento, sua
 
 ---
 
-## KI-010 — Importação de Menus no TipTap 3
+## KI-014 — Bloqueio de DND Nativo na WebView2
 
-**Sintoma:** `Uncaught SyntaxError: The requested module ... does not provide an export named 'BubbleMenu'`.
+**Sintoma:** O ícone do mouse vira um sinal de "proibido" (block) ao tentar arrastar itens, e os eventos de `dragover` não disparam.
 
-**Causa:** No TipTap 3, o componente React `BubbleMenu` foi movido para um ponto de entrada específico para otimização.
+**Causa:** No Windows, o componente WebView2 do Tauri possui um bug onde elementos com a propriedade CSS `user-select: none` bloqueiam a propagação da API nativa de Drag and Drop.
 
-**Solução:** 
-1. Importar de `@tiptap/react/menus` em vez de `@tiptap/react`.
-2. Instalar a dependência `@floating-ui/dom`.
-3. Renomear a prop `tippyOptions` para `options` no componente.
+**Solução:** Implementar Drag-and-Drop customizado usando eventos de Mouse (`onMouseDown`, `onMouseMove`, `onMouseUp`) e `document.elementFromPoint` para detectar destinos.
 
 ---
 
-## KI-011 — Quebra de Floats em Contêineres Flex
+## KI-015 — Erros de Importação de Extensões TipTap
 
-**Sintoma:** O texto pula para baixo da imagem em vez de envolver a lateral (wrap), mesmo com `float: left/right`.
+**Sintoma:** `Uncaught SyntaxError: ... does not provide an export named 'default'`.
 
-**Causa:** O contêiner pai do editor estava usando `display: flex`. Elementos flutuantes (`float`) não funcionam corretamente dentro de contextos flexbox.
+**Causa:** Algumas extensões oficiais do TipTap (como TextStyle e FontFamily) não possuem exports padrão, exigindo imports nomeados.
 
-**Solução:** Alterar o contêiner do editor (`.container`) para `display: block`.
-
----
-
-## KI-012 — Seleção Azul Esticada em Imagens Flutuantes
-
-**Sintoma:** Ao selecionar texto ao lado de uma imagem, o fundo azul ocupa toda a altura da imagem, criando um bloco visual estranho.
-
-**Causa:** A imagem com `display: inline-block` estica a `line-height` da linha atual do parágrafo para corresponder à sua altura.
-
-**Solução:** Forçar `display: block` no wrapper da imagem quando ela estiver usando os layouts `wrap-left` ou `wrap-right`. Elementos em bloco com `float` não afetam a altura da linha do texto adjacente.
+**Solução:** Utilizar sempre imports nomeados para extensões: `import { TextStyle } from '@tiptap/extension-text-style'`.
 
 ---
 
-## KI-013 — Virtualização de Pastas no Windows (Case Sensitivity)
+## KI-016 — Bubbling de Eventos em Pastas Hierárquicas
 
-**Sintoma:** A pasta virtual "Imagens" não aparece em certas subpastas.
+**Sintoma:** Ao arrastar um item sobre uma subpasta, o destaque visual pisca ou o evento de drop cai na pasta pai.
 
-**Causa:** Comparações de caminho no Windows falham se houver divergência entre `\` e `/` ou entre maiúsculas e minúsculas no nome da pasta raiz.
+**Causa:** Propagação de eventos (`bubbling`) onde o pai também tenta processar o dragover.
 
-**Solução:** 
-1. Normalizar todos os caminhos para minúsculo (`.toLowerCase()`).
-2. Substituir todas as barras invertidas por barras normais (`.replace(/\\/g, '/')`) antes da comparação de prefixo.
-3. Remover barras finais (`/`) de ambos os caminhos para garantir um "match" exato da string.
+**Solução:** Usar `e.stopPropagation()` rigorosamente nos handlers de pastas e garantir que itens que não aceitam drop (arquivos) permitam o bubble para que o contêiner raiz possa processar a movimentação.
 
 ---
 
@@ -57,3 +41,4 @@ Este documento registra erros que já aconteceram durante o desenvolvimento, sua
 | **Colar/Soltar** | Sempre converter para Bytes e salvar via comando Rust `save_image_from_bytes`. |
 | **Organização** | Usar subpastas baseadas no local da nota para manter o workspace limpo. |
 | **Caminho Interno** | Salvar no Markdown como `./assets/...` para garantir portabilidade entre workspaces. |
+| **Preview Histórico** | Temporariamente desabilitado por bugs de escala. **REVISAR OBRIGATORIAMENTE**. |

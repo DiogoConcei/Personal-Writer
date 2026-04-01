@@ -18,9 +18,63 @@ interface WorkspaceState {
   createDirectory: (name: string, parentPath?: string) => Promise<void>;
   deleteItem: (path: string) => Promise<void>;
   renameItem: (oldPath: string, newName: string) => Promise<void>;
+  moveItem: (sourcePath: string, targetDirPath: string) => Promise<void>;
 }
 
 const STORAGE_KEY = 'hybrid-editor-root-path';
+
+// Função auxiliar para mover nó na árvore (Otimista)
+function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: string, newPath: string): FileNode[] {
+  let draggedNode: FileNode | null = null;
+
+  // 1. Remover o nó da origem
+  const removeNode = (list: FileNode[]): FileNode[] => {
+    return list.filter(node => {
+      if (node.path === sourcePath) {
+        draggedNode = { ...node, path: newPath }; // Guardamos o nó com o novo path
+        return false;
+      }
+      if (node.children) {
+        node.children = removeNode(node.children);
+      }
+      return true;
+    });
+  };
+
+  const newNodes = removeNode([...nodes]);
+
+  if (!draggedNode) return nodes;
+
+  // 2. Inserir o nó no destino
+  const insertNode = (list: FileNode[]): FileNode[] => {
+    // Se o destino for a raiz do workspace
+    const { rootPath } = useWorkspaceStore.getState();
+    const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '');
+    
+    if (normalize(targetDirPath) === normalize(rootPath || '')) {
+      return [...list, draggedNode!].sort((a, b) => {
+        if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+        return a.is_dir ? -1 : 1;
+      });
+    }
+
+    return list.map(node => {
+      if (node.path === targetDirPath) {
+        const newChildren = [...(node.children || []), draggedNode!].sort((a, b) => {
+          if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+          return a.is_dir ? -1 : 1;
+        });
+        return { ...node, children: newChildren };
+      }
+      if (node.children) {
+        return { ...node, children: insertNode(node.children) };
+      }
+      return node;
+    });
+  };
+
+  return insertNode(newNodes);
+}
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   rootPath: localStorage.getItem(STORAGE_KEY),
@@ -58,7 +112,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const { rootPath } = get();
     if (!rootPath) return;
     
-    set({ isLoading: true });
+    // Na atualização silenciosa (refreshFiles), não ativamos isLoading para evitar flicker
     try {
       const { listDirectory } = await import('@/tauri-bridge');
       const files = await listDirectory(rootPath);
@@ -67,10 +121,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
         return a.is_dir ? -1 : 1;
       });
-      set({ files: sortedFiles, isLoading: false });
+      set({ files: sortedFiles });
     } catch (error) {
       console.error('Erro ao atualizar arquivos:', error);
-      set({ isLoading: false });
     }
   },
 
@@ -159,6 +212,35 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       await refreshFiles();
     } catch (error) {
       console.error('Erro ao renomear item:', error);
+    }
+  },
+
+  moveItem: async (sourcePath: string, targetDirPath: string) => {
+    const { files, activeFile, setActiveFile, refreshFiles } = get();
+    const previousFiles = JSON.parse(JSON.stringify(files)); // Deep clone para backup
+
+    try {
+      const separator = sourcePath.includes('\\') ? '\\' : '/';
+      const fileName = sourcePath.substring(sourcePath.lastIndexOf(separator) + 1);
+      const newPath = `${targetDirPath}${separator}${fileName}`;
+
+      if (sourcePath === newPath) return;
+
+      // 1. Atualização Otimista
+      const updatedFiles = moveNodeInTree(files, sourcePath, targetDirPath, newPath);
+      set({ files: updatedFiles });
+
+      // 2. Execução real
+      const { renameItem } = await import('@/tauri-bridge');
+      await renameItem(sourcePath, newPath);
+      
+      if (activeFile === sourcePath) setActiveFile(newPath);
+      
+      // 3. Sincronização final silenciosa
+      await refreshFiles();
+    } catch (error) {
+      console.error('Erro ao mover item (revertendo):', error);
+      set({ files: previousFiles });
     }
   },
 }));

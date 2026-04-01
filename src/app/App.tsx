@@ -101,7 +101,8 @@ export default function App() {
         <div className={styles.app__breadcrumbList}>
           <button onClick={() => handleBreadcrumbClick(null)}>Dashboard</button>
           {parts.map((part, index) => {
-            const currentPath = rootPath + (rootPath.includes('\\') ? '\\' : '/') + parts.slice(0, index + 1).join(rootPath.includes('\\') ? '\\' : '/');
+            const separator = rootPath.includes('\\') ? '\\' : '/';
+            const currentPath = rootPath + separator + parts.slice(0, index + 1).join(separator);
             return (
               <React.Fragment key={currentPath}>
                 <span className={styles.app__breadcrumbSeparator}>/</span>
@@ -120,9 +121,11 @@ export default function App() {
 
   return (
     <div className={`${styles.app} ${!isSidebarVisible ? styles['app--sidebar-hidden'] : ''}`}>
-      <aside className={styles.app__sidebar}>
-        <FileTree />
-      </aside>
+      {isSidebarVisible && (
+        <aside className={styles.app__sidebar}>
+          <FileTree />
+        </aside>
+      )}
       
       <main className={styles.app__main}>
         <header className={styles.app__header}>

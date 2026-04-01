@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import styles from './ImageNode.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { Maximize2, AlignLeft, AlignRight, StretchVertical, ImageOff } from 'lucide-react';
+import { Maximize2, AlignLeft, AlignRight, AlignCenter, StretchVertical, ImageOff } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 export default function ImageNode({ node, updateAttributes, selected }: NodeViewProps) {
@@ -16,7 +16,8 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
   let src = node.attrs.src;
   if (src.startsWith('./')) {
     const relativePart = src.replace('./', '');
-    const fullPath = `${rootPath}\\${relativePart.replace(/\//g, '\\')}`;
+    const separator = rootPath?.includes('\\') ? '\\' : '/';
+    const fullPath = `${rootPath}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
     src = convertFileSrc(fullPath);
   }
 
@@ -119,14 +120,21 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
             <button 
               onClick={() => handleAction('layout', 'wrap-left')} 
               className={node.attrs.layout === 'wrap-left' ? styles.active : ''}
-              title="Texto à direita"
+              title="Texto à direita (Alinhar à Esquerda)"
             >
               <AlignLeft size={14} />
             </button>
             <button 
+              onClick={() => handleAction('layout', 'center')} 
+              className={node.attrs.layout === 'center' ? styles.active : ''}
+              title="Centralizado"
+            >
+              <AlignCenter size={14} />
+            </button>
+            <button 
               onClick={() => handleAction('layout', 'wrap-right')} 
               className={node.attrs.layout === 'wrap-right' ? styles.active : ''}
-              title="Texto à esquerda"
+              title="Texto à esquerda (Alinhar à Direita)"
             >
               <AlignRight size={14} />
             </button>

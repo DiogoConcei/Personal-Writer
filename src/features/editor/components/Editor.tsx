@@ -4,6 +4,9 @@ import StarterKit from '@tiptap/starter-kit';
 import BubbleMenu from '@tiptap/extension-bubble-menu';
 import { WikiLink } from '../extensions/WikiLink/WikiLink';
 import { CustomImage } from '../extensions/Image/Image';
+import { FontSize } from '../extensions/FontSize';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { FontFamily } from '@tiptap/extension-font-family';
 import { MetadataHeader } from './MetadataHeader';
 import { useEditorStore } from '../store/editorStore';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
@@ -42,6 +45,9 @@ export default function Editor() {
     extensions: [
       StarterKit,
       BubbleMenu,
+      TextStyle,
+      FontFamily,
+      FontSize,
       WikiLink.configure({
         onLinkClick: (noteName: string) => {
           const findFile = (nodeList: any[]): any => {
@@ -70,7 +76,7 @@ export default function Editor() {
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (activeFile) {
-        saveTimeoutRef.current = setTimeout(() => save(activeFile), 1500);
+        saveTimeoutRef.current = setTimeout(() => save(activeFile, rootPath || undefined), 1500);
       }
     },
     editorProps: {
@@ -163,31 +169,11 @@ export default function Editor() {
     if (templateToApply && editor) {
       editor.commands.clearContent();
       
-      // Usar a lógica de parse do editorStore (que agora é exportada ou acessível)
-      // Como a função parseMarkdownMetadata não é exportada, vamos extrair manualmente aqui
-      // ou melhor, apenas limpar o conteúdo e deixar o save cuidar do resto se atualizarmos a store
+      const { metadata, markdown } = (useEditorStore.getState() as any).parseMarkdownMetadata ? (useEditorStore.getState() as any).parseMarkdownMetadata(templateToApply) : { metadata: {}, markdown: templateToApply };
       
-      const yamlMatch = templateToApply.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-      let finalMarkdown = templateToApply;
+      setMetadata(metadata);
+      editor.commands.setContent(markdown);
       
-      if (yamlMatch) {
-        // Se houver YAML no template, vamos tentar extrair os dados básicos para atualizar a UI
-        const yamlStr = yamlMatch[1];
-        const newMeta: any = { fields: {} };
-        
-        const typeMatch = yamlStr.match(/type:\s*["']?([^"'\r\n]+)["']?/i);
-        const iconMatch = yamlStr.match(/icon:\s*["']?([^"'\r\n]+)["']?/i);
-        if (typeMatch) newMeta.type = typeMatch[1].trim();
-        if (iconMatch) newMeta.icon = iconMatch[1].trim();
-        
-        setMetadata(newMeta);
-        finalMarkdown = templateToApply.replace(yamlMatch[0], '').trim();
-      } else {
-        // Se não houver YAML no template, limpamos o metadata atual (opcional, dependendo do desejado)
-        // setMetadata({}); 
-      }
-
-      editor.commands.setContent(finalMarkdown);
       const newHtml = editor.getHTML();
       setMarkdownContent(newHtml);
       

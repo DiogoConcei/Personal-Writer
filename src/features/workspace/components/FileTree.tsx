@@ -1,17 +1,84 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
+import { useUIStore } from '@/store/uiStore';
 import FileTreeItem from './FileTreeItem';
 import styles from './FileTree.module.scss';
-import { FolderOpen, RefreshCw, FilePlus, FolderPlus } from 'lucide-react';
+import { FolderOpen, RefreshCw, FilePlus, FolderPlus, FileText, Folder as FolderIcon } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 
 import { DEFAULT_TEMPLATES } from '@/features/templates/data/defaultTemplates';
 
 export default function FileTree() {
-  const { files, rootPath, setRootPath, refreshFiles, isLoading, createFile, createDirectory } = useWorkspaceStore();
+  const { 
+    files, 
+    rootPath, 
+    setRootPath, 
+    refreshFiles, 
+    isLoading, 
+    createFile, 
+    createDirectory,
+    moveItem 
+  } = useWorkspaceStore();
+  
+  const { dragInfo, setDragInfo, resetDrag } = useUIStore();
   const [showInput, setShowInput] = useState<'file' | 'dir' | null>(null);
   const [newName, setNewName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
+
+  // --- Custom Global Drag Logic ---
+  useEffect(() => {
+    if (!dragInfo.sourcePath) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Identificar o que está sob o mouse
+      const element = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
+      const targetItem = element?.closest('[data-path]') as HTMLElement;
+      
+      let targetPath: string | null = null;
+      
+      if (targetItem) {
+        const isDir = targetItem.getAttribute('data-is-dir') === "true";
+        if (isDir) {
+          targetPath = targetItem.getAttribute('data-path');
+        }
+      }
+
+      setDragInfo({
+        currentX: e.clientX,
+        currentY: e.clientY,
+        targetPath: targetPath
+      });
+    };
+
+    const handleMouseUp = async (e: MouseEvent) => {
+      const { sourcePath, targetPath } = useUIStore.getState().dragInfo;
+      
+      if (sourcePath) {
+        // Tenta encontrar a raiz se soltar no container mas não em um item específico
+        const treeElement = document.querySelector(`.${styles.tree}`);
+        const rect = treeElement?.getBoundingClientRect();
+        const isInTree = rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+        const finalTarget = targetPath || (isInTree ? rootPath : null);
+
+        if (sourcePath && finalTarget && sourcePath !== finalTarget) {
+          // Validar se não está movendo pai para filho
+          if (!finalTarget.startsWith(sourcePath)) {
+            await moveItem(sourcePath, finalTarget);
+          }
+        }
+      }
+      resetDrag();
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragInfo.sourcePath, rootPath, moveItem, resetDrag, setDragInfo]);
 
   const handleOpenWorkspace = async () => {
     const selected = await open({
@@ -41,12 +108,6 @@ export default function FileTree() {
     setShowInput(null);
   };
 
-  const cancelInput = () => {
-    setNewName('');
-    setSelectedTemplate('');
-    setShowInput(null);
-  };
-
   if (!rootPath) {
     return (
       <div className={styles.empty}>
@@ -64,28 +125,9 @@ export default function FileTree() {
       <header className={styles.tree__header}>
         <span className={styles.tree__title}>Arquivos</span>
         <div className={styles.tree__actions}>
-          <button 
-            className={styles.tree__action} 
-            onClick={() => setShowInput('file')}
-            title="Nova Nota (.md)"
-          >
-            <FilePlus size={14} />
-          </button>
-          <button 
-            className={styles.tree__action} 
-            onClick={() => setShowInput('dir')}
-            title="Nova Pasta"
-          >
-            <FolderPlus size={14} />
-          </button>
-          <button 
-            className={styles.tree__action} 
-            onClick={refreshFiles}
-            disabled={isLoading}
-            title="Atualizar"
-          >
-            <RefreshCw size={14} className={isLoading ? styles.spinning : ''} />
-          </button>
+          <button className={styles.tree__action} onClick={() => setShowInput('file')} title="Nova Nota"><FilePlus size={14} /></button>
+          <button className={styles.tree__action} onClick={() => setShowInput('dir')} title="Nova Pasta"><FolderPlus size={14} /></button>
+          <button className={styles.tree__action} onClick={refreshFiles} disabled={isLoading} title="Atualizar"><RefreshCw size={14} className={isLoading ? styles.spinning : ''} /></button>
         </div>
       </header>
       
@@ -93,33 +135,9 @@ export default function FileTree() {
         {showInput && (
           <form className={styles.tree__inputForm} onSubmit={handleSubmit}>
             <div className={styles.tree__inputWrapper}>
-              <input
-                autoFocus
-                className={styles.tree__input}
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Escape' && cancelInput()}
-                placeholder={showInput === 'file' ? 'Nome da nota...' : 'Nome da pasta...'}
-              />
-              
-              {showInput === 'file' && (
-                <div className={styles.tree__selectWrapper}>
-                  <label>Modelo (Template)</label>
-                  <select 
-                    className={styles.tree__select}
-                    value={selectedTemplate}
-                    onChange={(e) => setSelectedTemplate(e.target.value)}
-                  >
-                    <option value="">Nota em Branco</option>
-                    {DEFAULT_TEMPLATES.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
+              <input autoFocus className={styles.tree__input} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome..." />
               <div className={styles.tree__inputActions}>
-                <button type="button" className={styles.tree__btnCancel} onClick={cancelInput}>Cancelar</button>
+                <button type="button" className={styles.tree__btnCancel} onClick={() => setShowInput(null)}>Cancelar</button>
                 <button type="submit" className={styles.tree__btnConfirm}>Criar</button>
               </div>
             </div>
@@ -130,6 +148,20 @@ export default function FileTree() {
           <FileTreeItem key={file.path} node={file} depth={0} />
         ))}
       </div>
+
+      {/* Ghost Element (Elemento que segue o mouse) */}
+      {dragInfo.sourcePath && (
+        <div 
+          className={styles.ghost}
+          style={{ 
+            left: dragInfo.currentX + 10, 
+            top: dragInfo.currentY + 10 
+          }}
+        >
+          {dragInfo.sourceName?.endsWith('.md') ? <FileText size={14} /> : <FolderIcon size={14} />}
+          <span>{dragInfo.sourceName?.replace(/\.md$/, '')}</span>
+        </div>
+      )}
     </div>
   );
 }

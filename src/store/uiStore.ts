@@ -2,6 +2,14 @@ import { create } from 'zustand';
 
 export type ActivePanel = 'editor' | 'dashboard';
 
+export interface DragInfo {
+  sourcePath: string | null;
+  sourceName: string | null;
+  currentX: number;
+  currentY: number;
+  targetPath: string | null;
+}
+
 interface UIState {
   activePanel: ActivePanel;
   isSidebarVisible: boolean;
@@ -9,13 +17,26 @@ interface UIState {
   isFocusMode: boolean;
   isCommandPaletteOpen: boolean;
   
+  // Custom Drag State
+  dragInfo: DragInfo;
+  
   // Actions
   setActivePanel: (panel: ActivePanel) => void;
   toggleSidebar: () => void;
   toggleRightSidebar: () => void;
   setFocusMode: (enabled: boolean) => void;
   setCommandPaletteOpen: (isOpen: boolean) => void;
+  setDragInfo: (info: Partial<DragInfo>) => void;
+  resetDrag: () => void;
 }
+
+const INITIAL_DRAG: DragInfo = {
+  sourcePath: null,
+  sourceName: null,
+  currentX: 0,
+  currentY: 0,
+  targetPath: null,
+};
 
 export const useUIStore = create<UIState>((set) => ({
   activePanel: 'editor',
@@ -23,10 +44,17 @@ export const useUIStore = create<UIState>((set) => ({
   isRightSidebarVisible: false,
   isFocusMode: false,
   isCommandPaletteOpen: false,
+  dragInfo: INITIAL_DRAG,
 
   setActivePanel: (panel) => set({ activePanel: panel }),
   toggleSidebar: () => set((state) => ({ isSidebarVisible: !state.isSidebarVisible })),
   toggleRightSidebar: () => set((state) => ({ isRightSidebarVisible: !state.isRightSidebarVisible })),
   setFocusMode: (enabled) => set({ isFocusMode: enabled }),
   setCommandPaletteOpen: (isOpen) => set({ isCommandPaletteOpen: isOpen }),
+  
+  setDragInfo: (info) => set((state) => ({ 
+    dragInfo: { ...state.dragInfo, ...info } 
+  })),
+  
+  resetDrag: () => set({ dragInfo: INITIAL_DRAG }),
 }));

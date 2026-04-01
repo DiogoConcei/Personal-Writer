@@ -9,9 +9,9 @@
 
 .hero {
   display: flex;
-  align-items: flex-start; // Subir o texto para o topo
+  align-items: flex-start;
   gap: 4rem;
-  margin-bottom: 5rem;
+  margin-bottom: 2rem;
   position: relative;
 
   &::before {
@@ -70,12 +70,14 @@
   gap: 0.75rem;
   z-index: 1;
   flex: 1;
+  height: 310px; // Aumentado para ganhar +1 linha (280 -> 310)
 }
 
 .badgeRow {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .typeTag {
@@ -110,27 +112,26 @@
   line-height: 0.9;
   letter-spacing: -0.05em;
   font-family: var(--font-serif);
+  flex-shrink: 0;
 }
 
 .summaryInput {
   background: transparent;
   border: none;
-  padding: 0.5rem 0;
+  padding: 0.1rem 0;
   color: var(--color-text-secondary);
   font-size: 1.25rem;
   font-style: italic;
   width: 100%;
-  max-width: 800px;
   outline: none;
   transition: color 0.2s;
-  margin-top: 1rem;
+  margin-top: 0.25rem;
   resize: none;
   display: block;
   font-family: inherit;
   line-height: 1.5;
-  max-height: 120px; // Limite de aproximadamente 4-5 linhas
-  overflow-y: auto; // Permite rolagem interna se o texto for gigante
-  @include scrollbar; // Usa o mixin de scrollbar do projeto
+  flex: 1;
+  overflow: hidden; // Remove scroll vertical conforme solicitado
 
   &:focus {
     color: var(--color-text-primary);
@@ -161,7 +162,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); // Equilibrado
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 2.5rem;
 }
 
@@ -178,7 +179,7 @@
 }
 
 .label {
-  font-size: 0.65rem; // Legível
+  font-size: 0.65rem;
   font-weight: 800;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -198,7 +199,7 @@
     cursor: pointer;
     padding: 2px;
     border-radius: 4px;
-    &:hover { color: var(--color-text-primary); background: var(--color-bg-tertiary); }
+    &:hover { color: var(--color-text-primary); background: var(--color-bg-hover); }
   }
 }
 
@@ -213,7 +214,7 @@
     border: none;
     border-bottom: 2px solid var(--color-border-strong);
     color: var(--color-text-primary);
-    font-size: 1rem; // Padrão confortável
+    font-size: 1rem;
     font-weight: 600;
     padding: 0.5rem 0;
     outline: none;
@@ -244,10 +245,9 @@
     background: var(--color-bg-hover);
   }
 
-  span { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; } // Fonte maior conforme pedido
+  span { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
 }
 
-// Modais e auxiliares
 .modalActions { margin-bottom: 1.5rem; }
 .secondaryBtn {
   background: var(--color-bg-surface);

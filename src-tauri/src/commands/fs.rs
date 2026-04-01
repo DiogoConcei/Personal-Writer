@@ -123,10 +123,11 @@ pub async fn save_image_from_bytes(file_name: String, bytes: Vec<u8>, workspace_
     Ok(format!("{}{}", relative_prefix, file_name))
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SnapshotInfo {
     pub id: String,
     pub timestamp: u64,
+    pub is_locked: bool,
 }
 
 #[tauri::command]
@@ -163,10 +164,15 @@ pub async fn list_snapshots(path: String, workspace_root: String) -> Result<Vec<
     for entry in entries {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
-        let id = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
+        let file_name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        
+        let is_locked = file_name.contains(".locked.");
+        let id = file_name.split('.').next().unwrap_or_default().to_string();
         let timestamp = id.parse::<u64>().unwrap_or_default();
 
-        snapshots.push(SnapshotInfo { id, timestamp });
+        if timestamp > 0 {
+            snapshots.push(SnapshotInfo { id, timestamp, is_locked });
+        }
     }
 
     snapshots.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
@@ -176,24 +182,52 @@ pub async fn list_snapshots(path: String, workspace_root: String) -> Result<Vec<
 #[tauri::command]
 pub async fn read_snapshot(path: String, workspace_root: String, snapshot_id: String) -> Result<String, String> {
     let file_name = Path::new(&path).file_name().ok_or("Invalid path")?.to_string_lossy();
-    let snapshot_path = Path::new(&workspace_root)
-        .join(".snapshots")
-        .join(&*file_name)
-        .join(format!("{}.txt", snapshot_id));
+    let dir = Path::new(&workspace_root).join(".snapshots").join(&*file_name);
+    
+    // Tentar ler normal ou locked
+    let normal_path = dir.join(format!("{}.txt", snapshot_id));
+    let locked_path = dir.join(format!("{}.locked.txt", snapshot_id));
 
-    fs::read_to_string(snapshot_path).map_err(|e| e.to_string())
+    if normal_path.exists() {
+        fs::read_to_string(normal_path).map_err(|e| e.to_string())
+    } else {
+        fs::read_to_string(locked_path).map_err(|e| e.to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn toggle_snapshot_lock(path: String, workspace_root: String, snapshot_id: String) -> Result<bool, String> {
+    let file_name = Path::new(&path).file_name().ok_or("Invalid path")?.to_string_lossy();
+    let dir = Path::new(&workspace_root).join(".snapshots").join(&*file_name);
+    
+    let normal_path = dir.join(format!("{}.txt", snapshot_id));
+    let locked_path = dir.join(format!("{}.locked.txt", snapshot_id));
+
+    if normal_path.exists() {
+        fs::rename(normal_path, locked_path).map_err(|e| e.to_string())?;
+        Ok(true) // Agora está trancado
+    } else if locked_path.exists() {
+        fs::rename(locked_path, normal_path).map_err(|e| e.to_string())?;
+        Ok(false) // Agora está destrancado
+    } else {
+        Err("Snapshot not found".to_string())
+    }
 }
 
 #[tauri::command]
 pub async fn delete_snapshot(path: String, workspace_root: String, snapshot_id: String) -> Result<(), String> {
     let file_name = Path::new(&path).file_name().ok_or("Invalid path")?.to_string_lossy();
-    let snapshot_path = Path::new(&workspace_root)
-        .join(".snapshots")
-        .join(&*file_name)
-        .join(format!("{}.txt", snapshot_id));
+    let dir = Path::new(&workspace_root).join(".snapshots").join(&*file_name);
+    
+    let normal_path = dir.join(format!("{}.txt", snapshot_id));
+    let locked_path = dir.join(format!("{}.locked.txt", snapshot_id));
 
-    if snapshot_path.exists() {
-        fs::remove_file(snapshot_path).map_err(|e| e.to_string())
+    if locked_path.exists() {
+        return Err("Cannot delete a locked snapshot. Unlock it first.".to_string());
+    }
+
+    if normal_path.exists() {
+        fs::remove_file(normal_path).map_err(|e| e.to_string())
     } else {
         Err("Snapshot not found".to_string())
     }

@@ -47,6 +47,7 @@ export async function saveImageFromBytes(fileName: string, bytes: number[], work
 export interface SnapshotInfo {
   id: string;
   timestamp: number;
+  is_locked: boolean;
 }
 
 export async function createSnapshot(path: string, workspaceRoot: string, content: string): Promise<void> {
@@ -63,4 +64,8 @@ export async function readSnapshot(path: string, workspaceRoot: string, snapshot
 
 export async function deleteSnapshot(path: string, workspaceRoot: string, snapshotId: string): Promise<void> {
   return invoke<void>('delete_snapshot', { path, workspaceRoot, snapshotId });
+}
+
+export async function toggleSnapshotLock(path: string, workspaceRoot: string, snapshotId: string): Promise<boolean> {
+  return invoke<boolean>('toggle_snapshot_lock', { path, workspaceRoot, snapshotId });
 }

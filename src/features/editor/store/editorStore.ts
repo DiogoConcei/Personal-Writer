@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { readFile, writeFile, createSnapshot } from '@/tauri-bridge';
+import { useUniverseStore } from '@/features/universe/store/universeStore';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type Typography = 'sans' | 'serif';
@@ -12,6 +13,9 @@ export interface FieldConfig {
 export interface Metadata {
   type?: string;
   icon?: string;
+  images?: string[];
+  music?: string;
+  linked_characters?: string[];
   config?: Record<string, FieldConfig>;
   fields?: Record<string, any>;
 }
@@ -44,10 +48,29 @@ export const parseMarkdownMetadata = (content: string) => {
 
   const typeMatch = yamlStr.match(/type:\s*["']?([^"'\r\n]+)["']?/i);
   const iconMatch = yamlStr.match(/icon:\s*["']?([^"'\r\n]+)["']?/i);
+  const musicMatch = yamlStr.match(/music:\s*["']?([^"'\r\n]+)["']?/i);
   const configMatch = yamlStr.match(/config:\s*'(.*?)'/i);
+
+  // Parsers de arrays simples (estilo [item1, item2])
+  const imagesMatch = yamlStr.match(/images:\s*\[(.*?)\]/i);
+  const linkedMatch = yamlStr.match(/linked_characters:\s*\[(.*?)\]/i);
 
   if (typeMatch) data.type = typeMatch[1].trim();
   if (iconMatch) data.icon = iconMatch[1].trim();
+  if (musicMatch) data.music = musicMatch[1].trim();
+  
+  if (imagesMatch) {
+    data.images = imagesMatch[1].split(',').map(s => s.trim().replace(/["']/g, '')).filter(Boolean);
+  } else {
+    data.images = [];
+  }
+
+  if (linkedMatch) {
+    data.linked_characters = linkedMatch[1].split(',').map(s => s.trim().replace(/["']/g, '')).filter(Boolean);
+  } else {
+    data.linked_characters = [];
+  }
+
   if (configMatch) {
     try {
       data.config = JSON.parse(configMatch[1]);
@@ -75,6 +98,13 @@ const stringifyYAML = (metadata: Metadata) => {
   let yaml = '---\n';
   if (metadata.type) yaml += `type: ${metadata.type}\n`;
   if (metadata.icon) yaml += `icon: "${metadata.icon}"\n`;
+  if (metadata.music !== undefined) yaml += `music: "${metadata.music}"\n`;
+  if (metadata.images) {
+    yaml += `images: [${metadata.images.map(i => `"${i}"`).join(', ')}]\n`;
+  }
+  if (metadata.linked_characters) {
+    yaml += `linked_characters: [${metadata.linked_characters.map(c => `"${c}"`).join(', ')}]\n`;
+  }
   if (metadata.config && Object.keys(metadata.config).length > 0) {
     yaml += `config: '${JSON.stringify(metadata.config)}'\n`;
   }
@@ -133,6 +163,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       await writeFile(path, fullContent);
       
       const now = new Date();
+      
+      // Atualizar o índice do Universo
+      useUniverseStore.getState().updateEntity(path, fullContent, now.getTime() / 1000);
+
       // Snapshot automático a cada 10 min
       if (workspaceRoot && (!lastSnapshotAt || now.getTime() - lastSnapshotAt.getTime() > 10 * 60 * 1000)) {
         await createSnapshot(path, workspaceRoot, fullContent);
@@ -157,3 +191,4 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ wordCount: count });
   },
 }));
+

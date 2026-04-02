@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { FileNode } from '@/tauri-bridge';
+import { useUniverseStore } from '@/features/universe/store/universeStore';
 
 interface WorkspaceState {
   rootPath: string | null;
@@ -101,7 +102,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
         return a.is_dir ? -1 : 1;
       });
+      
       set({ files: sortedFiles, isLoading: false });
+
+      // Indexar Universo
+      useUniverseStore.getState().indexWorkspace(sortedFiles);
     } catch (error) {
       console.error('Erro ao carregar workspace:', error);
       set({ files: [], isLoading: false });
@@ -112,7 +117,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const { rootPath } = get();
     if (!rootPath) return;
     
-    // Na atualização silenciosa (refreshFiles), não ativamos isLoading para evitar flicker
     try {
       const { listDirectory } = await import('@/tauri-bridge');
       const files = await listDirectory(rootPath);
@@ -122,6 +126,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         return a.is_dir ? -1 : 1;
       });
       set({ files: sortedFiles });
+
+      // Re-indexar Universo (silenciosamente)
+      useUniverseStore.getState().indexWorkspace(sortedFiles);
     } catch (error) {
       console.error('Erro ao atualizar arquivos:', error);
     }
@@ -187,6 +194,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const { deleteItem } = await import('@/tauri-bridge');
       await deleteItem(path);
       if (activeFile === path) setActiveFile(null);
+      
+      // Remover do índice
+      useUniverseStore.getState().removeEntity(path);
+      
       await refreshFiles();
     } catch (error) {
       console.error('Erro ao excluir item:', error);
@@ -209,6 +220,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       await renameItem(oldPath, newPath);
       
       if (activeFile === oldPath) setActiveFile(newPath);
+
+      // Remover o caminho antigo do índice (o refreshFiles vai indexar o novo)
+      useUniverseStore.getState().removeEntity(oldPath);
+
       await refreshFiles();
     } catch (error) {
       console.error('Erro ao renomear item:', error);
@@ -235,6 +250,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       await renameItem(sourcePath, newPath);
       
       if (activeFile === sourcePath) setActiveFile(newPath);
+
+      // Remover o caminho antigo do índice
+      useUniverseStore.getState().removeEntity(sourcePath);
       
       // 3. Sincronização final silenciosa
       await refreshFiles();
@@ -244,3 +262,4 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
   },
 }));
+

@@ -14,7 +14,6 @@ import styles from './VersionHistory.module.scss';
 import { 
   History, 
   RotateCcw, 
-  Clock, 
   X, 
   Trash2, 
   Lock, 
@@ -35,7 +34,7 @@ interface VersionHistoryProps {
  */
 export default function VersionHistory({ onClose, editor }: VersionHistoryProps) {
   const { activeFile, rootPath } = useWorkspaceStore();
-  const { setMarkdownContent, markdownContent: currentContent, setMetadata, loadContent } = useEditorStore();
+  const { markdownContent: currentContent, loadContent } = useEditorStore();
   
   const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
   const [selectedSnapshot, setSelectedSnapshot] = useState<SnapshotInfo | null>(null);
@@ -109,7 +108,7 @@ export default function VersionHistory({ onClose, editor }: VersionHistoryProps)
       // 4. Recarrega a store e o editor
       await loadContent(activeFile);
       if (editor) {
-        const { parseMarkdownMetadata } = await import('@/features/editor/store/editorStore');
+        const { parseMarkdownMetadata } = await import('@/features/editor/store/metadataParser');
         const { markdown } = parseMarkdownMetadata(fullContent);
         editor.commands.setContent(markdown);
       }

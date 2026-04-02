@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FileNode, listDirectory } from '@/tauri-bridge';
+import { FileNode } from '@/tauri-bridge';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import { useReferenceStore } from '@/features/references/store/referenceStore';
 import { useUIStore } from '@/store/uiStore';

@@ -20,10 +20,6 @@ export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
         if (editor.isActive('image') || editor.isActive('customImage')) return false;
         return editor.view.state.selection.empty === false;
       }}
-      options={{ 
-        maxWidth: 'none',
-        zIndex: 9999,
-      }} 
       className={styles.bubbleMenu}
     >
       <div className={styles.group}>

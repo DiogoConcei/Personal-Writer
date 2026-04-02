@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useUniverseStore, Entity } from '@/features/universe/store/universeStore';
+import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { convertFileSrc } from '@tauri-apps/api/core';

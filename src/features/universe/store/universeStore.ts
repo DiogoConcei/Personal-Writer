@@ -86,7 +86,7 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
               ...metadata,
               path: node.path,
               name: node.name.replace('.md', ''),
-              lastModified: node.lastModified || node.modified_at || Date.now() / 1000,
+              lastModified: node.modified_at || Date.now() / 1000,
               excerpt,
               links,
               previewImage

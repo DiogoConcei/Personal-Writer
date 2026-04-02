@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import styles from './CharacterHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { useEditorStore, Metadata } from '@/features/editor/store/editorStore';
+import { useEditorStore } from '@/features/editor/store/editorStore';
+import { Metadata } from '@/features/editor/store/metadataParser';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { 
   User, Edit3, Sparkles, ChevronRight, Info

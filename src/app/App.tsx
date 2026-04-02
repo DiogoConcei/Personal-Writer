@@ -17,7 +17,7 @@ import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, 
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
 
-export default function App() {
+function App() {
   const { activeFile, rootPath, setRootPath, selectWorkspace } = useWorkspaceStore();
   const { typography, setTypography } = useEditorStore();
   const { entities } = useUniverseStore();
@@ -258,3 +258,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;

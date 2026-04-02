@@ -54,6 +54,26 @@ Este documento registra erros que já aconteceram durante o desenvolvimento, sua
 
 ---
 
+## KI-019 — Erro 500 / Falha de Importação no Vite (Dependência Circular)
+
+**Sintoma:** O app não carrega e o console mostra erro 500 ou que um módulo não possui o export solicitado.
+
+**Causa:** `editorStore.ts` importava `universeStore.ts` e vice-versa, criando um ciclo infinito de inicialização que o Vite/HMR não consegue resolver.
+
+**Solução:** Extrair a lógica compartilhada (ex: `Metadata`, `parseMarkdownMetadata`) para um arquivo neutro e independente (`src/features/editor/store/metadataParser.ts`). As stores devem importar desse arquivo, quebrando o ciclo.
+
+---
+
+## KI-020 — Lentidão/Lag ao navegar entre notas
+
+**Sintoma:** Ao clicar em uma nota na sidebar, há um atraso perceptível ("lag") e um flicker na tela antes do texto aparecer.
+
+**Causa:** O editor TipTap estava sendo destruído e recriado do zero a cada troca porque o `activeFile` estava na lista de dependências do hook `useEditor`.
+
+**Solução:** Remover `activeFile` das dependências do `useEditor`. Instanciar o editor apenas uma vez. Usar um `useEffect` separado para carregar o novo conteúdo usando `editor.commands.setContent(markdown, { emitUpdate: false })`, o que é instantâneo.
+
+---
+
 ## Padrões Gerais — Salvamento de Imagens
 
 | Contexto              | Regra de Ouro                                                                        |

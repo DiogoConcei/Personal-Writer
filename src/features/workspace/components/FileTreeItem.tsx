@@ -31,7 +31,6 @@ const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
 
 export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [children, setChildren] = useState<FileNode[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState<'file' | 'dir' | null>(null);
   const [tempName, setTempName] = useState('');
@@ -45,6 +44,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
     renameItem, 
     createFile, 
     createDirectory,
+    fetchChildren,
     rootPath
   } = useWorkspaceStore();
 
@@ -63,6 +63,8 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const isPinned = pinnedNotes.includes(node.path);
   const isDragTarget = dragInfo.targetPath === node.path && node.is_dir && !node.isVirtual;
   const isDraggingThis = dragInfo.sourcePath === node.path;
+
+  const children = node.children || [];
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -87,12 +89,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
 
   const loadSubItems = async () => {
     try {
-      const result = await listDirectory(node.path);
-      const sorted = result.sort((a, b) => {
-        if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
-        return a.is_dir ? -1 : 1;
-      });
-      setChildren(sorted);
+      await fetchChildren(node.path);
 
       if (node.is_dir && node.name !== 'assets' && node.name !== '.snapshots' && !node.isVirtual && rootPath) {
         const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
@@ -110,6 +107,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
             : `${rootPath}${separator}assets`;
             
           try {
+            const { listDirectory } = await import('@/tauri-bridge');
             const assetsContent = await listDirectory(nodeAssetsPath);
             const hasImages = assetsContent.some(file => 
               IMAGE_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext))
@@ -179,7 +177,6 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
       } else {
         await createDirectory(tempName.trim(), node.path);
       }
-      await loadSubItems();
     }
     setIsCreating(null);
     setSelectedTemplate('');
@@ -191,10 +188,13 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
     // Apenas clique esquerdo e não em botões/inputs
     if (e.button !== 0 || (e.target as HTMLElement).closest('button, input, select') || node.isVirtual) return;
 
-    // Aguardar um pequeno movimento para iniciar o drag real (opcional, mas evita cliques acidentais)
     setDragInfo({
       sourcePath: node.path,
       sourceName: node.name,
+      startX: e.clientX,
+      startY: e.clientY,
+      startTime: Date.now(),
+      isDragging: false,
       currentX: e.clientX,
       currentY: e.clientY
     });

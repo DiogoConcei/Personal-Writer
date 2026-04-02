@@ -30,6 +30,25 @@ export default function FileTree() {
     if (!dragInfo.sourcePath) return;
 
     const handleMouseMove = (e: MouseEvent) => {
+      const { startX, startY, startTime, isDragging, sourcePath } = useUIStore.getState().dragInfo;
+      
+      if (!sourcePath) return;
+
+      // Se ainda não é drag, verificar threshold
+      if (!isDragging) {
+        const deltaX = Math.abs(e.clientX - startX);
+        const deltaY = Math.abs(e.clientY - startY);
+        const deltaTime = Date.now() - startTime;
+
+        if (deltaX > 5 || deltaY > 5 || deltaTime > 150) {
+          setDragInfo({ isDragging: true });
+        } else {
+          // Ainda não atingiu o threshold, apenas atualiza posição para caso venha a atingir
+          setDragInfo({ currentX: e.clientX, currentY: e.clientY });
+          return;
+        }
+      }
+
       // Identificar o que está sob o mouse
       const element = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
       const targetItem = element?.closest('[data-path]') as HTMLElement;
@@ -51,9 +70,10 @@ export default function FileTree() {
     };
 
     const handleMouseUp = async (e: MouseEvent) => {
-      const { sourcePath, targetPath } = useUIStore.getState().dragInfo;
+      const { sourcePath, targetPath, isDragging } = useUIStore.getState().dragInfo;
       
-      if (sourcePath) {
+      // SÓ executa o move se o threshold de drag foi atingido
+      if (isDragging && sourcePath) {
         // Tenta encontrar a raiz se soltar no container mas não em um item específico
         const treeElement = document.querySelector(`.${styles.tree}`);
         const rect = treeElement?.getBoundingClientRect();
@@ -61,9 +81,13 @@ export default function FileTree() {
 
         const finalTarget = targetPath || (isInTree ? rootPath : null);
 
-        if (sourcePath && finalTarget && sourcePath !== finalTarget) {
-          // Validar se não está movendo pai para filho
-          if (!finalTarget.startsWith(sourcePath)) {
+        if (sourcePath && finalTarget) {
+          // Normalização OBRIGATÓRIA antes da comparação
+          const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '');
+          const normSource = normalize(sourcePath);
+          const normTarget = normalize(finalTarget);
+
+          if (normSource !== normTarget && !normTarget.startsWith(normSource + '/')) {
             await moveItem(sourcePath, finalTarget);
           }
         }

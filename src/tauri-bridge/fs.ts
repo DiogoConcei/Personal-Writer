@@ -1,6 +1,18 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import type { FileNode } from './types';
+
+export function resolveAssetPath(path: string, workspaceRoot: string | null): string {
+  if (path.startsWith('http')) return path;
+  if (!workspaceRoot || !path.includes('assets')) return path;
+
+  // Normalizar caminho relativo para o formato nativo do SO
+  const relativePart = path.replace('./', '');
+  const separator = workspaceRoot.includes('\\') ? '\\' : '/';
+  const fullPath = `${workspaceRoot}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
+  
+  return convertFileSrc(fullPath);
+}
 
 export async function selectDirectory(): Promise<string | null> {
   const selected = await open({

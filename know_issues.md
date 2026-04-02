@@ -74,6 +74,36 @@ Este documento registra erros que já aconteceram durante o desenvolvimento, sua
 
 ---
 
+## KI-021 — Imagens do Cabeçalho Sumindo ao Recarregar
+
+**Sintoma:** Ao definir um retrato de personagem ou imagem de localização, a imagem aparece na UI mas some após dar F5 ou trocar de nota.
+
+**Causa:** O `setMetadata` atualizava o estado global (Zustand), mas não disparava o comando Rust de escrita no disco. Como o auto-save do editor era ativado apenas por digitação no texto, as mudanças nos metadados ficavam apenas em memória.
+
+**Solução:** Refatorado `updateMetadata` nos cabeçalhos para chamar explicitamente `save(activeFile)` logo após a alteração do estado.
+
+---
+
+## KI-022 — Caminhos Absolutos Quebrando Portabilidade
+
+**Sintoma:** Imagens param de carregar se a pasta do workspace for movida para outro diretório ou computador.
+
+**Causa:** O uso de caminhos absolutos (ex: `C:\Users\...`) no Frontmatter.
+
+**Solução:** Implementação da função centralizada `resolveAssetPath` no `tauri-bridge`. O sistema agora salva apenas caminhos relativos (`./assets/...`) e converte dinamicamente para o protocolo seguro do Tauri em tempo de execução. As barras invertidas do Windows (`\`) são normalizadas para `/` durante a persistência para compatibilidade máxima.
+
+---
+
+## KI-023 — Movimentação Acidental de Arquivos (Threshold Ausente)
+
+**Sintoma:** Cliques simples em notas ou imagens disparavam o arraste (drag), movendo itens de subpastas para a raiz sem intenção. Abrir imagens também podia disparar o move.
+
+**Causa:** Ausência de um limite mínimo (threshold) para distinguir um clique de um arrasto. Qualquer `mousedown` seguido de `mouseup` era tratado como uma operação de movimentação para o destino sob o mouse.
+
+**Solução:** Implementado threshold duplo obrigatório: o arraste só é ativado se o mouse se deslocar mais de **5px** E o botão permanecer pressionado por mais de **150ms**. O `handleMouseUp` agora verifica essa flag antes de qualquer operação de `moveItem`. Além disso, a comparação de caminhos agora é agnóstica a barras (`/` vs `\`).
+
+---
+
 ## Padrões Gerais — Salvamento de Imagens
 
 | Contexto              | Regra de Ouro                                                                        |

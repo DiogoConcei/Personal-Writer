@@ -8,6 +8,11 @@ export interface DragInfo {
   currentX: number;
   currentY: number;
   targetPath: string | null;
+  // Threshold Info
+  startX: number;
+  startY: number;
+  startTime: number;
+  isDragging: boolean;
 }
 
 export interface PreviewState {
@@ -45,6 +50,10 @@ const INITIAL_DRAG: DragInfo = {
   currentX: 0,
   currentY: 0,
   targetPath: null,
+  startX: 0,
+  startY: 0,
+  startTime: 0,
+  isDragging: false,
 };
 
 const INITIAL_PREVIEW: PreviewState = {

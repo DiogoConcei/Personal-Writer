@@ -3,7 +3,6 @@ import styles from './LocationHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { Metadata, parseMarkdownMetadata } from '@/features/editor/store/metadataParser';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { 
   MapPin, Music, Play, Pause, Plus, Trash2, 
   ChevronRight, Info, User, X
@@ -11,7 +10,7 @@ import {
 import ImageGallery from '@/features/editor/components/ImageGallery/ImageGallery';
 import Modal from '@/shared/components/Modal/Modal';
 import { AttributeGrid } from './AttributeGrid';
-import { readFile, listDirectory } from '@/tauri-bridge';
+import { readFile, listDirectory, resolveAssetPath } from '@/tauri-bridge';
 
 interface CharacterLink {
   path: string;
@@ -23,7 +22,7 @@ import { Backlinks } from './Backlinks';
 
 export function LocationHeader() {
   const { rootPath, activeFile, setActiveFile } = useWorkspaceStore();
-  const { metadata, setMetadata } = useEditorStore();
+  const { metadata, setMetadata, save } = useEditorStore();
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [showCharacterPicker, setShowCharacterPicker] = useState(false);
   const [availableCharacters, setAvailableCharacters] = useState<CharacterLink[]>([]);
@@ -74,6 +73,10 @@ export function LocationHeader() {
 
   const updateMetadata = (newData: Metadata) => {
     setMetadata(newData);
+    // Forçar salvamento no disco para persistir mudanças de cabeçalho (images/fields)
+    if (activeFile) {
+      save(activeFile, rootPath || undefined);
+    }
   };
 
   const addImage = (src: string) => {
@@ -129,14 +132,6 @@ export function LocationHeader() {
     }
   };
 
-  const getFullUrl = (path: string) => {
-    if (path.startsWith('http')) return path;
-    if (!rootPath) return path;
-    const relativePart = path.replace('./', '');
-    const separator = rootPath.includes('\\') ? '\\' : '/';
-    return convertFileSrc(`${rootPath}${separator}${relativePart.replace(/[\\/]/g, separator)}`);
-  };
-
   return (
     <div className={styles.locationHeader}>
       {/* Galeria de Imagens */}
@@ -145,7 +140,7 @@ export function LocationHeader() {
           <div className={styles.galleryScroll}>
             {metadata.images?.map((img, idx) => (
               <div key={idx} className={styles.galleryItem}>
-                <img src={getFullUrl(img)} alt={`Location ${idx}`} />
+                <img src={resolveAssetPath(img, rootPath)} alt={`Location ${idx}`} />
                 <button className={styles.removeImg} onClick={() => removeImage(img)}><X size={14} /></button>
               </div>
             ))}
@@ -183,7 +178,7 @@ export function LocationHeader() {
             <div className={styles.audioPlayer}>
               <audio 
                 ref={audioRef} 
-                src={getFullUrl(metadata.music)} 
+                src={resolveAssetPath(metadata.music, rootPath)} 
                 onTimeUpdate={onTimeUpdate}
                 onEnded={() => setIsPlaying(false)}
               />

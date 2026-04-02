@@ -13,6 +13,8 @@ interface WorkspaceState {
   setRootPath: (path: string) => Promise<void>;
   selectWorkspace: () => Promise<void>;
   refreshFiles: () => Promise<void>;
+  fetchChildren: (path: string) => Promise<void>;
+  syncNode: (path: string) => Promise<void>;
   setActiveFile: (path: string | null) => void;
   setDashboardFilterPath: (path: string | null) => void;
   createFile: (name: string, parentPath?: string, initialContent?: string) => Promise<void>;
@@ -24,22 +26,40 @@ interface WorkspaceState {
 
 const STORAGE_KEY = 'hybrid-editor-root-path';
 
-// Função auxiliar para mover nó na árvore (Otimista)
+// Auxiliar para atualizar caminhos recursivamente após um move
+function updatePathsRecursively(node: FileNode, newPath: string): FileNode {
+  const separator = newPath.includes('\\') ? '\\' : '/';
+  const updatedNode = { ...node, path: newPath };
+  
+  if (updatedNode.children) {
+    updatedNode.children = updatedNode.children.map(child => {
+      const childNewPath = `${newPath}${separator}${child.name}`;
+      return updatePathsRecursively(child, childNewPath);
+    });
+  }
+  
+  return updatedNode;
+}
+
+// Função auxiliar para mover nó na árvore (Otimista e Imutável)
 function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: string, newPath: string): FileNode[] {
   let draggedNode: FileNode | null = null;
 
-  // 1. Remover o nó da origem
+  // 1. Remover o nó da origem e capturá-lo
   const removeNode = (list: FileNode[]): FileNode[] => {
-    return list.filter(node => {
+    return list.reduce((acc: FileNode[], node) => {
       if (node.path === sourcePath) {
-        draggedNode = { ...node, path: newPath }; // Guardamos o nó com o novo path
-        return false;
+        draggedNode = updatePathsRecursively(node, newPath);
+        return acc;
       }
       if (node.children) {
-        node.children = removeNode(node.children);
+        const newChildren = removeNode(node.children);
+        acc.push({ ...node, children: newChildren });
+      } else {
+        acc.push(node);
       }
-      return true;
-    });
+      return acc;
+    }, []);
   };
 
   const newNodes = removeNode([...nodes]);
@@ -48,9 +68,8 @@ function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: st
 
   // 2. Inserir o nó no destino
   const insertNode = (list: FileNode[]): FileNode[] => {
-    // Se o destino for a raiz do workspace
     const { rootPath } = useWorkspaceStore.getState();
-    const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '');
+    const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
     
     if (normalize(targetDirPath) === normalize(rootPath || '')) {
       return [...list, draggedNode!].sort((a, b) => {
@@ -61,7 +80,10 @@ function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: st
 
     return list.map(node => {
       if (node.path === targetDirPath) {
-        const newChildren = [...(node.children || []), draggedNode!].sort((a, b) => {
+        const currentChildren = node.children || [];
+        // Evitar duplicatas no otimista
+        const filteredChildren = currentChildren.filter(c => c.path !== newPath);
+        const newChildren = [...filteredChildren, draggedNode!].sort((a, b) => {
           if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
           return a.is_dir ? -1 : 1;
         });
@@ -75,6 +97,18 @@ function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: st
   };
 
   return insertNode(newNodes);
+}
+
+function injectChildren(nodes: FileNode[], targetPath: string, children: FileNode[]): FileNode[] {
+  return nodes.map(node => {
+    if (node.path === targetPath) {
+      return { ...node, children };
+    }
+    if (node.children) {
+      return { ...node, children: injectChildren(node.children, targetPath, children) };
+    }
+    return node;
+  });
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
@@ -104,8 +138,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       });
       
       set({ files: sortedFiles, isLoading: false });
-
-      // Indexar Universo
       useUniverseStore.getState().indexWorkspace(sortedFiles);
     } catch (error) {
       console.error('Erro ao carregar workspace:', error);
@@ -114,23 +146,60 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   refreshFiles: async () => {
-    const { rootPath } = get();
+    const { rootPath, files } = get();
     if (!rootPath) return;
-    
+
     try {
       const { listDirectory } = await import('@/tauri-bridge');
-      const files = await listDirectory(rootPath);
-      const filteredFiles = files.filter(node => !node.name.startsWith('.'));
-      const sortedFiles = filteredFiles.sort((a, b) => {
+      const rootFiles = await listDirectory(rootPath);
+      const filteredFiles = rootFiles.filter(node => !node.name.startsWith('.'));
+      
+      const preserveChildren = (newList: FileNode[], oldList: FileNode[]): FileNode[] => {
+        return newList.map(newNode => {
+          const oldNode = oldList.find(o => o.path === newNode.path);
+          if (oldNode && oldNode.children) {
+            return { ...newNode, children: preserveChildren(newNode.children || [], oldNode.children) };
+          }
+          return newNode;
+        }).sort((a, b) => {
+          if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+          return a.is_dir ? -1 : 1;
+        });
+      };
+
+      const finalFiles = preserveChildren(filteredFiles, files);
+      set({ files: finalFiles });
+      useUniverseStore.getState().indexWorkspace(finalFiles);
+    } catch (error) {
+      console.error('Erro ao atualizar arquivos:', error);
+    }
+  },
+
+  fetchChildren: async (path: string) => {
+    const { files } = get();
+    try {
+      const { listDirectory } = await import('@/tauri-bridge');
+      const children = await listDirectory(path);
+      const sortedChildren = children.filter(n => !n.name.startsWith('.')).sort((a, b) => {
         if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
         return a.is_dir ? -1 : 1;
       });
-      set({ files: sortedFiles });
 
-      // Re-indexar Universo (silenciosamente)
-      useUniverseStore.getState().indexWorkspace(sortedFiles);
+      const updatedFiles = injectChildren(files, path, sortedChildren);
+      set({ files: updatedFiles });
     } catch (error) {
-      console.error('Erro ao atualizar arquivos:', error);
+      console.error('Erro ao carregar filhos:', error);
+    }
+  },
+
+  syncNode: async (path: string) => {
+    const { rootPath } = get();
+    const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
+    
+    if (normalize(path) === normalize(rootPath || '')) {
+      await get().refreshFiles();
+    } else {
+      await get().fetchChildren(path);
     }
   },
 
@@ -153,86 +222,81 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   createFile: async (name: string, parentPath?: string, initialContent: string = '') => {
-    const { rootPath, refreshFiles } = get();
+    const { rootPath, syncNode } = get();
     const base = parentPath || rootPath;
     if (!base) return;
 
     const fileName = name.endsWith('.md') ? name : `${name}.md`;
     const separator = base.includes('\\') ? '\\' : '/';
-    const fullPath = `${base}${separator}${fileName}`;
+    const filePath = `${base}${separator}${fileName}`;
 
     try {
       const { writeFile } = await import('@/tauri-bridge');
-      await writeFile(fullPath, initialContent);
-      await refreshFiles();
-      set({ activeFile: fullPath });
+      await writeFile(filePath, initialContent);
+      await syncNode(base);
+      set({ activeFile: filePath });
     } catch (error) {
       console.error('Erro ao criar arquivo:', error);
     }
   },
 
   createDirectory: async (name: string, parentPath?: string) => {
-    const { rootPath, refreshFiles } = get();
+    const { rootPath, syncNode } = get();
     const base = parentPath || rootPath;
     if (!base) return;
 
     const separator = base.includes('\\') ? '\\' : '/';
-    const fullPath = `${base}${separator}${name}`;
+    const dirPath = `${base}${separator}${name}`;
 
     try {
       const { createDirectory } = await import('@/tauri-bridge');
-      await createDirectory(fullPath);
-      await refreshFiles();
+      await createDirectory(dirPath);
+      await syncNode(base);
     } catch (error) {
-      console.error('Erro ao criar pasta:', error);
+      console.error('Erro ao criar diretório:', error);
     }
   },
 
   deleteItem: async (path: string) => {
-    const { activeFile, setActiveFile, refreshFiles } = get();
+    const { rootPath, syncNode, activeFile, setActiveFile } = get();
     try {
+      const separator = path.includes('\\') ? '\\' : '/';
+      const parentPath = path.substring(0, path.lastIndexOf(separator)) || rootPath;
+      
       const { deleteItem } = await import('@/tauri-bridge');
       await deleteItem(path);
       if (activeFile === path) setActiveFile(null);
       
-      // Remover do índice
       useUniverseStore.getState().removeEntity(path);
-      
-      await refreshFiles();
+      if (parentPath) await syncNode(parentPath);
     } catch (error) {
       console.error('Erro ao excluir item:', error);
     }
   },
 
   renameItem: async (oldPath: string, newName: string) => {
-    const { activeFile, setActiveFile, refreshFiles } = get();
+    const { rootPath, syncNode, activeFile, setActiveFile } = get();
     try {
-      const { renameItem } = await import('@/tauri-bridge');
-      const parentDir = oldPath.substring(0, oldPath.lastIndexOf(oldPath.includes('\\') ? '\\' : '/'));
       const separator = oldPath.includes('\\') ? '\\' : '/';
+      const parentPath = oldPath.substring(0, oldPath.lastIndexOf(separator)) || rootPath;
       
-      let finalName = newName;
-      if (oldPath.endsWith('.md') && !newName.endsWith('.md')) {
-        finalName = `${newName}.md`;
-      }
+      const { renameItem } = await import('@/tauri-bridge');
+      let finalName = newName.endsWith('.md') || !oldPath.endsWith('.md') ? newName : `${newName}.md`;
+      const newPath = `${parentPath}${separator}${finalName}`;
       
-      const newPath = `${parentDir}${separator}${finalName}`;
       await renameItem(oldPath, newPath);
-      
       if (activeFile === oldPath) setActiveFile(newPath);
 
-      // Remover o caminho antigo do índice (o refreshFiles vai indexar o novo)
       useUniverseStore.getState().removeEntity(oldPath);
-
-      await refreshFiles();
+      if (parentPath) await syncNode(parentPath);
     } catch (error) {
       console.error('Erro ao renomear item:', error);
     }
   },
 
   moveItem: async (sourcePath: string, targetDirPath: string) => {
-    const { files, activeFile, setActiveFile, refreshFiles } = get();
-    const previousFiles = JSON.parse(JSON.stringify(files)); // Deep clone para backup
+    const { rootPath, files, activeFile, setActiveFile, syncNode } = get();
+    const previousFiles = JSON.parse(JSON.stringify(files));
 
     try {
       const separator = sourcePath.includes('\\') ? '\\' : '/';
@@ -241,25 +305,36 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
       if (sourcePath === newPath) return;
 
-      // 1. Atualização Otimista
+      const sourceParentPath = sourcePath.substring(0, sourcePath.lastIndexOf(separator)) || rootPath;
+
+      // 1. Atualização Otimista (Recursive Path Update)
       const updatedFiles = moveNodeInTree(files, sourcePath, targetDirPath, newPath);
       set({ files: updatedFiles });
 
-      // 2. Execução real
+      // 2. Execução real no disco
       const { renameItem } = await import('@/tauri-bridge');
       await renameItem(sourcePath, newPath);
       
-      if (activeFile === sourcePath) setActiveFile(newPath);
+      // Atualizar activeFile: se o arquivo ativo era o movido OU estava dentro da pasta movida
+      if (activeFile === sourcePath) {
+        setActiveFile(newPath);
+      } else if (activeFile && activeFile.startsWith(sourcePath + separator)) {
+        const relativePart = activeFile.substring(sourcePath.length);
+        setActiveFile(`${newPath}${relativePart}`);
+      }
 
-      // Remover o caminho antigo do índice
       useUniverseStore.getState().removeEntity(sourcePath);
+
+      // 3. Delay de segurança para indexação do SO
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // 3. Sincronização final silenciosa
-      await refreshFiles();
+      // 4. Sincronização Direcionada (Sync apenas onde mudou)
+      if (sourceParentPath) await syncNode(sourceParentPath);
+      await syncNode(targetDirPath);
+      
     } catch (error) {
       console.error('Erro ao mover item (revertendo):', error);
       set({ files: previousFiles });
     }
   },
 }));
-

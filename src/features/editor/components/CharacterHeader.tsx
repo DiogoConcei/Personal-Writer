@@ -3,19 +3,19 @@ import styles from './CharacterHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { Metadata } from '@/features/editor/store/metadataParser';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { 
   User, Edit3, Sparkles, ChevronRight, Info
 } from 'lucide-react';
 import ImageGallery from '@/features/editor/components/ImageGallery/ImageGallery';
 import Modal from '@/shared/components/Modal/Modal';
 import { AttributeGrid } from './AttributeGrid';
+import { resolveAssetPath } from '@/tauri-bridge';
 
 import { Backlinks } from './Backlinks';
 
 export function CharacterHeader() {
   const { rootPath, activeFile } = useWorkspaceStore();
-  const { metadata, setMetadata } = useEditorStore();
+  const { metadata, setMetadata, save } = useEditorStore();
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showEmojiPrompt, setShowEmojiPrompt] = useState(false);
   const [emojiInput, setEmojiInput] = useState('');
@@ -24,6 +24,10 @@ export function CharacterHeader() {
 
   const updateMetadata = (newData: Metadata) => {
     setMetadata(newData);
+    // Forçar salvamento no disco para persistir mudanças de cabeçalho (icon/fields)
+    if (activeFile) {
+      save(activeFile, rootPath || undefined);
+    }
   };
 
   const handleFieldChange = (key: string, value: any) => {
@@ -38,11 +42,8 @@ export function CharacterHeader() {
     if (!icon) return <div className={styles.placeholderIcon}><User size={64} strokeWidth={1} /></div>;
 
     const isPath = icon.includes('/') || icon.includes('\\') || icon.includes('.');
-    if (isPath && rootPath) {
-      const relativePart = icon.replace('./', '');
-      const separator = rootPath.includes('\\') ? '\\' : '/';
-      const fullPath = `${rootPath}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
-      return <img src={convertFileSrc(fullPath)} className={styles.imageIcon} alt="Portrait" />;
+    if (isPath) {
+      return <img src={resolveAssetPath(icon, rootPath)} className={styles.imageIcon} alt="Portrait" />;
     }
     return <span className={styles.emojiIcon}>{icon}</span>;
   };
@@ -59,7 +60,13 @@ export function CharacterHeader() {
           <div className={styles.badgeRow}>
             <span className={styles.typeTag}><User size={12} /> Personagem</span>
             <ChevronRight size={14} className={styles.separator} />
-            <span className={styles.statusTag}>Ativo</span>
+            <span 
+              className={`${styles.statusTag} ${metadata.fields?.Status === 'Inativo' ? styles['statusTag--inactive'] : ''}`}
+              onClick={() => handleFieldChange('Status', metadata.fields?.Status === 'Inativo' ? 'Ativo' : 'Inativo')}
+              title="Clique para alternar status"
+            >
+              {metadata.fields?.Status || 'Ativo'}
+            </span>
           </div>
           <h1 className={styles.name}>{noteName}</h1>
           <textarea 

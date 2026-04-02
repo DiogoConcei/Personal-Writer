@@ -100,6 +100,18 @@
   color: var(--color-success);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: opacity 0.2s, filter 0.2s;
+  user-select: none;
+
+  &:hover {
+    filter: brightness(1.2);
+    opacity: 0.8;
+  }
+
+  &--inactive {
+    color: var(--color-text-muted);
+  }
 }
 
 .separator { color: var(--color-text-muted); opacity: 0.3; }

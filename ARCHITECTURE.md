@@ -5,7 +5,7 @@
 
 ---
 
-## 1. Estrutura de Pastas (Novas Features)
+### 1. Estrutura de Pastas (Novas Features)
 
 ```
 ├── src/
@@ -25,7 +25,18 @@
 
 ---
 
+## Mapa de Features Estáveis — Não Toque Sem Motivo
+
+| Feature | Arquivos Críticos | Status |
+| :--- | :--- | :--- |
+| **Ecossistema de Imagem** | `ImageGallery.tsx`, `resolveAssetPath.ts` | ✅ Estável (Fase 3 Concluída) |
+| **Persistência de YAML** | `editorStore.ts`, `metadataParser.ts` | ✅ Estável |
+| **Drag-and-Drop** | `FileTree.tsx`, `FileTreeItem.tsx` | ✅ Estável — ADR-009 |
+
+---
+
 ## 2. Decisões Arquiteturais (ADRs)
+
 
 ### ADR-009 — Drag-and-Drop via Mouse Events
 **Decisão:** Abandono da HTML5 Drag and Drop API em favor de uma implementação manual usando MouseDown, MouseMove e MouseUp.

@@ -1,7 +1,7 @@
 import styles from './AttributeGrid.module.scss';
 import { useState } from 'react';
 import { Plus, Trash2, Settings } from 'lucide-react';
-import { Metadata } from '@/features/editor/store/editorStore';
+import { Metadata } from '@/features/editor/store/metadataParser';
 import Modal from '@/shared/components/Modal/Modal';
 
 interface AttributeGridProps {
@@ -86,7 +86,7 @@ export function AttributeGrid({ metadata, onUpdate }: AttributeGridProps) {
                 {type === 'select' ? (
                   <select value={value as string} onChange={(e) => handleFieldChange(key, e.target.value)}>
                     <option value="" disabled>Selecionar...</option>
-                    {config?.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    {config?.options?.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 ) : (
                   <input 

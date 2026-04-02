@@ -1,6 +1,5 @@
-import React from 'react';
 import styles from './MetadataHeader.module.scss';
-import { Metadata } from '@/features/editor/store/editorStore';
+import { Metadata } from '@/features/editor/store/metadataParser';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { User, ChevronRight, Info } from 'lucide-react';
 

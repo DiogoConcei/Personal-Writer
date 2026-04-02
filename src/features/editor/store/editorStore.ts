@@ -86,7 +86,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ markdownContent });
     
     // Auto-save disparado por mudança de conteúdo
-    const activeFile = (window as any).__ACTIVE_FILE_PATH__; 
     // Nota: Como a store não tem o path, vamos usar um hack temporário ou 
     // passar o path no trigger. Mas melhor: o Editor.tsx já chama save().
     // Para resolver o bug da imagem, o setMetadata deve disparar o save.

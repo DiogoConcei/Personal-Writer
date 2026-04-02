@@ -64,5 +64,13 @@ Um editor de notas local-first para uso pessoal dual: estudo de Ciência da Comp
 ## 4. Próximos Passos Imediatos
 
 1.  **Revisão do Preview de Histórico:** Corrigir bugs de escala e renderização para habilitar novamente o preview visual de versões.
+
+estones):** Funcionalidade de congelar/trancar versões importantes para evitar exclusão.
+
+---
+
+## 4. Próximos Passos Imediatos
+
+1.  **Revisão do Preview de Histórico:** Corrigir bugs de escala e renderização para habilitar novamente o preview visual de versões.
 2.  **Breadcrumbs Interativos:** Permitir clicar nos níveis do caminho para navegar até as pastas.
 3.  **Refinamento Final de Estilo:** Ajustes de polimento visual e consistência de cores em estados de hover.

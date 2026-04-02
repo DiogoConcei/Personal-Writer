@@ -185,6 +185,22 @@ O lado Rust é a área de maior risco de erro. As regras abaixo são mais rígid
 14. **Consulte KNOWN_ISSUES.md antes de implementar qualquer coisa em Rust ou que envolva caminhos de arquivo:** Erros já resolvidos estão documentados lá. Não reinvente soluções para problemas conhecidos.
 15. **Caminhos de arquivo no Windows usam barras invertidas nativas:** Nunca normalize `\` para `/` antes de passar para `convertFileSrc`. Veja o padrão correto em `KNOWN_ISSUES.md`.
 
+### 16. Zero Regressão — Regra Absoluta
+
+Antes de modificar qualquer arquivo existente, você DEVE:
+
+1. Listar TODAS as funcionalidades que esse arquivo implementa atualmente
+2. Para cada funcionalidade, confirmar que ela continuará funcionando após sua mudança
+3. Se uma mudança em arquivo A pode afetar o comportamento de arquivo B, liste arquivo B explicitamente no plano
+
+Nunca remova, sobrescreva ou refatore código funcional existente como efeito colateral
+de uma nova feature. Se perceber que precisa refatorar algo para continuar, PARE e
+proponha a refatoração separadamente antes de prosseguir.
+
+Ao entregar código modificado, inclua ao final:
+"Funcionalidades preservadas: [lista]"
+"Nenhuma funcionalidade existente foi alterada."
+
 ---
 
 ## Checklist de Qualidade (antes de entregar qualquer código)

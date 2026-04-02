@@ -37,34 +37,17 @@ Escreva a história e detalhes aqui...`
     content: `---
 type: location
 icon: "📍"
+images: []
+music: ""
+linked_characters: []
 fields:
   Região: ""
+  Clima: ""
   População: ""
-  Perigo: "Baixo"
 ---
 
 # Nova Localização
 
 Descreva o local aqui...`
-  },
-  {
-    id: 'session',
-    name: 'Sessão de Jogo',
-    description: 'Resumo de sessões e eventos',
-    content: `---
-type: session
-data: "${new Date().toLocaleDateString('pt-BR')}"
----
-
-# Sessão de Hoje
-
-### Resumo dos Eventos
-- 
-
-### NPCs Encontrados
-- 
-
-### Itens Obtidos
-- `
   }
 ];

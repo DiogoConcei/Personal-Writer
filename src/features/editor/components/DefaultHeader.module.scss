@@ -1,0 +1,59 @@
+@use "@/shared/styles/variables" as vars;
+
+.defaultHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.badgeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.typeTag {
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.statusTag {
+  background: var(--color-accent-glow);
+  color: var(--color-accent);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.separator {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.name {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.content {
+  border-top: 1px solid var(--color-border);
+  padding-top: 24px;
+}

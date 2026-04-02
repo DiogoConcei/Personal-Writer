@@ -4,19 +4,23 @@ import FileTree from '@/features/workspace/components/FileTree';
 import Editor from '@/features/editor/components/Editor';
 import ImageViewer from '@/features/editor/components/ImageViewer';
 import Dashboard from '@/features/dashboard/components/Dashboard';
+import CharacterGallery from '@/features/dashboard/components/CharacterGallery';
 import StatusBar from '@/features/editor/components/StatusBar';
 import ReferenceSidebar from '@/features/references/components/ReferenceSidebar';
 import CommandPalette from '@/features/search/components/CommandPalette';
+import { EntityPreview } from '@/features/editor/components/EntityPreview';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
+import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { useUIStore } from '@/store/uiStore';
-import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search } from 'lucide-react';
+import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users } from 'lucide-react';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
 
 export default function App() {
   const { activeFile, rootPath, setRootPath, selectWorkspace } = useWorkspaceStore();
   const { typography, setTypography } = useEditorStore();
+  const { entities } = useUniverseStore();
   const { 
     activePanel, 
     setActivePanel, 
@@ -24,10 +28,17 @@ export default function App() {
     toggleSidebar,
     isRightSidebarVisible, 
     toggleRightSidebar,
-    setCommandPaletteOpen
+    setCommandPaletteOpen,
+    preview,
+    setPreview
   } = useUIStore();
 
   const isImage = activeFile && IMAGE_EXTENSIONS.some(ext => activeFile.toLowerCase().endsWith(ext));
+
+  // Resetar preview ao trocar de aba ou arquivo
+  useEffect(() => {
+    setPreview({ entityPath: null, position: null });
+  }, [activePanel, activeFile, setPreview]);
 
   // Carregar workspace salvo ao iniciar
   useEffect(() => {
@@ -45,10 +56,18 @@ export default function App() {
         toggleSidebar();
       }
       
-      // Toggle Dashboard: Ctrl + D (opcional, para conveniência)
+      // Atalhos rápidos para painéis
       if (e.ctrlKey && e.key === 'd') {
         e.preventDefault();
-        setActivePanel(activePanel === 'editor' ? 'dashboard' : 'editor');
+        setActivePanel('dashboard');
+      }
+      if (e.ctrlKey && e.key === 'g') {
+        e.preventDefault();
+        setActivePanel('gallery');
+      }
+      if (e.ctrlKey && e.key === 'e') {
+        e.preventDefault();
+        setActivePanel('editor');
       }
     };
 
@@ -67,16 +86,18 @@ export default function App() {
   };
 
   const renderBreadcrumb = () => {
-    if (activePanel === 'dashboard') {
+    if (activePanel === 'dashboard' || activePanel === 'gallery') {
       const { dashboardFilterPath } = useWorkspaceStore.getState();
-      if (!dashboardFilterPath || !rootPath) return <span>Dashboard</span>;
+      const prefix = activePanel === 'dashboard' ? 'Dashboard' : 'Galeria';
+      
+      if (!dashboardFilterPath || !rootPath) return <span>{prefix}</span>;
       
       const relativePath = dashboardFilterPath.replace(rootPath, '').replace(/^[\\/]/, '');
       const parts = relativePath.split(/[\\/]/);
       
       return (
         <div className={styles.app__breadcrumbList}>
-          <button onClick={() => handleBreadcrumbClick(null)}>Dashboard</button>
+          <button onClick={() => handleBreadcrumbClick(null)}>{prefix}</button>
           {parts.map((part, index) => {
             const currentPath = rootPath + (rootPath.includes('\\') ? '\\' : '/') + parts.slice(0, index + 1).join(rootPath.includes('\\') ? '\\' : '/');
             return (
@@ -169,13 +190,29 @@ export default function App() {
               </button>
             )}
             
-            <button 
-              className={`${styles.app__iconBtn} ${activePanel === 'dashboard' ? styles['app__iconBtn--active'] : ''}`}
-              onClick={() => setActivePanel(activePanel === 'editor' ? 'dashboard' : 'editor')}
-              title={activePanel === 'editor' ? 'Ver Dashboard' : 'Voltar ao Editor'}
-            >
-              {activePanel === 'editor' ? <LayoutGrid size={18} /> : <FileEdit size={18} />}
-            </button>
+            <nav className={styles.app__nav}>
+              <button 
+                className={`${styles.app__iconBtn} ${activePanel === 'editor' ? styles['app__iconBtn--active'] : ''}`}
+                onClick={() => setActivePanel('editor')}
+                title="Editor (Ctrl+E)"
+              >
+                <FileEdit size={18} />
+              </button>
+              <button 
+                className={`${styles.app__iconBtn} ${activePanel === 'dashboard' ? styles['app__iconBtn--active'] : ''}`}
+                onClick={() => setActivePanel('dashboard')}
+                title="Dashboard (Ctrl+D)"
+              >
+                <LayoutGrid size={18} />
+              </button>
+              <button 
+                className={`${styles.app__iconBtn} ${activePanel === 'gallery' ? styles['app__iconBtn--active'] : ''}`}
+                onClick={() => setActivePanel('gallery')}
+                title="Galeria de Personagens (Ctrl+G)"
+              >
+                <Users size={18} />
+              </button>
+            </nav>
 
             <button 
               className={`${styles.app__iconBtn} ${isRightSidebarVisible ? styles['app__iconBtn--active'] : ''}`}
@@ -190,11 +227,13 @@ export default function App() {
         <div className={styles.app__content}>
           {activePanel === 'dashboard' ? (
             <Dashboard />
+          ) : activePanel === 'gallery' ? (
+            <CharacterGallery />
           ) : activeFile ? (
             isImage ? <ImageViewer path={activeFile} /> : <Editor />
           ) : (
             <div className={styles.placeholder}>
-              <p>Abra um arquivo .md ou vá para o Dashboard para ver suas notas.</p>
+              <p>Abra um arquivo .md ou vá para a Galeria/Dashboard para ver suas notas.</p>
             </div>
           )}
         </div>
@@ -209,6 +248,13 @@ export default function App() {
       )}
 
       <CommandPalette />
+
+      {preview.entityPath && preview.position && entities[preview.entityPath] && (
+        <EntityPreview 
+          entity={entities[preview.entityPath]} 
+          position={preview.position} 
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { FontSize } from '../extensions/FontSize';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { MetadataHeader } from './MetadataHeader';
-import { useEditorStore } from '../store/editorStore';
+import { useEditorStore, parseMarkdownMetadata } from '../store/editorStore';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { saveImageFromBytes } from '@/tauri-bridge';
 import VersionHistory from './VersionHistory/VersionHistory';
@@ -75,8 +75,10 @@ export default function Editor() {
       setWordCount(words);
 
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (activeFile) {
-        saveTimeoutRef.current = setTimeout(() => save(activeFile, rootPath || undefined), 1500);
+      // Usamos a ref para o path para evitar dependência circular no onUpdate
+      const currentPath = useWorkspaceStore.getState().activeFile;
+      if (currentPath) {
+        saveTimeoutRef.current = setTimeout(() => save(currentPath, rootPath || undefined), 1500);
       }
     },
     editorProps: {
@@ -139,15 +141,19 @@ export default function Editor() {
         return false;
       }
     },
-  }, [activeFile, rootPath]);
+  }, [rootPath]); // activeFile removido das dependências para não recriar o editor
 
   useEffect(() => {
     let isMounted = true;
     if (activeFile && editor) {
+      // Limpar timeout de save anterior ao trocar de nota para não salvar conteúdo da nota nova na nota antiga
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+
       loadContent(activeFile).then(() => {
         if (!isMounted) return;
         try {
           const markdown = useEditorStore.getState().markdownContent || '';
+          // setContent é muito mais rápido que recriar o editor
           editor.commands.setContent(markdown, { emitUpdate: false });
           
           const text = editor.getText();
@@ -169,7 +175,7 @@ export default function Editor() {
     if (templateToApply && editor) {
       editor.commands.clearContent();
       
-      const { metadata, markdown } = (useEditorStore.getState() as any).parseMarkdownMetadata ? (useEditorStore.getState() as any).parseMarkdownMetadata(templateToApply) : { metadata: {}, markdown: templateToApply };
+      const { metadata, markdown } = parseMarkdownMetadata(templateToApply);
       
       setMetadata(metadata);
       editor.commands.setContent(markdown);

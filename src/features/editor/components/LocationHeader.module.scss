@@ -4,22 +4,21 @@
 .locationHeader {
   display: flex;
   flex-direction: column;
-  gap: 24px;
 }
 
 .gallery {
-  width: calc(100% + 40px);
-  margin: -20px -20px 0 -20px;
+  width: calc(100% + (var(--spacing-md) * 2));
+  margin: 0 calc(var(--spacing-md) * -1);
   background: var(--color-bg-surface);
   border-bottom: 1px solid var(--color-border);
-  padding: 20px;
+  padding: 24px;
 }
 
 .galleryScroll {
   display: flex;
   gap: 16px;
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 12px;
 
   &::-webkit-scrollbar {
     height: 4px;
@@ -32,30 +31,45 @@
 
 .galleryItem {
   position: relative;
-  flex: 0 0 240px;
-  height: 140px;
+  flex: 0 0 320px;
+  height: 180px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
 
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  &:hover img {
+    transform: scale(1.05);
   }
 
   .removeImg {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    background: rgba(0, 0, 0, 0.6);
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.7);
     color: white;
     border: none;
-    border-radius: 4px;
-    padding: 4px;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, background 0.2s;
+    z-index: 2;
+
+    &:hover {
+      background: var(--color-danger);
+    }
   }
 
   &:hover .removeImg {
@@ -64,53 +78,75 @@
 }
 
 .addImgBtn {
-  flex: 0 0 140px;
-  height: 140px;
+  flex: 0 0 180px;
+  height: 180px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
   background: var(--color-accent-glow);
   border: 2px dashed var(--color-accent);
   border-radius: var(--radius-md);
   color: var(--color-accent);
   cursor: pointer;
+  transition: all 0.2s;
 
   &:hover {
     background: rgba(155, 114, 245, 0.1);
     filter: brightness(1.2);
+    transform: translateY(-2px);
   }
 
   span {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 }
 
 .galleryPlaceholder {
-  width: calc(100% + 40px);
-  margin: -20px -20px 0 -20px;
-  height: 100px;
+  width: calc(100% + (var(--spacing-md) * 2));
+  margin: 0 calc(var(--spacing-md) * -1);
+  height: 220px;
   background: var(--color-bg-surface);
   border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
   color: var(--color-text-muted);
   cursor: pointer;
+  transition: all 0.2s;
 
   &:hover {
     background: var(--color-bg-hover);
-    color: var(--color-text-secondary);
+    color: var(--color-accent);
+    
+    svg {
+      transform: scale(1.1);
+      color: var(--color-accent);
+    }
+  }
+
+  svg {
+    transition: all 0.3s ease;
   }
 
   span {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
+    letter-spacing: 0.02em;
   }
+}
+
+.mainContent {
+  padding: 3rem 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
 .hero {

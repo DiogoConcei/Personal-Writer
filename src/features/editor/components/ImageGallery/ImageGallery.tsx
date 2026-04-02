@@ -4,6 +4,7 @@ import { listDirectory, FileNode, deleteItem, renameItem, copyImageToAssets } fr
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import DeleteModal from '@/features/workspace/components/DeleteModal';
+import InputModal from '@/shared/components/Modal/InputModal';
 import styles from './ImageGallery.module.scss';
 import { 
   Folder, 
@@ -34,6 +35,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
   const [draggedItem, setDraggedItem] = useState<FileNode | null>(null);
   const [itemToDelete, setItemToDelete] = useState<FileNode | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showFolderModal, setShowFolderModal] = useState(false);
 
   const ASSETS_DIR = 'assets';
 
@@ -97,8 +99,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
     }
   };
 
-  const handleCreateFolder = async () => {
-    const name = prompt('Nome da nova pasta:');
+  const handleCreateFolder = async (name: string) => {
     if (!name || !name.trim()) return;
 
     const separator = currentPath.includes('\\') ? '\\' : '/';
@@ -218,7 +219,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
               <Upload size={16} />
               <span>{isUploading ? 'Enviando...' : 'Upload'}</span>
             </button>
-            <button className={styles.folderBtn} onClick={handleCreateFolder} title="Nova Pasta">
+            <button className={styles.folderBtn} onClick={() => setShowFolderModal(true)} title="Nova Pasta">
               <Plus size={16} />
             </button>
             <button className={styles.closeBtn} onClick={onClose}>
@@ -292,7 +293,6 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
                       <img 
                         src={convertFileSrc(item.path)} 
                         alt={item.name} 
-                        loading="lazy"
                       />
                       <span className={styles.imageName}>{item.name}</span>
                     </div>
@@ -310,6 +310,15 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
         onConfirm={confirmDelete}
         itemName={itemToDelete?.name || ''}
         isDir={itemToDelete?.is_dir || false}
+      />
+
+      <InputModal 
+        isOpen={showFolderModal}
+        onClose={() => setShowFolderModal(false)}
+        onConfirm={handleCreateFolder}
+        title="Nova Pasta"
+        placeholder="Nome da pasta..."
+        confirmLabel="Criar Pasta"
       />
     </div>
   );

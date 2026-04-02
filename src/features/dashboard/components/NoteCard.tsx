@@ -24,20 +24,40 @@ export default function NoteCard({ entity }: NoteCardProps) {
   };
 
   const renderIcon = () => {
-    if (!entity.icon) return <FileText size={24} className={styles.card__icon} />;
+    // Fallback de Ícone:
+    // 1. Se for localização e tiver imagens, usa a primeira
+    // 2. Se tiver icon definido, usa ele (emoji ou caminho)
+    // 3. Se tiver uma imagem no corpo do texto (previewImage)
+    // 4. Fallback genérico por tipo
     
-    if (entity.icon.includes('/') || entity.icon.includes('\\') || entity.icon.includes('.')) {
-      let iconSrc = entity.icon;
+    let iconToRender = entity.icon;
+    
+    if (entity.type === 'location' && entity.images && entity.images.length > 0) {
+      iconToRender = entity.images[0];
+    }
+
+    if (!iconToRender && entity.previewImage) {
+      iconToRender = entity.previewImage;
+    }
+
+    if (!iconToRender) {
+      if (entity.type === 'character') return <User size={24} className={styles.card__icon} />;
+      if (entity.type === 'location') return <MapPin size={24} className={styles.card__icon} />;
+      return <FileText size={24} className={styles.card__icon} />;
+    }
+    
+    if (iconToRender.includes('/') || iconToRender.includes('\\') || iconToRender.includes('.')) {
+      let iconSrc = iconToRender;
       if (iconSrc.startsWith('./') && rootPath) {
         const relativePart = iconSrc.replace('./', '');
         const separator = rootPath.includes('\\') ? '\\' : '/';
         const fullPath = `${rootPath}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
         iconSrc = convertFileSrc(fullPath);
       }
-      return <img src={iconSrc} className={styles.card__imageIcon} alt="Icon" />;
+      return <img src={iconSrc} className={styles.card__imageIcon} alt="Preview" />;
     }
 
-    return <span className={styles.card__emojiIcon}>{entity.icon}</span>;
+    return <span className={styles.card__emojiIcon}>{iconToRender}</span>;
   };
 
   return (

@@ -27,12 +27,14 @@ interface EditorState {
 const stringifyYAML = (metadata: Metadata) => {
   if (Object.keys(metadata).length === 0) return '';
 
+  const normalize = (path: string) => path.replace(/\\/g, '/');
+
   let yaml = '---\n';
   if (metadata.type) yaml += `type: ${metadata.type}\n`;
-  if (metadata.icon) yaml += `icon: "${metadata.icon}"\n`;
-  if (metadata.music !== undefined) yaml += `music: "${metadata.music}"\n`;
+  if (metadata.icon) yaml += `icon: "${normalize(metadata.icon)}"\n`;
+  if (metadata.music !== undefined) yaml += `music: "${normalize(metadata.music)}"\n`;
   if (metadata.images) {
-    yaml += `images: [${metadata.images.map(i => `"${i}"`).join(', ')}]\n`;
+    yaml += `images: [${metadata.images.map(i => `"${normalize(i)}"`).join(', ')}]\n`;
   }
   if (metadata.linked_characters) {
     yaml += `linked_characters: [${metadata.linked_characters.map(c => `"${c}"`).join(', ')}]\n`;
@@ -51,6 +53,8 @@ const stringifyYAML = (metadata: Metadata) => {
   return yaml;
 };
 
+let saveTimeout: any = null;
+
 export const useEditorStore = create<EditorState>((set, get) => ({
   metadata: {},
   markdownContent: '',
@@ -61,6 +65,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   wordCount: 0,
 
   loadContent: async (path: string) => {
+    if (saveTimeout) clearTimeout(saveTimeout);
     set({ saveStatus: 'idle', lastSnapshotAt: null });
     try {
       const fullContent = await readFile(path);
@@ -79,6 +84,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setMarkdownContent: (markdownContent: string) => {
     set({ markdownContent });
+    
+    // Auto-save disparado por mudança de conteúdo
+    const activeFile = (window as any).__ACTIVE_FILE_PATH__; 
+    // Nota: Como a store não tem o path, vamos usar um hack temporário ou 
+    // passar o path no trigger. Mas melhor: o Editor.tsx já chama save().
+    // Para resolver o bug da imagem, o setMetadata deve disparar o save.
   },
 
   setMetadata: (metadata: Metadata) => {

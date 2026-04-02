@@ -8,6 +8,7 @@ export interface Entity extends Metadata {
   lastModified: number;
   excerpt: string;
   links: string[]; // Caminhos citados via [[ ]]
+  previewImage?: string; // Primeira imagem encontrada no corpo do texto
 }
 
 interface UniverseState {
@@ -71,6 +72,10 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
               links.push(match[1]);
             }
 
+            // Extrair a primeira imagem do corpo do texto (HTML <img> ou Markdown ![]())
+            const imgMatch = markdown.match(/<img\s+src=["'](.*?)["']/i) || markdown.match(/!\[.*?\]\((.*?)\)/i);
+            const previewImage = imgMatch ? imgMatch[1] : undefined;
+
             const excerpt = markdown
               .replace(/<[^>]*>/g, '')
               .replace(/[#*`[\]]/g, '')
@@ -83,7 +88,8 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
               name: node.name.replace('.md', ''),
               lastModified: node.lastModified || node.modified_at || Date.now() / 1000,
               excerpt,
-              links
+              links,
+              previewImage
             };
           } catch (e) {
             console.error(`Erro ao indexar ${node.path}:`, e);
@@ -107,6 +113,10 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
       links.push(match[1]);
     }
 
+    // Extrair a primeira imagem do corpo do texto (HTML <img> ou Markdown ![]())
+    const imgMatch = markdown.match(/<img\s+src=["'](.*?)["']/i) || markdown.match(/!\[.*?\]\((.*?)\)/i);
+    const previewImage = imgMatch ? imgMatch[1] : undefined;
+
     const excerpt = markdown
       .replace(/<[^>]*>/g, '')
       .replace(/[#*`[\]]/g, '')
@@ -121,7 +131,8 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
       name: fileName.replace('.md', ''),
       lastModified: lastModified || Date.now() / 1000,
       excerpt,
-      links
+      links,
+      previewImage
     };
 
     set({ 

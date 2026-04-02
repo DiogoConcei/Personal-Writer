@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { readFile, FileNode } from '@/tauri-bridge';
-import { Metadata, parseMarkdownMetadata } from '@/features/editor/store/editorStore';
+import { Metadata, parseMarkdownMetadata } from '@/features/editor/store/metadataParser';
 
 export interface Entity extends Metadata {
   path: string;

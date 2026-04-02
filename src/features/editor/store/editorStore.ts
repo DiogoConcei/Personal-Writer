@@ -1,24 +1,10 @@
 import { create } from 'zustand';
 import { readFile, writeFile, createSnapshot } from '@/tauri-bridge';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
+import { Metadata, parseMarkdownMetadata } from './metadataParser';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type Typography = 'sans' | 'serif';
-
-export interface FieldConfig {
-  type: 'text' | 'number' | 'select';
-  options?: string[];
-}
-
-export interface Metadata {
-  type?: string;
-  icon?: string;
-  images?: string[];
-  music?: string;
-  linked_characters?: string[];
-  config?: Record<string, FieldConfig>;
-  fields?: Record<string, any>;
-}
 
 interface EditorState {
   metadata: Metadata;
@@ -37,60 +23,6 @@ interface EditorState {
   setTypography: (typography: Typography) => void;
   setWordCount: (count: number) => void;
 }
-
-export const parseMarkdownMetadata = (content: string) => {
-  const yamlMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!yamlMatch) return { metadata: {}, markdown: content };
-
-  const yamlStr = yamlMatch[1];
-  const markdown = content.replace(yamlMatch[0], '').trim();
-  const data: Metadata = { fields: {} };
-
-  const typeMatch = yamlStr.match(/type:\s*["']?([^"'\r\n]+)["']?/i);
-  const iconMatch = yamlStr.match(/icon:\s*["']?([^"'\r\n]+)["']?/i);
-  const musicMatch = yamlStr.match(/music:\s*["']?([^"'\r\n]+)["']?/i);
-  const configMatch = yamlStr.match(/config:\s*'(.*?)'/i);
-
-  // Parsers de arrays simples (estilo [item1, item2])
-  const imagesMatch = yamlStr.match(/images:\s*\[(.*?)\]/i);
-  const linkedMatch = yamlStr.match(/linked_characters:\s*\[(.*?)\]/i);
-
-  if (typeMatch) data.type = typeMatch[1].trim();
-  if (iconMatch) data.icon = iconMatch[1].trim();
-  if (musicMatch) data.music = musicMatch[1].trim();
-  
-  if (imagesMatch) {
-    data.images = imagesMatch[1].split(',').map(s => s.trim().replace(/["']/g, '')).filter(Boolean);
-  } else {
-    data.images = [];
-  }
-
-  if (linkedMatch) {
-    data.linked_characters = linkedMatch[1].split(',').map(s => s.trim().replace(/["']/g, '')).filter(Boolean);
-  } else {
-    data.linked_characters = [];
-  }
-
-  if (configMatch) {
-    try {
-      data.config = JSON.parse(configMatch[1]);
-    } catch (e) {}
-  }
-
-  const fieldsBlock = yamlStr.match(/fields:\r?\n([\s\S]*?)(?=\r?\n[a-z]|$)/i);
-  if (fieldsBlock) {
-    const lines = fieldsBlock[1].split('\n');
-    lines.forEach(line => {
-      const parts = line.split(':');
-      if (parts.length >= 2) {
-        const k = parts[0].trim();
-        const v = parts.slice(1).join(':').trim().replace(/["']/g, '');
-        if (k) data.fields![k] = isNaN(Number(v)) ? v : Number(v);
-      }
-    });
-  }
-  return { metadata: data, markdown };
-};
 
 const stringifyYAML = (metadata: Metadata) => {
   if (Object.keys(metadata).length === 0) return '';
@@ -164,7 +96,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       
       const now = new Date();
       
-      // Atualizar o índice do Universo
+      // Atualizar o índice do Universo (Aqui usamos o acesso dinâmico para evitar problemas de init circular)
       useUniverseStore.getState().updateEntity(path, fullContent, now.getTime() / 1000);
 
       // Snapshot automático a cada 10 min
@@ -191,4 +123,3 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ wordCount: count });
   },
 }));
-

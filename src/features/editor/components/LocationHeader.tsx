@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import styles from './LocationHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { useEditorStore, Metadata, parseMarkdownMetadata } from '@/features/editor/store/editorStore';
+import { useEditorStore } from '@/features/editor/store/editorStore';
+import { Metadata, parseMarkdownMetadata } from '@/features/editor/store/metadataParser';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { 
   MapPin, Music, Play, Pause, Plus, Trash2, 

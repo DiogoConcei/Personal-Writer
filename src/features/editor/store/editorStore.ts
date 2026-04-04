@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { readFile, writeFile, createSnapshot } from '@/tauri-bridge';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
-import { Metadata, parseMarkdownMetadata } from './metadataParser';
+import { Metadata, parseMarkdownMetadata, stringifyYAML } from './metadataParser';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type Typography = 'sans' | 'serif';
@@ -19,39 +19,10 @@ interface EditorState {
   loadContent: (path: string) => Promise<void>;
   setMarkdownContent: (content: string) => void;
   setMetadata: (metadata: Metadata) => void;
-  save: (path: string, workspaceRoot?: string) => Promise<void>;
+  save: (path: string, workspaceRoot?: string) => Promise<boolean>;
   setTypography: (typography: Typography) => void;
   setWordCount: (count: number) => void;
 }
-
-const stringifyYAML = (metadata: Metadata) => {
-  if (Object.keys(metadata).length === 0) return '';
-
-  const normalize = (path: string) => path.replace(/\\/g, '/');
-
-  let yaml = '---\n';
-  if (metadata.type) yaml += `type: ${metadata.type}\n`;
-  if (metadata.icon) yaml += `icon: "${normalize(metadata.icon)}"\n`;
-  if (metadata.music !== undefined) yaml += `music: "${normalize(metadata.music)}"\n`;
-  if (metadata.images) {
-    yaml += `images: [${metadata.images.map(i => `"${normalize(i)}"`).join(', ')}]\n`;
-  }
-  if (metadata.linked_characters) {
-    yaml += `linked_characters: [${metadata.linked_characters.map(c => `"${c}"`).join(', ')}]\n`;
-  }
-  if (metadata.config && Object.keys(metadata.config).length > 0) {
-    yaml += `config: '${JSON.stringify(metadata.config)}'\n`;
-  }
-  if (metadata.fields && Object.keys(metadata.fields).length > 0) {
-    yaml += `fields:\n`;
-    Object.entries(metadata.fields).forEach(([k, v]) => {
-      const formattedValue = typeof v === 'string' ? `"${v}"` : v;
-      yaml += `  ${k}: ${formattedValue}\n`;
-    });
-  }
-  yaml += '---';
-  return yaml;
-};
 
 let saveTimeout: any = null;
 
@@ -119,9 +90,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         saveStatus: 'saved', 
         lastSavedAt: now
       });
+      return true;
     } catch (error) {
       console.error('Erro ao salvar arquivo:', error);
       set({ saveStatus: 'error' });
+      return false;
     }
   },
 

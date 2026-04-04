@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { readFile, FileNode } from '@/tauri-bridge';
-import { Metadata, parseMarkdownMetadata } from '@/features/editor/store/metadataParser';
+import { readFile, writeFile, FileNode } from '@/tauri-bridge';
+import { Metadata, parseMarkdownMetadata, stringifyYAML } from '@/features/editor/store/metadataParser';
 
 export interface Entity extends Metadata {
   path: string;
@@ -22,6 +22,7 @@ interface UniverseState {
   removeEntity: (path: string) => void;
   clearIndex: () => void;
   getBacklinks: (targetPath: string) => Entity[];
+  updateEntitiesOrder: (paths: string[]) => Promise<void>;
 }
 
 export const useUniverseStore = create<UniverseState>((set, get) => ({
@@ -41,6 +42,37 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
         link === targetName || link === targetPath || targetPath.endsWith(link + '.md')
       );
     });
+  },
+
+  updateEntitiesOrder: async (paths: string[]) => {
+    const { entities } = get();
+    const updatedEntities = { ...entities };
+
+    for (let i = 0; i < paths.length; i++) {
+      const path = paths[i];
+      const entity = updatedEntities[path];
+      if (entity) {
+        if (!entity.fields) entity.fields = {};
+        entity.fields.order = i;
+        
+        try {
+          // Ler o conteúdo original para preservar o corpo do markdown
+          const fullContent = await readFile(path);
+          const { markdown } = parseMarkdownMetadata(fullContent);
+          
+          // Gerar novo YAML com o campo order atualizado
+          const newYaml = stringifyYAML(entity);
+          const newContent = `${newYaml}\n\n${markdown}`;
+          
+          await writeFile(path, newContent);
+          updatedEntities[path] = { ...entity };
+        } catch (e) {
+          console.error(`Erro ao salvar nova ordem para ${path}:`, e);
+        }
+      }
+    }
+
+    set({ entities: updatedEntities });
   },
 
   indexWorkspace: async (files: FileNode[]) => {

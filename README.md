@@ -5,6 +5,7 @@ Um editor de notas Desktop moderno, local-first e extensível, construído com *
 ## ✨ Recursos Principais
 
 - 🖋️ **Editor Rich-Text**: Experiência TipTap polida com suporte a Markdown.
+- 📖 **Dicionário e Sinônimos**: Corretor ortográfico nativo (PT-BR) e dicionário de sinônimos offline integrados via Rust.
 - 📂 **Organização Fluida**: Árvore de arquivos com Drag-and-Drop ultra-rápido e atualizações otimistas.
 - 🖼️ **Gestão de Imagens**: Galeria integrada com upload local e suporte a layouts flexíveis (float/wrap).
 - 🔗 **WikiLinks**: Navegação rápida estilo Obsidian com autocomplete.

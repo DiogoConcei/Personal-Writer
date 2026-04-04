@@ -5,6 +5,7 @@ import BubbleMenu from '@tiptap/extension-bubble-menu';
 import { WikiLink } from '../extensions/WikiLink/WikiLink';
 import { CustomImage } from '../extensions/Image/Image';
 import { FontSize } from '../extensions/FontSize';
+import { Spelling } from '../extensions/Spelling';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { MetadataHeader } from './MetadataHeader';
@@ -15,6 +16,7 @@ import { saveImageFromBytes } from '@/tauri-bridge';
 import VersionHistory from './VersionHistory/VersionHistory';
 import ImageGallery from './ImageGallery/ImageGallery';
 import EditorBubbleMenu from './EditorBubbleMenu';
+import { DictionaryContextMenu } from './DictionaryContextMenu';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
 import styles from './Editor.module.scss';
 import { History, LayoutTemplate, Image as ImageIcon } from 'lucide-react';
@@ -26,6 +28,10 @@ export default function Editor() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [templateToApply, setTemplateToApply] = useState<string | null>(null);
+  
+  // Estado do Menu de Contexto do Dicionário
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, word: string, suggestions: string[] } | null>(null);
+
   const { setMarkdownContent, loadContent, save, typography, setWordCount, setMetadata } = useEditorStore();
   const saveTimeoutRef = useRef<any>(null);
 
@@ -49,6 +55,7 @@ export default function Editor() {
       TextStyle,
       FontFamily,
       FontSize,
+      Spelling.configure({ debounce: 800 }),
       WikiLink.configure({
         onLinkClick: (noteName: string) => {
           const findFile = (nodeList: any[]): any => {
@@ -83,7 +90,7 @@ export default function Editor() {
       }
     },
     editorProps: {
-      attributes: { class: styles.prose, spellcheck: 'true', lang: 'pt-BR' },
+      attributes: { class: styles.prose, spellcheck: 'false', lang: 'pt-BR' },
       handlePaste: (view, event) => {
         const items = Array.from(event.clipboardData?.items || []);
         const imageItem = items.find(item => item.type.startsWith('image'));
@@ -167,6 +174,44 @@ export default function Editor() {
     return () => { isMounted = false; };
   }, [activeFile, editor, loadContent, setWordCount]);
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // Tentar encontrar a palavra sob o mouse
+    const target = e.target as HTMLElement;
+    const isMisspelled = target.classList.contains('misspelled');
+    
+    let word = '';
+    let suggestions: string[] = [];
+
+    if (isMisspelled) {
+      word = target.getAttribute('data-word') || '';
+      try {
+        suggestions = JSON.parse(target.getAttribute('data-suggestions') || '[]');
+      } catch (err) {}
+    } else {
+      const selection = window.getSelection();
+      word = selection?.toString().trim() || '';
+      
+      if (!word && editor) {
+        const { view } = editor;
+        const pos = view.posAtCoords({ left: e.clientX, top: e.clientY });
+        if (pos) {
+          const $pos = view.state.doc.resolve(pos.pos);
+          const text = $pos.parent.textContent;
+          const offset = $pos.parentOffset;
+          const before = text.slice(0, offset).match(/[\p{L}\p{N}]+$/u);
+          const after = text.slice(offset).match(/^[\p{L}\p{N}]+/u);
+          word = (before ? before[0] : '') + (after ? after[0] : '');
+        }
+      }
+    }
+
+    if (word) {
+      setContextMenu({ x: e.clientX, y: e.clientY, word, suggestions });
+    }
+  };
+
   const applyTemplate = (templateContent: string) => {
     setTemplateToApply(templateContent);
     setShowTemplates(false);
@@ -215,9 +260,16 @@ export default function Editor() {
         </div>
       </div>
       
-      <div className={styles.scrollContainer}>
+      <div className={styles.scrollContainer} onContextMenu={handleContextMenu} onClick={() => setContextMenu(null)}>
         <MetadataHeader />
         <EditorBubbleMenu editor={editor} />
+        {editor && contextMenu && (
+          <DictionaryContextMenu 
+            editor={editor} 
+            {...contextMenu} 
+            onClose={() => setContextMenu(null)} 
+          />
+        )}
         <EditorContent editor={editor} className={styles.editor} />
       </div>
 

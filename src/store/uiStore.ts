@@ -20,12 +20,19 @@ export interface PreviewState {
   position: { x: number; y: number } | null;
 }
 
+export interface ToastNotification {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
 interface UIState {
   activePanel: ActivePanel;
   isSidebarVisible: boolean;
   isRightSidebarVisible: boolean;
   isFocusMode: boolean;
   isCommandPaletteOpen: boolean;
+  notifications: ToastNotification[];
   
   // Quick Look State
   preview: PreviewState;
@@ -42,6 +49,8 @@ interface UIState {
   setPreview: (preview: Partial<PreviewState>) => void;
   setDragInfo: (info: Partial<DragInfo>) => void;
   resetDrag: () => void;
+  addNotification: (message: string, type?: ToastNotification['type']) => void;
+  removeNotification: (id: string) => void;
 }
 
 const INITIAL_DRAG: DragInfo = {
@@ -67,6 +76,7 @@ export const useUIStore = create<UIState>((set) => ({
   isRightSidebarVisible: false,
   isFocusMode: false,
   isCommandPaletteOpen: false,
+  notifications: [],
   dragInfo: INITIAL_DRAG,
   preview: INITIAL_PREVIEW,
 
@@ -84,5 +94,23 @@ export const useUIStore = create<UIState>((set) => ({
   })),
   
   resetDrag: () => set({ dragInfo: INITIAL_DRAG }),
+
+  addNotification: (message, type = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    set((state) => ({
+      notifications: [...state.notifications, { id, message, type }]
+    }));
+
+    // Auto-remove após 3 segundos
+    setTimeout(() => {
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n.id !== id)
+      }));
+    }, 3000);
+  },
+
+  removeNotification: (id) => set((state) => ({
+    notifications: state.notifications.filter((n) => n.id !== id)
+  })),
 }));
 

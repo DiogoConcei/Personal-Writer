@@ -1,0 +1,49 @@
+@import '@/shared/styles/_variables';
+
+.toast {
+  background-color: var(--color-gunmetal-light);
+  color: var(--color-text-primary);
+  padding: 12px 20px;
+  border-radius: 8px;
+  border-left: 4px solid var(--color-amethyst);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+  pointer-events: auto;
+  animation: slideIn 0.3s ease-out;
+  font-size: 0.9rem;
+
+  &--success {
+    border-left-color: #4ade80;
+    .icon { color: #4ade80; }
+  }
+
+  &--error {
+    border-left-color: #f87171;
+    .icon { color: #f87171; }
+  }
+
+  &--info {
+    border-left-color: var(--color-amethyst);
+    .icon { color: var(--color-amethyst); }
+  }
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

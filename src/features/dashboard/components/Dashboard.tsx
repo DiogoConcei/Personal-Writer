@@ -1,13 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUniverseStore, Entity } from '@/features/universe/store/universeStore';
 import NoteCard from './NoteCard';
+import TimelineView from './TimelineView';
 import styles from './Dashboard.module.scss';
-import { LayoutGrid, User, MapPin, FileText } from 'lucide-react';
+import { LayoutGrid, User, MapPin, FileText, Clock } from 'lucide-react';
 
 export default function Dashboard() {
   const { dashboardFilterPath, rootPath, setDashboardFilterPath } = useWorkspaceStore();
   const { entities, isIndexing } = useUniverseStore();
+  const [activeTab, setActiveTab] = useState<'gallery' | 'timeline'>('gallery');
   
   // Filtrar e categorizar notas usando o índice em memória
   const categorized = useMemo(() => {
@@ -78,6 +80,22 @@ export default function Dashboard() {
       <header className={styles.header}>
         <div className={styles.header__left}>
           <h2 className={styles.title}>{getTitle()}</h2>
+          <div className={styles.tabs}>
+            <button 
+              className={`${styles.tab} ${activeTab === 'gallery' ? styles.active : ''}`}
+              onClick={() => setActiveTab('gallery')}
+            >
+              <LayoutGrid size={16} />
+              Galeria
+            </button>
+            <button 
+              className={`${styles.tab} ${activeTab === 'timeline' ? styles.active : ''}`}
+              onClick={() => setActiveTab('timeline')}
+            >
+              <Clock size={16} />
+              Linha do Tempo
+            </button>
+          </div>
           {dashboardFilterPath && (
             <button className={styles.clearFilter} onClick={() => setDashboardFilterPath(null)}>
               Limpar Filtro
@@ -88,9 +106,15 @@ export default function Dashboard() {
       </header>
       
       <div className={styles.content}>
-        {renderSection('Personagens', <User size={20} color="#a78bfa" />, categorized.characters)}
-        {renderSection('Localização', <MapPin size={20} color="#fbbf24" />, categorized.locations)}
-        {renderSection('Notas Gerais', <FileText size={20} color="#94a3b8" />, categorized.others)}
+        {activeTab === 'gallery' ? (
+          <>
+            {renderSection('Personagens', <User size={20} color="#a78bfa" />, categorized.characters)}
+            {renderSection('Localização', <MapPin size={20} color="#fbbf24" />, categorized.locations)}
+            {renderSection('Notas Gerais', <FileText size={20} color="#94a3b8" />, categorized.others)}
+          </>
+        ) : (
+          <TimelineView />
+        )}
       </div>
     </div>
   );

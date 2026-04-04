@@ -13,13 +13,14 @@ import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { useUIStore } from '@/store/uiStore';
+import { ToastContainer } from '@/shared/components/Toast/ToastContainer';
 import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users } from 'lucide-react';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
 
 function App() {
   const { activeFile, rootPath, setRootPath, selectWorkspace } = useWorkspaceStore();
-  const { typography, setTypography } = useEditorStore();
+  const { typography, setTypography, save } = useEditorStore();
   const { entities } = useUniverseStore();
   const { 
     activePanel, 
@@ -30,7 +31,8 @@ function App() {
     toggleRightSidebar,
     setCommandPaletteOpen,
     preview,
-    setPreview
+    setPreview,
+    addNotification
   } = useUIStore();
 
   const isImage = activeFile && IMAGE_EXTENSIONS.some(ext => activeFile.toLowerCase().endsWith(ext));
@@ -69,11 +71,25 @@ function App() {
         e.preventDefault();
         setActivePanel('editor');
       }
+
+      // Salvamento Manual: Ctrl + S
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        if (activeFile && activePanel === 'editor' && !isImage) {
+          save(activeFile, rootPath || undefined).then((success) => {
+            if (success) {
+              addNotification('Alterações salvas com sucesso', 'success');
+            } else {
+              addNotification('Erro ao salvar arquivo', 'error');
+            }
+          });
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar, activePanel, setActivePanel]);
+  }, [toggleSidebar, activePanel, setActivePanel, activeFile, isImage, rootPath, save, addNotification]);
 
   const toggleTypography = () => {
     setTypography(typography === 'sans' ? 'serif' : 'sans');
@@ -248,6 +264,8 @@ function App() {
       )}
 
       <CommandPalette />
+
+      <ToastContainer />
 
       {preview.entityPath && preview.position && entities[preview.entityPath] && (
         <EntityPreview 

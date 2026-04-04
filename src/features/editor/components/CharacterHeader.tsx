@@ -13,6 +13,8 @@ import { resolveAssetPath } from '@/tauri-bridge';
 
 import { Backlinks } from './Backlinks';
 
+import { SummaryEditor } from './SummaryEditor';
+
 export function CharacterHeader() {
   const { rootPath, activeFile } = useWorkspaceStore();
   const { metadata, setMetadata, save } = useEditorStore();
@@ -69,16 +71,10 @@ export function CharacterHeader() {
             </span>
           </div>
           <h1 className={styles.name}>{noteName}</h1>
-          <textarea 
-            className={styles.summaryInput}
+          <SummaryEditor 
             value={metadata.fields?.summary || ''} 
-            onChange={(e) => {
-              handleFieldChange('summary', e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = e.target.scrollHeight + 'px';
-            }}
+            onChange={(html) => handleFieldChange('summary', html)}
             placeholder="Clique para adicionar um resumo..."
-            rows={1}
           />
         </div>
       </div>

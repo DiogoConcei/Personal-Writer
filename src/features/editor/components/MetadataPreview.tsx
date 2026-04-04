@@ -53,9 +53,11 @@ export function MetadataPreview({ metadata, rootPath, noteName }: MetadataPrevie
           </div>
           <h1 className={styles.name}>{noteName}</h1>
           {metadata.fields?.summary && (
-            <div className={styles.summaryInput} style={{ border: 'none', minHeight: 'auto' }}>
-              {metadata.fields.summary}
-            </div>
+            <div 
+              className={styles.summaryInput} 
+              style={{ border: 'none', minHeight: 'auto' }}
+              dangerouslySetInnerHTML={{ __html: metadata.fields.summary }}
+            />
           )}
         </div>
       </div>

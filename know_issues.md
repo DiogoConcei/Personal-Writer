@@ -104,6 +104,46 @@ Este documento registra erros que já aconteceram durante o desenvolvimento, sua
 
 ---
 
+## KI-024 — Erro de Linker (LNK1181) com Crate Hunspell no Windows
+
+**Sintoma:** Falha na compilação do Rust com o erro `fatal error LNK1181: não foi possível abrir o arquivo de entrada 'hunspell.lib'`.
+
+**Causa:** A crate `hunspell` original é apenas um binding (ponte) para a biblioteca C++. No Windows, ela exige que a biblioteca compilada do Hunspell esteja presente no sistema e configurada no PATH do linker, o que quebra a portabilidade do projeto.
+
+**Solução:** Substituir a crate por uma implementação **100% Rust**, como o `spellbook`. Isso elimina a dependência de bibliotecas C++ externas e garante que o projeto compile em qualquer máquina apenas com o Toolchain do Rust.
+
+---
+
+## KI-025 — Limitações de API em Crates de Ortografia (ZSpell vs Spellbook)
+
+**Sintoma:** Erros de compilação como `no method named suggest` ou `cannot infer type`.
+
+**Causa:** A crate `zspell` (versão 0.5.x) possui a API de sugestões marcada como "WIP" (em progresso) e não a expõe de forma estável. Além disso, a inicialização de dicionários pessoais exige o uso de Builders complexos.
+
+**Solução:** Utilizar a crate **`spellbook`** (mantida pela equipe do editor Helix). Ela possui uma API estável e completa para `check`, `suggest` e `add`, além de ser compatível com o formato de dicionários do LibreOffice/Firefox.
+
+---
+
+## KI-026 — Incompatibilidade de Comandos curl/&& no PowerShell (Tauri Dev)
+
+**Sintoma:** Erros de sintaxe ao tentar baixar arquivos ou rodar comandos encadeados via `run_shell_command`.
+
+**Causa:** O alias `curl` no Windows PowerShell aponta para `Invoke-WebRequest`, que não suporta os mesmos parâmetros do cURL do Linux (como `-L`). Além disso, versões antigas do PowerShell não aceitam `&&` para encadeamento.
+
+**Solução:** Utilizar o comando nativo do PowerShell: `iwr -Uri <URL> -OutFile <PATH>`. Para encadeamento de comandos, utilize o ponto e vírgula `;`.
+
+---
+
+## KI-027 — Travamento Total (Freeze) por Desalinhamento de Índices Unicode
+
+**Sintoma:** A aplicação trava completamente após uma verificação ortográfica, exigindo fechar o processo.
+
+**Causa:** Conflito de codificação. O Rust retorna posições de erro em **offsets de bytes (UTF-8)**, mas o ProseMirror espera **offsets de caracteres (UTF-16)**. Se o texto contém acentos (ex: 'á'), os índices divergem. Ao tentar renderizar uma decoração em um índice inválido, o motor da WebView entra em loop ou pânico visual.
+
+**Solução:** Implementada a função `byteToCharIndex` no frontend usando `TextEncoder`/`TextDecoder` para converter precisamente os offsets de bytes do Rust para a contagem de caracteres do JS antes de aplicar as decorações no TipTap.
+
+---
+
 ## Padrões Gerais — Salvamento de Imagens
 
 | Contexto              | Regra de Ouro                                                                        |

@@ -64,7 +64,7 @@ export function AttributeGrid({ metadata, onUpdate }: AttributeGridProps) {
   return (
     <div className={styles.grid}>
       {metadata.fields && Object.entries(metadata.fields)
-        .filter(([key]) => key !== 'summary' && key !== 'Status')
+        .filter(([key]) => key !== 'summary' && key !== 'Status' && key !== 'order')
         .map(([key, value]) => {
           const config = metadata.config?.[key];
           const type = config?.type || (typeof value === 'number' ? 'number' : 'text');

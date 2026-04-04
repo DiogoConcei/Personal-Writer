@@ -65,3 +65,32 @@ export const parseMarkdownMetadata = (content: string) => {
   }
   return { metadata: data, markdown };
 };
+
+export const stringifyYAML = (metadata: Metadata) => {
+  if (Object.keys(metadata).length === 0) return '';
+
+  const normalize = (path: string) => path.replace(/\\/g, '/');
+
+  let yaml = '---\n';
+  if (metadata.type) yaml += `type: ${metadata.type}\n`;
+  if (metadata.icon) yaml += `icon: "${normalize(metadata.icon)}"\n`;
+  if (metadata.music !== undefined) yaml += `music: "${normalize(metadata.music)}"\n`;
+  if (metadata.images && metadata.images.length > 0) {
+    yaml += `images: [${metadata.images.map(i => `"${normalize(i)}"`).join(', ')}]\n`;
+  }
+  if (metadata.linked_characters && metadata.linked_characters.length > 0) {
+    yaml += `linked_characters: [${metadata.linked_characters.map(c => `"${c}"`).join(', ')}]\n`;
+  }
+  if (metadata.config && Object.keys(metadata.config).length > 0) {
+    yaml += `config: '${JSON.stringify(metadata.config)}'\n`;
+  }
+  if (metadata.fields && Object.keys(metadata.fields).length > 0) {
+    yaml += `fields:\n`;
+    Object.entries(metadata.fields).forEach(([k, v]) => {
+      const formattedValue = typeof v === 'string' ? `"${v}"` : v;
+      yaml += `  ${k}: ${formattedValue}\n`;
+    });
+  }
+  yaml += '---';
+  return yaml;
+};

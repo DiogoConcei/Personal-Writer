@@ -1,0 +1,58 @@
+@use '@/shared/styles/variables' as *;
+
+.summaryContainer {
+  position: relative;
+  width: 100%;
+  margin-top: 0.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  
+  /* Esconder barra de rolagem */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Tauri */
+  }
+}
+
+.editorContent {
+  width: 100%;
+  flex: 1;
+  cursor: text;
+  
+  :global(.tiptap) {
+    outline: none;
+  }
+}
+
+.summaryProse {
+  color: var(--color-text-secondary);
+  font-size: 1.25rem;
+  font-style: italic;
+  outline: none;
+  line-height: 1.5;
+  font-family: inherit;
+  min-height: 1.5em;
+  transition: color 0.2s;
+
+  &:focus {
+    color: var(--color-text-primary);
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.placeholder {
+  position: absolute;
+  top: 0.1rem;
+  left: 0;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  font-style: italic;
+  pointer-events: none;
+  opacity: 0.3;
+}

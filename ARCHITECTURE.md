@@ -30,6 +30,7 @@
 | Feature | Arquivos Críticos | Status |
 | :--- | :--- | :--- |
 | **Ecossistema de Imagem** | `ImageGallery.tsx`, `resolveAssetPath.ts` | ✅ Estável (Fase 3 Concluída) |
+| **Dicionário e Sinônimos**| `dictionary.rs`, `Spelling.ts` | ✅ Estável — ADR-011/012 |
 | **Persistência de YAML** | `editorStore.ts`, `metadataParser.ts` | ✅ Estável |
 | **Drag-and-Drop** | `FileTree.tsx`, `FileTreeItem.tsx` | ✅ Estável — ADR-009 |
 
@@ -45,6 +46,18 @@
 ### ADR-010 — Persistência de Lock de Snapshots
 **Decisão:** Utilizar sufixos de arquivo para armazenar o estado de "trancado" de uma versão do histórico.
 **Motivo:** Simplicidade local-first. Ao trancar uma versão `123.txt`, ela é renomeada para `123.locked.txt`. Isso evita a necessidade de um banco de dados de metadados extra, mantendo a portabilidade do histórico apenas via sistema de arquivos.
+
+### ADR-011 — Motor de Ortografia 100% Rust (Spellbook)
+**Decisão:** Substituição da crate `hunspell` (binding C++) pela crate `spellbook` (100% Rust).
+**Motivo:** Garantir a portabilidade do projeto e facilidade de compilação em ambientes Windows (MSVC) sem a necessidade de instalar bibliotecas externas `.lib` ou configurar caminhos de linker complexos.
+
+### ADR-012 — Mapeamento de Offsets UTF-8 para UTF-16
+**Decisão:** Implementação de um conversor de índices de bytes (Rust) para índices de caracteres (ProseMirror) no frontend.
+**Motivo:** O Rust processa strings em UTF-8, enquanto o JS/ProseMirror usa UTF-16. O desalinhamento de índices causava decorações fora dos limites, gerando travamentos totais na aplicação.
+
+### ADR-013 — Dicionário Pessoal Global via AppData
+**Decisão:** Armazenar palavras ignoradas pelo usuário em uma pasta global do sistema (`%AppData%`).
+**Motivo:** Proporcionar consistência onde nomes de personagens criados pelo usuário sejam reconhecidos em todos os workspaces na mesma máquina.
 
 ---
 

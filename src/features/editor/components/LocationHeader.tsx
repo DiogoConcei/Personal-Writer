@@ -20,9 +20,17 @@ interface CharacterLink {
 
 import { Backlinks } from './Backlinks';
 
-export function LocationHeader() {
+interface LocationHeaderProps {
+  metadata?: Metadata;
+  readOnly?: boolean;
+}
+
+export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHeaderProps) {
   const { rootPath, activeFile, setActiveFile } = useWorkspaceStore();
-  const { metadata, setMetadata, save } = useEditorStore();
+  const { metadata: storeMetadata, setMetadata, save } = useEditorStore();
+  
+  const metadata = propMetadata || storeMetadata;
+  
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [showCharacterPicker, setShowCharacterPicker] = useState(false);
   const [availableCharacters, setAvailableCharacters] = useState<CharacterLink[]>([]);
@@ -35,10 +43,10 @@ export function LocationHeader() {
   const noteName = activeFile ? activeFile.split(/[\\/]/).pop()?.replace('.md', '') : 'Nova Localização';
 
   useEffect(() => {
-    if (showCharacterPicker) {
+    if (showCharacterPicker && !readOnly) {
       loadCharacters();
     }
-  }, [showCharacterPicker]);
+  }, [showCharacterPicker, readOnly]);
 
   const loadCharacters = async () => {
     if (!rootPath) return;
@@ -72,6 +80,7 @@ export function LocationHeader() {
   };
 
   const updateMetadata = (newData: Metadata) => {
+    if (readOnly) return;
     setMetadata(newData);
     // Forçar salvamento no disco para persistir mudanças de cabeçalho (images/fields)
     if (activeFile) {
@@ -80,6 +89,7 @@ export function LocationHeader() {
   };
 
   const addImage = (src: string) => {
+    if (readOnly) return;
     const images = [...(metadata.images || [])];
     if (!images.includes(src)) {
       images.push(src);
@@ -89,11 +99,13 @@ export function LocationHeader() {
   };
 
   const removeImage = (src: string) => {
+    if (readOnly) return;
     const images = (metadata.images || []).filter(img => img !== src);
     updateMetadata({ ...metadata, images });
   };
 
   const linkCharacter = (char: CharacterLink) => {
+    if (readOnly) return;
     const linked = [...(metadata.linked_characters || [])];
     if (!linked.includes(char.path)) {
       linked.push(char.path);
@@ -103,6 +115,7 @@ export function LocationHeader() {
   };
 
   const unlinkCharacter = (path: string) => {
+    if (readOnly) return;
     const linked = (metadata.linked_characters || []).filter(p => p !== path);
     updateMetadata({ ...metadata, linked_characters: linked });
   };
@@ -133,29 +146,31 @@ export function LocationHeader() {
   };
 
   return (
-    <div className={styles.locationHeader}>
+    <div className={`${styles.locationHeader} ${readOnly ? styles['locationHeader--readonly'] : ''}`}>
       {/* Galeria de Imagens */}
-      {(metadata.images && metadata.images.length > 0) || showImagePicker ? (
+      {(metadata.images && metadata.images.length > 0) || (showImagePicker && !readOnly) ? (
         <div className={styles.gallery}>
           <div className={styles.galleryScroll}>
             {metadata.images?.map((img, idx) => (
               <div key={idx} className={styles.galleryItem}>
                 <img src={resolveAssetPath(img, rootPath)} alt={`Location ${idx}`} />
-                <button className={styles.removeImg} onClick={() => removeImage(img)}><X size={14} /></button>
+                {!readOnly && <button className={styles.removeImg} onClick={() => removeImage(img)}><X size={14} /></button>}
               </div>
             ))}
-            <button className={styles.addImgBtn} onClick={() => setShowImagePicker(true)}>
-              <Plus size={24} />
-              <span>Adicionar Foto</span>
-            </button>
+            {!readOnly && (
+              <button className={styles.addImgBtn} onClick={() => setShowImagePicker(true)}>
+                <Plus size={24} />
+                <span>Adicionar Foto</span>
+              </button>
+            )}
           </div>
         </div>
-      ) : (
+      ) : !readOnly ? (
         <div className={styles.galleryPlaceholder} onClick={() => setShowImagePicker(true)}>
           <MapPin size={32} />
           <span>Clique para adicionar imagens desta localização</span>
         </div>
-      )}
+      ) : null}
 
       <div className={styles.mainContent}>
         <div className={styles.hero}>
@@ -195,6 +210,7 @@ export function LocationHeader() {
                   value={progress} 
                   onChange={handleSeek}
                   className={styles.progressBar}
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -212,14 +228,16 @@ export function LocationHeader() {
               const charName = path.split(/[\\/]/).pop()?.replace('.md', '');
               return (
                 <div key={path} className={styles.charTag}>
-                  <span className={styles.tagName} onClick={() => setActiveFile(path)}>{charName}</span>
-                  <button className={styles.unlinkBtn} onClick={() => unlinkCharacter(path)}><X size={12} /></button>
+                  <span className={styles.tagName} onClick={() => !readOnly && setActiveFile(path)}>{charName}</span>
+                  {!readOnly && <button className={styles.unlinkBtn} onClick={() => unlinkCharacter(path)}><X size={12} /></button>}
                 </div>
               );
             })}
-            <button className={styles.addTagBtn} onClick={() => setShowCharacterPicker(true)}>
-              <Plus size={14} /> Vincular
-            </button>
+            {!readOnly && (
+              <button className={styles.addTagBtn} onClick={() => setShowCharacterPicker(true)}>
+                <Plus size={14} /> Vincular
+              </button>
+            )}
           </div>
         </div>
 
@@ -228,10 +246,10 @@ export function LocationHeader() {
             <Info size={14} />
             <span>Detalhes da Localização</span>
           </div>
-          <AttributeGrid metadata={metadata} onUpdate={updateMetadata} />
+          <AttributeGrid metadata={metadata} onUpdate={updateMetadata} readOnly={readOnly} />
         </div>
         
-        {activeFile && <Backlinks targetPath={activeFile} />}
+        {!readOnly && activeFile && <Backlinks targetPath={activeFile} />}
       </div>
 
       {showImagePicker && (

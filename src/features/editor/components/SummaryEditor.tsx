@@ -11,9 +11,10 @@ interface SummaryEditorProps {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  readOnly?: boolean;
 }
 
-export function SummaryEditor({ value, onChange, placeholder }: SummaryEditorProps) {
+export function SummaryEditor({ value, onChange, placeholder, readOnly }: SummaryEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -22,7 +23,9 @@ export function SummaryEditor({ value, onChange, placeholder }: SummaryEditorPro
       FontSize,
     ],
     content: value,
+    editable: !readOnly,
     onUpdate: ({ editor }) => {
+      if (readOnly) return;
       const html = editor.getHTML();
       // Se o editor estiver vazio (apenas tags <p></p>), enviamos string vazia
       if (editor.isEmpty) {

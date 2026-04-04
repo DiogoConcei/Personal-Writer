@@ -4,9 +4,18 @@ import { useEditorStore } from '@/features/editor/store/editorStore';
 import { FileText, ChevronRight } from 'lucide-react';
 import { AttributeGrid } from './AttributeGrid';
 
-export function DefaultHeader() {
+import { Metadata } from '@/features/editor/store/metadataParser';
+
+interface DefaultHeaderProps {
+  metadata?: Metadata;
+  readOnly?: boolean;
+}
+
+export function DefaultHeader({ metadata: propMetadata, readOnly }: DefaultHeaderProps) {
   const { activeFile } = useWorkspaceStore();
-  const { metadata, setMetadata } = useEditorStore();
+  const { metadata: storeMetadata, setMetadata } = useEditorStore();
+
+  const metadata = propMetadata || storeMetadata;
 
   const noteName = activeFile ? activeFile.split(/[\\/]/).pop()?.replace('.md', '') : 'Nova Nota';
 
@@ -22,7 +31,7 @@ export function DefaultHeader() {
       </div>
 
       <div className={styles.content}>
-        <AttributeGrid metadata={metadata} onUpdate={setMetadata} />
+        <AttributeGrid metadata={metadata} onUpdate={setMetadata} readOnly={readOnly} />
       </div>
     </div>
   );

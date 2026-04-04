@@ -1,20 +1,27 @@
 import { useEditorStore } from '@/features/editor/store/editorStore';
+import { Metadata } from '@/features/editor/store/metadataParser';
 import { CharacterHeader } from './CharacterHeader';
 import { LocationHeader } from './LocationHeader';
 import { DefaultHeader } from './DefaultHeader';
 
-export function MetadataHeader() {
-  const { metadata } = useEditorStore();
+interface MetadataHeaderProps {
+  metadata?: Metadata;
+  readOnly?: boolean;
+}
+
+export function MetadataHeader({ metadata: propMetadata, readOnly }: MetadataHeaderProps) {
+  const { metadata: storeMetadata } = useEditorStore();
+  const metadata = propMetadata || storeMetadata;
 
   if (!metadata.type && !metadata.fields) return null;
 
   if (metadata.type === 'character') {
-    return <CharacterHeader />;
+    return <CharacterHeader metadata={propMetadata} readOnly={readOnly} />;
   }
 
   if (metadata.type === 'location') {
-    return <LocationHeader />;
+    return <LocationHeader metadata={propMetadata} readOnly={readOnly} />;
   }
 
-  return <DefaultHeader />;
+  return <DefaultHeader metadata={propMetadata} readOnly={readOnly} />;
 }

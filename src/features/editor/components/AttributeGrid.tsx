@@ -7,9 +7,10 @@ import Modal from '@/shared/components/Modal/Modal';
 interface AttributeGridProps {
   metadata: Metadata;
   onUpdate: (newData: Metadata) => void;
+  readOnly?: boolean;
 }
 
-export function AttributeGrid({ metadata, onUpdate }: AttributeGridProps) {
+export function AttributeGrid({ metadata, onUpdate, readOnly }: AttributeGridProps) {
   const [editingField, setEditingField] = useState<{ 
     isNew: boolean; 
     oldName?: string; 
@@ -19,6 +20,7 @@ export function AttributeGrid({ metadata, onUpdate }: AttributeGridProps) {
   } | null>(null);
 
   const handleFieldChange = (key: string, value: any) => {
+    if (readOnly) return;
     const newData = { ...metadata };
     if (!newData.fields) newData.fields = {};
     const config = metadata.config?.[key];
@@ -27,6 +29,7 @@ export function AttributeGrid({ metadata, onUpdate }: AttributeGridProps) {
   };
 
   const removeField = (key: string) => {
+    if (readOnly) return;
     const newData = { ...metadata };
     if (newData.fields) delete newData.fields[key];
     if (newData.config) delete newData.config[key];
@@ -62,7 +65,7 @@ export function AttributeGrid({ metadata, onUpdate }: AttributeGridProps) {
   };
 
   return (
-    <div className={styles.grid}>
+    <div className={`${styles.grid} ${readOnly ? styles['grid--readonly'] : ''}`}>
       {metadata.fields && Object.entries(metadata.fields)
         .filter(([key]) => key !== 'summary' && key !== 'Status' && key !== 'order')
         .map(([key, value]) => {
@@ -73,18 +76,24 @@ export function AttributeGrid({ metadata, onUpdate }: AttributeGridProps) {
             <div key={key} className={styles.field}>
               <div className={styles.fieldHeader}>
                 <span className={styles.label}>{key}</span>
-                <div className={styles.actions}>
-                  <button onClick={() => setEditingField({ 
-                    isNew: false, oldName: key, name: key, 
-                    type: type as any, options: config?.options?.join(', ') || '' 
-                  })}><Settings size={12} /></button>
-                  <button onClick={() => removeField(key)}><Trash2 size={12} /></button>
-                </div>
+                {!readOnly && (
+                  <div className={styles.actions}>
+                    <button onClick={() => setEditingField({ 
+                      isNew: false, oldName: key, name: key, 
+                      type: type as any, options: config?.options?.join(', ') || '' 
+                    })}><Settings size={12} /></button>
+                    <button onClick={() => removeField(key)}><Trash2 size={12} /></button>
+                  </div>
+                )}
               </div>
               
               <div className={styles.inputArea}>
                 {type === 'select' ? (
-                  <select value={value as string} onChange={(e) => handleFieldChange(key, e.target.value)}>
+                  <select 
+                    value={value as string} 
+                    onChange={(e) => handleFieldChange(key, e.target.value)}
+                    disabled={readOnly}
+                  >
                     <option value="" disabled>Selecionar...</option>
                     {config?.options?.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
@@ -94,6 +103,7 @@ export function AttributeGrid({ metadata, onUpdate }: AttributeGridProps) {
                     value={value as string | number}
                     onChange={(e) => handleFieldChange(key, e.target.value)}
                     placeholder="..."
+                    readOnly={readOnly}
                   />
                 )}
               </div>
@@ -101,10 +111,12 @@ export function AttributeGrid({ metadata, onUpdate }: AttributeGridProps) {
           );
       })}
       
-      <button className={styles.addBtn} onClick={() => setEditingField({ isNew: true, name: '', type: 'text', options: '' })}>
-        <Plus size={20} />
-        <span>Adicionar Atributo</span>
-      </button>
+      {!readOnly && (
+        <button className={styles.addBtn} onClick={() => setEditingField({ isNew: true, name: '', type: 'text', options: '' })}>
+          <Plus size={20} />
+          <span>Adicionar Atributo</span>
+        </button>
+      )}
 
       {editingField && (
         <Modal isOpen={true} onClose={() => setEditingField(null)} title={editingField.isNew ? "Novo Atributo" : "Configurar Atributo"}>

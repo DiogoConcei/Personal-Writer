@@ -30,7 +30,8 @@
 | Feature | Arquivos Críticos | Status |
 | :--- | :--- | :--- |
 | **Ecossistema de Imagem** | `ImageGallery.tsx`, `resolveAssetPath.ts` | ✅ Estável (Fase 3 Concluída) |
-| **Dicionário e Sinônimos**| `dictionary.rs`, `Spelling.ts` | ✅ Estável — ADR-011/012 |
+| **Dicionário e Sinônimos**| `dictionary.rs`, `Spelling.ts` | ✅ Estável — ADR-011/012 (Refatorado v2) |
+| **Sistema de Toasts**    | `uiStore.ts`, `ToastContainer.tsx` | ✅ Estável |
 | **Persistência de YAML** | `editorStore.ts`, `metadataParser.ts` | ✅ Estável |
 | **Drag-and-Drop** | `FileTree.tsx`, `FileTreeItem.tsx` | ✅ Estável — ADR-009 |
 
@@ -51,13 +52,17 @@
 **Decisão:** Substituição da crate `hunspell` (binding C++) pela crate `spellbook` (100% Rust).
 **Motivo:** Garantir a portabilidade do projeto e facilidade de compilação em ambientes Windows (MSVC) sem a necessidade de instalar bibliotecas externas `.lib` ou configurar caminhos de linker complexos.
 
-### ADR-012 — Mapeamento de Offsets UTF-8 para UTF-16
-**Decisão:** Implementação de um conversor de índices de bytes (Rust) para índices de caracteres (ProseMirror) no frontend.
-**Motivo:** O Rust processa strings em UTF-8, enquanto o JS/ProseMirror usa UTF-16. O desalinhamento de índices causava decorações fora dos limites, gerando travamentos totais na aplicação.
+### ADR-012 — Mapeamento de Offsets Unicode via Node-Based Iteration
+**Decisão:** O corretor ortográfico itera individualmente sobre cada nó de texto (`text node`) do ProseMirror, em vez do documento inteiro.
+**Motivo:** O Rust processa strings em UTF-8 (offsets de bytes), enquanto o ProseMirror usa UTF-16 (offsets de caracteres). Ao tratar cada nó isoladamente, garantimos que o cálculo de `byteToCharIndex` seja 100% preciso, evitando que decorações fora dos limites causem travamentos (KI-027).
 
 ### ADR-013 — Dicionário Pessoal Global via AppData
 **Decisão:** Armazenar palavras ignoradas pelo usuário em uma pasta global do sistema (`%AppData%`).
 **Motivo:** Proporcionar consistência onde nomes de personagens criados pelo usuário sejam reconhecidos em todos os workspaces na mesma máquina.
+
+### ADR-014 — Notificações Toasts Manuais
+**Decisão:** Implementar Toasts para feedback de ações críticas (como Ctrl+S) sem poluir a interface com salvamentos automáticos.
+**Motivo:** Manter a sensação de controle do usuário ("Eu salvei e o sistema confirmou") sem o ruído visual do auto-save de 10 em 10 minutos.
 
 ---
 

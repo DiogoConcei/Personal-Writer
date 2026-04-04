@@ -140,7 +140,20 @@ Este documento registra erros que já aconteceram durante o desenvolvimento, sua
 
 **Causa:** Conflito de codificação. O Rust retorna posições de erro em **offsets de bytes (UTF-8)**, mas o ProseMirror espera **offsets de caracteres (UTF-16)**. Se o texto contém acentos (ex: 'á'), os índices divergem. Ao tentar renderizar uma decoração em um índice inválido, o motor da WebView entra em loop ou pânico visual.
 
-**Solução:** Implementada a função `byteToCharIndex` no frontend usando `TextEncoder`/`TextDecoder` para converter precisamente os offsets de bytes do Rust para a contagem de caracteres do JS antes de aplicar as decorações no TipTap.
+**Solução:** Implementação de verificação **nó a nó (`node-based`)**. A extensão `Spelling.ts` agora extrai a string de cada nó de texto individualmente. A função `byteToCharIndex` é aplicada localmente a cada string de nó, e a decoração final é posicionada usando `posDoNo + offsetLocalCorrigido`. Isso elimina qualquer possibilidade de desalinhamento cumulativo ao longo do documento.
+
+---
+
+## KI-028 — Sublinhado de Ortografia Invisível ou Desalinhado
+
+**Sintoma:** O corretor detectava o erro, mas o sublinhado vermelho não aparecia no lugar certo ou sumia ao digitar.
+
+**Causa:** Uso de `split_whitespace()` no Rust (perda de índices originais) e decorações TipTap sem classe CSS global mapeada.
+
+**Solução:** 
+1. Refatorado `dictionary.rs` para usar `char_indices()` e capturar o byte exato do início da palavra.
+2. Adicionado estilo global `:global(.misspelled)` no `Editor.module.scss` com `text-decoration: underline wavy`.
+3. Integração com o `Apply` do ProseMirror para mapear decorações durante mudanças no documento.
 
 ---
 

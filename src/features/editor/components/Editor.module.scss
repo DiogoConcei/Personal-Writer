@@ -117,6 +117,12 @@
     clear: none;
   }
 
+  :global(.misspelled) {
+    text-decoration: underline wavy var(--color-error, #ef4444);
+    text-decoration-skip-ink: auto;
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+
   // Previne que outros elementos limpem o float sem necessidade
   h1, h2, h3, ul, ol, blockquote {
     clear: none;

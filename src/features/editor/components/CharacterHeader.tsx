@@ -15,9 +15,17 @@ import { Backlinks } from './Backlinks';
 
 import { SummaryEditor } from './SummaryEditor';
 
-export function CharacterHeader() {
+interface CharacterHeaderProps {
+  metadata?: Metadata;
+  readOnly?: boolean;
+}
+
+export function CharacterHeader({ metadata: propMetadata, readOnly }: CharacterHeaderProps) {
   const { rootPath, activeFile } = useWorkspaceStore();
-  const { metadata, setMetadata, save } = useEditorStore();
+  const { metadata: storeMetadata, setMetadata, save } = useEditorStore();
+  
+  const metadata = propMetadata || storeMetadata;
+  
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showEmojiPrompt, setShowEmojiPrompt] = useState(false);
   const [emojiInput, setEmojiInput] = useState('');
@@ -25,6 +33,7 @@ export function CharacterHeader() {
   const noteName = activeFile ? activeFile.split(/[\\/]/).pop()?.replace('.md', '') : 'Nova Nota';
 
   const updateMetadata = (newData: Metadata) => {
+    if (readOnly) return;
     setMetadata(newData);
     // Forçar salvamento no disco para persistir mudanças de cabeçalho (icon/fields)
     if (activeFile) {
@@ -33,6 +42,7 @@ export function CharacterHeader() {
   };
 
   const handleFieldChange = (key: string, value: any) => {
+    if (readOnly) return;
     const newData = { ...metadata };
     if (!newData.fields) newData.fields = {};
     newData.fields[key] = value;
@@ -51,11 +61,11 @@ export function CharacterHeader() {
   };
 
   return (
-    <div className={styles.profile}>
+    <div className={`${styles.profile} ${readOnly ? styles['profile--readonly'] : ''}`}>
       <div className={styles.hero}>
-        <div className={styles.portraitWrapper} onClick={() => setShowIconPicker(true)}>
+        <div className={styles.portraitWrapper} onClick={() => !readOnly && setShowIconPicker(true)}>
           {renderVisualIcon()}
-          <div className={styles.portraitOverlay}><Edit3 size={24} /></div>
+          {!readOnly && <div className={styles.portraitOverlay}><Edit3 size={24} /></div>}
         </div>
 
         <div className={styles.mainInfo}>
@@ -63,9 +73,9 @@ export function CharacterHeader() {
             <span className={styles.typeTag}><User size={12} /> Personagem</span>
             <ChevronRight size={14} className={styles.separator} />
             <span 
-              className={`${styles.statusTag} ${metadata.fields?.Status === 'Inativo' ? styles['statusTag--inactive'] : ''}`}
-              onClick={() => handleFieldChange('Status', metadata.fields?.Status === 'Inativo' ? 'Ativo' : 'Inativo')}
-              title="Clique para alternar status"
+              className={`${styles.statusTag} ${metadata.fields?.Status === 'Inativo' ? styles['statusTag--inactive'] : ''} ${readOnly ? styles['statusTag--readonly'] : ''}`}
+              onClick={() => !readOnly && handleFieldChange('Status', metadata.fields?.Status === 'Inativo' ? 'Ativo' : 'Inativo')}
+              title={readOnly ? "" : "Clique para alternar status"}
             >
               {metadata.fields?.Status || 'Ativo'}
             </span>
@@ -73,8 +83,9 @@ export function CharacterHeader() {
           <h1 className={styles.name}>{noteName}</h1>
           <SummaryEditor 
             value={metadata.fields?.summary || ''} 
-            onChange={(html) => handleFieldChange('summary', html)}
-            placeholder="Clique para adicionar um resumo..."
+            onChange={(html) => !readOnly && handleFieldChange('summary', html)}
+            placeholder={readOnly ? "" : "Clique para adicionar um resumo..."}
+            readOnly={readOnly}
           />
         </div>
       </div>
@@ -85,9 +96,9 @@ export function CharacterHeader() {
           <h2>Informações e Atributos</h2>
         </div>
 
-        <AttributeGrid metadata={metadata} onUpdate={updateMetadata} />
+        <AttributeGrid metadata={metadata} onUpdate={updateMetadata} readOnly={readOnly} />
         
-        {activeFile && <Backlinks targetPath={activeFile} />}
+        {!readOnly && activeFile && <Backlinks targetPath={activeFile} />}
       </div>
 
       {showIconPicker && (

@@ -96,30 +96,39 @@ pub async fn check_spelling(
     let mut errors = Vec::new();
     
     if let Some(engine) = &*lock {
-        let mut current_byte = 0;
-        for word_raw in text.split_whitespace() {
-            if let Some(offset) = text[current_byte..].find(word_raw) {
-                let word_start = current_byte + offset;
-                current_byte = word_start + word_raw.len();
-
-                let clean_word = word_raw.trim_matches(|c: char| !c.is_alphabetic());
-                if clean_word.is_empty() { continue; }
-
-                if !engine.check(clean_word) {
-                    let clean_offset = word_raw.find(clean_word).unwrap_or(0);
-                    let final_start = word_start + clean_offset;
-                    let final_end = final_start + clean_word.len();
-
+        let mut start_idx = None;
+        for (i, c) in text.char_indices() {
+            if c.is_alphabetic() {
+                if start_idx.is_none() {
+                    start_idx = Some(i);
+                }
+            } else if let Some(start) = start_idx {
+                let word = &text[start..i];
+                if !engine.check(word) {
                     let mut suggestions = Vec::new();
-                    engine.suggest(clean_word, &mut suggestions);
-                    
+                    engine.suggest(word, &mut suggestions);
                     errors.push(SpellError {
-                        word: clean_word.to_string(),
-                        start: final_start,
-                        end: final_end,
+                        word: word.to_string(),
+                        start,
+                        end: i,
                         suggestions: suggestions.into_iter().take(5).collect(),
                     });
                 }
+                start_idx = None;
+            }
+        }
+        // Check last word if it exists
+        if let Some(start) = start_idx {
+            let word = &text[start..];
+            if !engine.check(word) {
+                let mut suggestions = Vec::new();
+                engine.suggest(word, &mut suggestions);
+                errors.push(SpellError {
+                    word: word.to_string(),
+                    start,
+                    end: text.len(),
+                    suggestions: suggestions.into_iter().take(5).collect(),
+                });
             }
         }
     }

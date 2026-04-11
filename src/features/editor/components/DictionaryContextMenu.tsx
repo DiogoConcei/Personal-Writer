@@ -45,7 +45,8 @@ export function DictionaryContextMenu({ editor, x, y, word, suggestions, onClose
     onClose();
     try {
       await addToDictionary(word);
-      // O recheckSpelling será disparado naturalmente pela mudança do doc ou via comando manual se necessário
+      // Forçar recheck imediato
+      (editor.commands as any).recheckSpelling();
     } catch (e) {
       console.error(e);
     }

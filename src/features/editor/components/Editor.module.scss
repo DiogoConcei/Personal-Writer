@@ -118,7 +118,7 @@
   }
 
   :global(.misspelled) {
-    text-decoration: underline wavy var(--color-error, #ef4444);
+    text-decoration: underline wavy var(--color-danger, #ef4444);
     text-decoration-skip-ink: auto;
     background-color: rgba(239, 68, 68, 0.1);
   }

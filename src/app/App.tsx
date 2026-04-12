@@ -29,6 +29,8 @@ function App() {
     toggleSidebar,
     isRightSidebarVisible, 
     toggleRightSidebar,
+    isZenMode,
+    toggleZenMode,
     setCommandPaletteOpen,
     preview,
     setPreview,
@@ -52,10 +54,10 @@ function App() {
   // Atalhos de teclado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Toggle Sidebar: Ctrl + \
+      // Toggle Modo Zen: Ctrl + \
       if (e.ctrlKey && e.key === '\\') {
         e.preventDefault();
-        toggleSidebar();
+        toggleZenMode();
       }
       
       // Atalhos rápidos para painéis
@@ -89,7 +91,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar, activePanel, setActivePanel, activeFile, isImage, rootPath, save, addNotification]);
+  }, [toggleZenMode, toggleSidebar, activePanel, setActivePanel, activeFile, isImage, rootPath, save, addNotification]);
 
   const toggleTypography = () => {
     setTypography(typography === 'sans' ? 'serif' : 'sans');
@@ -157,88 +159,94 @@ function App() {
   };
 
   return (
-    <div className={`${styles.app} ${!isSidebarVisible ? styles['app--sidebar-hidden'] : ''}`}>
-      {isSidebarVisible && (
+    <div className={`
+      ${styles.app} 
+      ${!isSidebarVisible ? styles['app--sidebar-hidden'] : ''}
+      ${isZenMode ? styles['app--zen-mode'] : ''}
+    `}>
+      {isSidebarVisible && !isZenMode && (
         <aside className={styles.app__sidebar}>
           <FileTree />
         </aside>
       )}
       
       <main className={styles.app__main}>
-        <header className={styles.app__header}>
-          <div className={styles.app__headerLeft}>
-            <button 
-              className={`${styles.app__iconBtn} ${!isSidebarVisible ? styles['app__iconBtn--active'] : ''}`}
-              onClick={toggleSidebar}
-              title="Alternar Sidebar (Ctrl+\)"
-            >
-              <PanelLeft size={18} />
-            </button>
-            <div className={styles.app__breadcrumb}>
-              {renderBreadcrumb()}
+        {!isZenMode && (
+          <header className={styles.app__header}>
+            <div className={styles.app__headerLeft}>
+              <button 
+                className={`${styles.app__iconBtn} ${!isSidebarVisible ? styles['app__iconBtn--active'] : ''}`}
+                onClick={toggleSidebar}
+                title="Alternar Sidebar"
+              >
+                <PanelLeft size={18} />
+              </button>
+              <div className={styles.app__breadcrumb}>
+                {renderBreadcrumb()}
+              </div>
             </div>
-          </div>
-          
-          <div className={styles.app__actions}>
-            <button 
-              className={styles.app__iconBtn} 
-              onClick={() => setCommandPaletteOpen(true)}
-              title="Busca Rápida e Comandos (Ctrl+P)"
-            >
-              <Search size={18} />
-            </button>
-
-            <button 
-              className={styles.app__iconBtn} 
-              onClick={selectWorkspace}
-              title="Trocar Workspace"
-            >
-              <FolderOpen size={18} />
-            </button>
-
-            {activePanel === 'editor' && !isImage && (
+            
+            <div className={styles.app__actions}>
               <button 
                 className={styles.app__iconBtn} 
-                onClick={toggleTypography}
-                title="Alternar Tipografia"
+                onClick={() => setCommandPaletteOpen(true)}
+                title="Busca Rápida e Comandos (Ctrl+P)"
               >
-                <Type size={18} />
+                <Search size={18} />
               </button>
-            )}
-            
-            <nav className={styles.app__nav}>
-              <button 
-                className={`${styles.app__iconBtn} ${activePanel === 'editor' ? styles['app__iconBtn--active'] : ''}`}
-                onClick={() => setActivePanel('editor')}
-                title="Editor (Ctrl+E)"
-              >
-                <FileEdit size={18} />
-              </button>
-              <button 
-                className={`${styles.app__iconBtn} ${activePanel === 'dashboard' ? styles['app__iconBtn--active'] : ''}`}
-                onClick={() => setActivePanel('dashboard')}
-                title="Dashboard (Ctrl+D)"
-              >
-                <LayoutGrid size={18} />
-              </button>
-              <button 
-                className={`${styles.app__iconBtn} ${activePanel === 'gallery' ? styles['app__iconBtn--active'] : ''}`}
-                onClick={() => setActivePanel('gallery')}
-                title="Galeria de Personagens (Ctrl+G)"
-              >
-                <Users size={18} />
-              </button>
-            </nav>
 
-            <button 
-              className={`${styles.app__iconBtn} ${isRightSidebarVisible ? styles['app__iconBtn--active'] : ''}`}
-              onClick={toggleRightSidebar}
-              title="Referências Lateral"
-            >
-              <PanelRight size={18} />
-            </button>
-          </div>
-        </header>
+              <button 
+                className={styles.app__iconBtn} 
+                onClick={selectWorkspace}
+                title="Trocar Workspace"
+              >
+                <FolderOpen size={18} />
+              </button>
+
+              {activePanel === 'editor' && !isImage && (
+                <button 
+                  className={styles.app__iconBtn} 
+                  onClick={toggleTypography}
+                  title="Alternar Tipografia"
+                >
+                  <Type size={18} />
+                </button>
+              )}
+              
+              <nav className={styles.app__nav}>
+                <button 
+                  className={`${styles.app__iconBtn} ${activePanel === 'editor' ? styles['app__iconBtn--active'] : ''}`}
+                  onClick={() => setActivePanel('editor')}
+                  title="Editor (Ctrl+E)"
+                >
+                  <FileEdit size={18} />
+                </button>
+                <button 
+                  className={`${styles.app__iconBtn} ${activePanel === 'dashboard' ? styles['app__iconBtn--active'] : ''}`}
+                  onClick={() => setActivePanel('dashboard')}
+                  title="Dashboard (Ctrl+D)"
+                >
+                  <LayoutGrid size={18} />
+                </button>
+                <button 
+                  className={`${styles.app__iconBtn} ${activePanel === 'gallery' ? styles['app__iconBtn--active'] : ''}`}
+                  onClick={() => setActivePanel('gallery')}
+                  title="Galeria de Personagens (Ctrl+G)"
+                >
+                  <Users size={18} />
+                </button>
+              </nav>
+
+              <button 
+                className={`${styles.app__iconBtn} ${isRightSidebarVisible ? styles['app__iconBtn--active'] : ''}`}
+                onClick={toggleRightSidebar}
+                title="Referências Lateral"
+              >
+                <PanelRight size={18} />
+              </button>
+            </div>
+          </header>
+        )}
         
         <div className={styles.app__content}>
           {activePanel === 'dashboard' ? (
@@ -257,7 +265,7 @@ function App() {
         {activePanel === 'editor' && !isImage && <StatusBar />}
       </main>
 
-      {isRightSidebarVisible && (
+      {isRightSidebarVisible && !isZenMode && (
         <aside className={styles.app__rightSidebar}>
           <ReferenceSidebar />
         </aside>

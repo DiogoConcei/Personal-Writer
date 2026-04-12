@@ -1,7 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { checkSpelling, SpellError } from '@/tauri-bridge';
+import { checkSpellingBatch, SpellError } from '@/tauri-bridge';
 
 // Função para converter offset de bytes (UTF-8) para offset de caracteres (UTF-16/ProseMirror)
 function byteToCharIndex(text: string, byteOffset: number): number {
@@ -16,6 +16,15 @@ export interface SpellingOptions {
   debounce: number;
 }
 
+export interface SpellingStorage {
+  pluginKey: PluginKey<SpellingPluginState> | null;
+}
+
+export interface SpellingPluginState {
+  decorations: DecorationSet;
+  forceCheck: boolean;
+}
+
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     spelling: {
@@ -24,17 +33,21 @@ declare module '@tiptap/core' {
   }
 }
 
-interface SpellingPluginState {
-  decorations: DecorationSet;
-  forceCheck: boolean;
-}
+// Cache global de nós já verificados (ProseMirror Nodes são imutáveis)
+const checkedNodes = new WeakSet<any>();
 
-export const Spelling = Extension.create<SpellingOptions>({
+export const Spelling = Extension.create<SpellingOptions, SpellingStorage>({
   name: 'spelling',
 
   addOptions() {
     return {
-      debounce: 1000,
+      debounce: 150,
+    };
+  },
+
+  addStorage() {
+    return {
+      pluginKey: null,
     };
   },
 
@@ -52,6 +65,8 @@ export const Spelling = Extension.create<SpellingOptions>({
   addProseMirrorPlugins() {
     const { debounce } = this.options;
     const pluginKey = new PluginKey<SpellingPluginState>('spelling');
+    this.storage.pluginKey = pluginKey;
+    
     let timeout: ReturnType<typeof setTimeout> | null = null;
     let docVersion = 0;
 
@@ -67,7 +82,7 @@ export const Spelling = Extension.create<SpellingOptions>({
             const forceCheck = tr.getMeta('recheck_spelling');
 
             if (data) {
-              const { results, version } = data;
+              const { results, version, isFullCheck } = data;
               
               if (version !== docVersion) {
                 return { 
@@ -76,11 +91,27 @@ export const Spelling = Extension.create<SpellingOptions>({
                 };
               }
 
+              // Mapear decorações existentes para a posição atual
+              let decos = pluginState.decorations.map(tr.mapping, tr.doc);
+
+              // Se for check total (ex: carregamento), limpa tudo
+              if (isFullCheck) {
+                decos = DecorationSet.empty;
+              }
+
               const decoList: Decoration[] = [];
-              results.forEach(({ pos, text, errors }: { pos: number, text: string, errors: SpellError[] }) => {
+              results.forEach(({ pos, node, errors }: { pos: number, node: any, errors: SpellError[] }) => {
+                // Remover decorações antigas apenas neste nó se não for check total
+                if (!isFullCheck) {
+                  const existingInNode = decos.find(pos, pos + node.nodeSize);
+                  if (existingInNode.length > 0) {
+                    decos = decos.remove(existingInNode);
+                  }
+                }
+
                 errors.forEach((err) => {
-                  const from = byteToCharIndex(text, err.start);
-                  const to = byteToCharIndex(text, err.end);
+                  const from = byteToCharIndex(node.text!, err.start);
+                  const to = byteToCharIndex(node.text!, err.end);
                   
                   decoList.push(Decoration.inline(pos + from, pos + to, {
                     class: 'misspelled',
@@ -90,7 +121,7 @@ export const Spelling = Extension.create<SpellingOptions>({
                 });
               });
 
-              return { decorations: DecorationSet.create(tr.doc, decoList), forceCheck: !!forceCheck };
+              return { decorations: decos.add(tr.doc, decoList), forceCheck: !!forceCheck };
             }
 
             return { 
@@ -113,35 +144,48 @@ export const Spelling = Extension.create<SpellingOptions>({
               if (docChanged || state?.forceCheck) {
                 docVersion++;
                 const currentVersion = docVersion;
+                const isFullCheck = !!state?.forceCheck;
                 
                 if (timeout) clearTimeout(timeout);
                 timeout = setTimeout(async () => {
-                  const checkPromises: Promise<{ pos: number, text: string, errors: SpellError[] }>[] = [];
+                  const nodesToCheck: { pos: number, node: any }[] = [];
                   
-                  // Verificação nó-a-nó (KI-027)
+                  // Coleta Delta (KI-032): Só agrupa nós novos ou modificados
                   view.state.doc.descendants((node, pos) => {
                     if (node.isText && node.text) {
-                      checkPromises.push((async () => {
-                        try {
-                          const errors = await checkSpelling(node.text!);
-                          return { pos, text: node.text!, errors };
-                        } catch (e) {
-                          return { pos, text: node.text!, errors: [] };
-                        }
-                      })());
+                      if (isFullCheck || !checkedNodes.has(node)) {
+                        nodesToCheck.push({ pos, node });
+                      }
                     }
                     return true;
                   });
 
-                  const results = await Promise.all(checkPromises);
-                  
-                  if (currentVersion === docVersion) {
-                    view.dispatch(view.state.tr.setMeta('spelling_errors', {
-                      results,
-                      version: currentVersion
-                    }));
+                  if (nodesToCheck.length === 0) return;
+
+                  try {
+                    const texts = nodesToCheck.map(item => item.node.text!);
+                    const batchErrors = await checkSpellingBatch(texts);
+                    
+                    if (currentVersion === docVersion) {
+                      const results = nodesToCheck.map((item, index) => {
+                        checkedNodes.add(item.node);
+                        return {
+                          pos: item.pos,
+                          node: item.node,
+                          errors: batchErrors[index]
+                        };
+                      });
+
+                      view.dispatch(view.state.tr.setMeta('spelling_errors', {
+                        results,
+                        version: currentVersion,
+                        isFullCheck
+                      }));
+                    }
+                  } catch (e) {
+                    console.error('Erro na verificação ortográfica em lote:', e);
                   }
-                }, state?.forceCheck ? 0 : debounce);
+                }, isFullCheck ? 0 : debounce);
               }
             },
             destroy() {

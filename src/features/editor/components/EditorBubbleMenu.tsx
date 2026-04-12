@@ -1,9 +1,10 @@
 import { BubbleMenu } from '@tiptap/react/menus';
+import { Editor } from '@tiptap/core';
 import { Bold, Italic, Strikethrough, Code, Heading1, Heading2, Heading3, Quote } from 'lucide-react';
 import styles from './EditorBubbleMenu.module.scss';
 
 interface EditorBubbleMenuProps {
-  editor: any;
+  editor: Editor | null;
 }
 
 export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
@@ -15,10 +16,21 @@ export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
   return (
     <BubbleMenu 
       editor={editor} 
-      shouldShow={({ editor, from, to }) => {
+      shouldShow={({ from, to }) => {
         if (from === to) return false;
         if (editor.isActive('image') || editor.isActive('customImage')) return false;
-        return editor.view.state.selection.empty === false;
+
+        // Ocultar se houver erro ortográfico no range selecionado de forma segura via storage
+        const spellingStorage = (editor.storage as any).spelling;
+        if (spellingStorage && spellingStorage.pluginKey) {
+          const pluginState = spellingStorage.pluginKey.getState(editor.state);
+          if (pluginState?.decorations) {
+            const decos = pluginState.decorations.find(from, to);
+            if (decos.length > 0) return false;
+          }
+        }
+
+        return !editor.state.selection.empty;
       }}
       className={styles.bubbleMenu}
     >

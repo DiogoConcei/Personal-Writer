@@ -55,7 +55,7 @@ export default function Editor() {
       TextStyle,
       FontFamily,
       FontSize,
-      Spelling.configure({ debounce: 800 }),
+      Spelling.configure({ debounce: 150 }),
       WikiLink.configure({
         onLinkClick: (noteName: string) => {
           const findFile = (nodeList: any[]): any => {

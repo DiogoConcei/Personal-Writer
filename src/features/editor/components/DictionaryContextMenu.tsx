@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Editor } from '@tiptap/react';
-import { getSynonyms, addToDictionary } from '@/tauri-bridge';
+import { getSynonyms, addToDictionary, getSpellSuggestions } from '@/tauri-bridge';
 import styles from './DictionaryContextMenu.module.scss';
-import { Languages, Plus, Check } from 'lucide-react';
+import { Languages, Plus, Check, Loader2 } from 'lucide-react';
 
 interface DictionaryContextMenuProps {
   editor: Editor;
   x: number;
   y: number;
   word: string;
-  suggestions: string[];
   onClose: () => void;
 }
 
-export function DictionaryContextMenu({ editor, x, y, word, suggestions, onClose }: DictionaryContextMenuProps) {
+export function DictionaryContextMenu({ editor, x, y, word, onClose }: DictionaryContextMenuProps) {
   const [synonyms, setSynonyms] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -22,8 +22,13 @@ export function DictionaryContextMenu({ editor, x, y, word, suggestions, onClose
       if (!word) return;
       setLoading(true);
       try {
-        const list = await getSynonyms(word);
-        setSynonyms(list);
+        // Busca paralela de sinônimos e sugestões ortográficas (On-Demand)
+        const [synList, sugList] = await Promise.all([
+          getSynonyms(word),
+          getSpellSuggestions(word)
+        ]);
+        setSynonyms(synList);
+        setSuggestions(sugList);
       } catch (e) {
         console.error(e);
       } finally {
@@ -57,10 +62,12 @@ export function DictionaryContextMenu({ editor, x, y, word, suggestions, onClose
 
   return (
     <div className={styles.menu} style={{ top: adjustedY, left: adjustedX }} onMouseDown={e => e.stopPropagation()}>
-      {suggestions.length > 0 && (
-        <div className={styles.group}>
-          <div className={styles.label}><Check size={10} /> Corrigir</div>
-          {suggestions.map(s => (
+      <div className={styles.group}>
+        <div className={styles.label}><Check size={10} /> Corrigir</div>
+        {loading ? (
+          <div className={styles.status}><Loader2 size={10} className={styles.spin} /> Buscando...</div>
+        ) : suggestions.length > 0 ? (
+          suggestions.map(s => (
             <button 
               key={s} 
               className={styles.item} 
@@ -68,14 +75,16 @@ export function DictionaryContextMenu({ editor, x, y, word, suggestions, onClose
             >
               {s}
             </button>
-          ))}
-        </div>
-      )}
+          ))
+        ) : (
+          <div className={styles.status}>Nenhuma sugestão</div>
+        )}
+      </div>
 
       <div className={styles.group}>
         <div className={styles.label}><Languages size={10} /> Sinônimos</div>
         {loading ? (
-          <div className={styles.status}>Buscando...</div>
+          <div className={styles.status}><Loader2 size={10} className={styles.spin} /> Buscando...</div>
         ) : synonyms.length > 0 ? (
           <div className={styles.pillGrid}>
             {synonyms.slice(0, 8).map(s => (
@@ -89,7 +98,7 @@ export function DictionaryContextMenu({ editor, x, y, word, suggestions, onClose
             ))}
           </div>
         ) : (
-          <div className={styles.status}>Nenhum</div>
+          <div className={styles.status}>Nenhum sinônimo encontrado</div>
         )}
       </div>
 

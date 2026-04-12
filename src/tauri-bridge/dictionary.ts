@@ -11,6 +11,10 @@ export async function checkSpelling(text: string): Promise<SpellError[]> {
   return invoke('check_spelling', { text });
 }
 
+export async function checkSpellingBatch(texts: string[]): Promise<SpellError[][]> {
+  return invoke('check_spelling_batch', { texts });
+}
+
 export async function getSynonyms(word: string): Promise<string[]> {
   return invoke('get_synonyms', { word });
 }

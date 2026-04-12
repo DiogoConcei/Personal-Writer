@@ -137,6 +137,63 @@ pub async fn check_spelling(
 }
 
 #[tauri::command]
+pub async fn check_spelling_batch(
+    texts: Vec<String>,
+    state: State<'_, DictionaryState>,
+) -> Result<Vec<Vec<SpellError>>, String> {
+    let lock = state.engine.lock().unwrap();
+    let mut results = Vec::with_capacity(texts.len());
+    
+    if let Some(engine) = &*lock {
+        for text in texts {
+            let mut errors = Vec::new();
+            let mut start_idx = None;
+            for (i, c) in text.char_indices() {
+                if c.is_alphabetic() {
+                    if start_idx.is_none() {
+                        start_idx = Some(i);
+                    }
+                } else if let Some(start) = start_idx {
+                    let word = &text[start..i];
+                    if !engine.check(word) {
+                        let mut suggestions = Vec::new();
+                        engine.suggest(word, &mut suggestions);
+                        errors.push(SpellError {
+                            word: word.to_string(),
+                            start,
+                            end: i,
+                            suggestions: suggestions.into_iter().take(5).collect(),
+                        });
+                    }
+                    start_idx = None;
+                }
+            }
+            // Check last word if it exists
+            if let Some(start) = start_idx {
+                let word = &text[start..];
+                if !engine.check(word) {
+                    let mut suggestions = Vec::new();
+                    engine.suggest(word, &mut suggestions);
+                    errors.push(SpellError {
+                        word: word.to_string(),
+                        start,
+                        end: text.len(),
+                        suggestions: suggestions.into_iter().take(5).collect(),
+                    });
+                }
+            }
+            results.push(errors);
+        }
+    } else {
+        for _ in 0..texts.len() {
+            results.push(Vec::new());
+        }
+    }
+    
+    Ok(results)
+}
+
+#[tauri::command]
 pub async fn get_synonyms(
     word: String,
     state: State<'_, DictionaryState>,

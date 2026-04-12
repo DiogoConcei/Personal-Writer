@@ -157,6 +157,50 @@ Este documento registra erros que já aconteceram durante o desenvolvimento, sua
 
 ---
 
+## KI-029 — Falha de Sublinhado por Interferência de Transação (KeyDown)
+
+**Sintoma:** O corretor ortográfico para de funcionar completamente; nenhuma palavra (mesmo as inexistentes) é sublinhada.
+
+**Causa:** Uso de `handleKeyDown` para disparar transações manuais (`setMeta('recheck_spelling', true)`) no momento exato em que teclas como Espaço ou Enter são pressionadas. Isso cria uma colisão entre a transação manual do plugin e a transação padrão do editor para inserir o caractere, corrompendo o rastreamento de versões (`docVersion`) do plugin.
+
+**Solução:** Remover gatilhos manuais no `KeyDown`. Confiar apenas no `debounce` reduzido (ex: 150ms), que é processado com segurança após a conclusão das transações de texto do navegador.
+
+---
+
+## KI-030 — Travamento do Revisor por Inspeção de DOM Instável
+
+**Sintoma:** O editor TipTap "congela" ou para de renderizar atualizações (incluindo decorações ortográficas) silenciosamente.
+
+**Causa:** Uso de `editor.view.domAtPos(from)` dentro de funções de renderização ou lógica de UI (como `shouldShow` do BubbleMenu). Se a posição `from` cair em um limite de nó vazio ou fim de documento, o ProseMirror pode falhar ao mapear o nó do DOM, disparando exceções que interrompem o ciclo do React.
+
+**Solução:** Nunca inspecionar o DOM diretamente para lógica de estado. Utilizar sempre o estado do plugin (`pluginState`) através de chaves exportadas (`pluginKey.getState(state)`) para verificar a presença de decorações de forma estável e performática.
+
+---
+
+## KI-031 — Desincronização de Decoradores após Remoção de Gatilhos
+
+**Sintoma:** O sublinhado vermelho não aparece mesmo após a remoção de códigos problemáticos.
+
+**Causa:** Persistência de metadados de transação ou estado de `forceCheck` que entram em conflito com o `docVersion` incremental.
+
+**Solução:** Garantir que o `docVersion` seja reiniciado ou que as transações de metadados sejam limpas após cada verificação bem-sucedida.
+
+---
+
+## KI-032 — Latência Excessiva no Sublinhado (UI/UX Lag)
+
+**Sintoma:** O sublinhado vermelho aparece, mas leva muito tempo para ser renderizado após a digitação (mesmo com debounce baixo).
+
+**Causa:** O plugin ortográfico realizava um `descendants()` sobre todo o documento a cada verificação, disparando centenas de chamadas assíncronas ao comando Rust `check_spelling`.
+
+**Solução:** 
+1. **Delta Check:** Implementado cache de nós imutáveis (`WeakSet`) para ignorar parágrafos não modificados.
+2. **Batch IPC:** Implementado comando `check_spelling_batch` no Rust para processar todos os nós modificados em uma única chamada de sistema.
+
+**Observação:** Mesmo após estas otimizações, o lag pode persistir em palavras isoladas. Investigação futura sugere que o motor de sugestões (`engine.suggest`) do `spellbook` pode ser o novo gargalo.
+
+---
+
 ## Padrões Gerais — Salvamento de Imagens
 
 | Contexto              | Regra de Ouro                                                                        |

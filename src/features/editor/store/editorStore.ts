@@ -14,6 +14,9 @@ interface EditorState {
   lastSnapshotAt: Date | null;
   typography: Typography;
   wordCount: number;
+  wordGoal: number;
+  sessionGoal: number;
+  sessionStartWordCount: number;
 
   // Actions
   loadContent: (path: string) => Promise<void>;
@@ -22,9 +25,12 @@ interface EditorState {
   save: (path: string, workspaceRoot?: string) => Promise<boolean>;
   setTypography: (typography: Typography) => void;
   setWordCount: (count: number) => void;
+  setWordGoal: (goal: number) => void;
+  setSessionGoal: (goal: number) => void;
+  startNewSession: () => void;
 }
 
-let saveTimeout: any = null;
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   metadata: {},
@@ -34,6 +40,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   lastSnapshotAt: null,
   typography: 'sans',
   wordCount: 0,
+  wordGoal: 0,
+  sessionGoal: 0,
+  sessionStartWordCount: 0,
 
   loadContent: async (path: string) => {
     if (saveTimeout) clearTimeout(saveTimeout);
@@ -41,11 +50,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     try {
       const fullContent = await readFile(path);
       const { metadata, markdown } = parseMarkdownMetadata(fullContent);
+      
+      // Se o arquivo tiver uma meta salva no YAML, carregamos ela
+      const wordGoal = metadata.wordGoal ? Number(metadata.wordGoal) : 0;
+      const sessionGoal = metadata.sessionGoal ? Number(metadata.sessionGoal) : 0;
+
       set({ 
         metadata,
         markdownContent: markdown,
         saveStatus: 'idle',
-        lastSavedAt: new Date() 
+        lastSavedAt: new Date(),
+        wordGoal,
+        sessionGoal
       });
     } catch (error) {
       console.error('Erro ao ler arquivo:', error);
@@ -55,11 +71,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setMarkdownContent: (markdownContent: string) => {
     set({ markdownContent });
-    
-    // Auto-save disparado por mudança de conteúdo
-    // Nota: Como a store não tem o path, vamos usar um hack temporário ou 
-    // passar o path no trigger. Mas melhor: o Editor.tsx já chama save().
-    // Para resolver o bug da imagem, o setMetadata deve disparar o save.
   },
 
   setMetadata: (metadata: Metadata) => {
@@ -67,11 +78,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   save: async (path: string, workspaceRoot?: string) => {
-    const { metadata, markdownContent, lastSnapshotAt } = get();
+    const { metadata, markdownContent, lastSnapshotAt, wordGoal, sessionGoal } = get();
     set({ saveStatus: 'saving' });
 
     try {
-      const yaml = stringifyYAML(metadata);
+      // Sincronizar as metas com os metadados antes de salvar
+      const updatedMetadata = { 
+        ...metadata, 
+        wordGoal: wordGoal > 0 ? wordGoal : undefined,
+        sessionGoal: sessionGoal > 0 ? sessionGoal : undefined
+      };
+      
+      const yaml = stringifyYAML(updatedMetadata);
       const fullContent = yaml ? `${yaml}\n\n${markdownContent}` : markdownContent;
       await writeFile(path, fullContent);
       
@@ -88,7 +106,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
       set({ 
         saveStatus: 'saved', 
-        lastSavedAt: now
+        lastSavedAt: now,
+        metadata: updatedMetadata
       });
       return true;
     } catch (error) {
@@ -104,5 +123,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setWordCount: (count: number) => {
     set({ wordCount: count });
+  },
+
+  setWordGoal: (goal: number) => {
+    set({ wordGoal: goal });
+  },
+
+  setSessionGoal: (goal: number) => {
+    set({ sessionGoal: goal });
+  },
+
+  startNewSession: () => {
+    const { wordCount } = get();
+    set({ sessionStartWordCount: wordCount });
   },
 }));

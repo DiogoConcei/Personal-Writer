@@ -9,6 +9,8 @@ export interface Metadata {
   images?: string[];
   music?: string;
   linked_characters?: string[];
+  wordGoal?: number;
+  sessionGoal?: number;
   config?: Record<string, FieldConfig>;
   fields?: Record<string, any>;
 }

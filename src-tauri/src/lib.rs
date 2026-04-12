@@ -47,6 +47,7 @@ pub fn run() {
             commands::fs::toggle_snapshot_lock,
 
             commands::dictionary::check_spelling,
+            commands::dictionary::check_spelling_batch,
             commands::dictionary::get_synonyms,
             commands::dictionary::add_to_dictionary
         ])

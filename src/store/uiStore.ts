@@ -30,7 +30,7 @@ interface UIState {
   activePanel: ActivePanel;
   isSidebarVisible: boolean;
   isRightSidebarVisible: boolean;
-  isFocusMode: boolean;
+  isZenMode: boolean;
   isCommandPaletteOpen: boolean;
   notifications: ToastNotification[];
   
@@ -44,7 +44,7 @@ interface UIState {
   setActivePanel: (panel: ActivePanel) => void;
   toggleSidebar: () => void;
   toggleRightSidebar: () => void;
-  setFocusMode: (enabled: boolean) => void;
+  toggleZenMode: () => void;
   setCommandPaletteOpen: (isOpen: boolean) => void;
   setPreview: (preview: Partial<PreviewState>) => void;
   setDragInfo: (info: Partial<DragInfo>) => void;
@@ -74,7 +74,7 @@ export const useUIStore = create<UIState>((set) => ({
   activePanel: 'editor',
   isSidebarVisible: true,
   isRightSidebarVisible: false,
-  isFocusMode: false,
+  isZenMode: false,
   isCommandPaletteOpen: false,
   notifications: [],
   dragInfo: INITIAL_DRAG,
@@ -83,7 +83,7 @@ export const useUIStore = create<UIState>((set) => ({
   setActivePanel: (panel) => set({ activePanel: panel }),
   toggleSidebar: () => set((state) => ({ isSidebarVisible: !state.isSidebarVisible })),
   toggleRightSidebar: () => set((state) => ({ isRightSidebarVisible: !state.isRightSidebarVisible })),
-  setFocusMode: (enabled) => set({ isFocusMode: enabled }),
+  toggleZenMode: () => set((state) => ({ isZenMode: !state.isZenMode })),
   setCommandPaletteOpen: (isOpen) => set({ isCommandPaletteOpen: isOpen }),
   setPreview: (preview) => set((state) => ({ 
     preview: { ...state.preview, ...preview } 

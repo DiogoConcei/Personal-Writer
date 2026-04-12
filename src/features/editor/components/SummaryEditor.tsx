@@ -20,7 +20,7 @@ interface SummaryEditorProps {
 }
 
 export function SummaryEditor({ value, onChange, placeholder, readOnly }: SummaryEditorProps) {
-  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, word: string, suggestions: string[] } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, word: string } | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -90,13 +90,9 @@ export function SummaryEditor({ value, onChange, placeholder, readOnly }: Summar
     const isMisspelled = target.classList.contains('misspelled');
     
     let word = '';
-    let suggestions: string[] = [];
 
     if (isMisspelled) {
       word = target.getAttribute('data-word') || '';
-      try {
-        suggestions = JSON.parse(target.getAttribute('data-suggestions') || '[]');
-      } catch (err) {}
     } else {
       const selection = window.getSelection();
       word = selection?.toString().trim() || '';
@@ -116,7 +112,7 @@ export function SummaryEditor({ value, onChange, placeholder, readOnly }: Summar
     }
 
     if (word) {
-      setContextMenu({ x: e.clientX, y: e.clientY, word, suggestions });
+      setContextMenu({ x: e.clientX, y: e.clientY, word });
     }
   };
 

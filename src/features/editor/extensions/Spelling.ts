@@ -3,13 +3,31 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { checkSpellingBatch, SpellError } from '@/tauri-bridge';
 
-// Função para converter offset de bytes (UTF-8) para offset de caracteres (UTF-16/ProseMirror)
-function byteToCharIndex(text: string, byteOffset: number): number {
-  const encoder = new TextEncoder();
+// UMA instância reutilizável para evitar GC excessivo
+const encoder = new TextEncoder();
+
+/**
+ * Converte offset de bytes (UTF-8 do Rust) para índice de caracteres (UTF-16 do JS/ProseMirror)
+ * de forma eficiente construindo um mapa de mapeamento uma única vez para a string.
+ */
+function buildByteToCharMap(text: string): Uint32Array {
   const bytes = encoder.encode(text);
-  const slice = bytes.slice(0, byteOffset);
-  const decoder = new TextDecoder();
-  return decoder.decode(slice).length;
+  const map = new Uint32Array(bytes.length + 1);
+  
+  let charIndex = 0;
+  let byteIndex = 0;
+  
+  // Itera por caracteres (codepoints) da string JS
+  for (const char of text) {
+    const charBytes = encoder.encode(char).length;
+    for (let i = 0; i < charBytes; i++) {
+      map[byteIndex + i] = charIndex;
+    }
+    byteIndex += charBytes;
+    charIndex++;
+  }
+  map[byteIndex] = charIndex;
+  return map;
 }
 
 export interface SpellingOptions {
@@ -91,7 +109,7 @@ export const Spelling = Extension.create<SpellingOptions, SpellingStorage>({
                 };
               }
 
-              // Mapear decorações existentes para a posição atual
+              // Mapear decorações existentes para a posição atual de forma eficiente
               let decos = pluginState.decorations.map(tr.mapping, tr.doc);
 
               // Se for check total (ex: carregamento), limpa tudo
@@ -101,7 +119,7 @@ export const Spelling = Extension.create<SpellingOptions, SpellingStorage>({
 
               const decoList: Decoration[] = [];
               results.forEach(({ pos, node, errors }: { pos: number, node: any, errors: SpellError[] }) => {
-                // Remover decorações antigas apenas neste nó se não for check total
+                // Remover decorações antigas APENAS no range deste nó
                 if (!isFullCheck) {
                   const existingInNode = decos.find(pos, pos + node.nodeSize);
                   if (existingInNode.length > 0) {
@@ -109,16 +127,20 @@ export const Spelling = Extension.create<SpellingOptions, SpellingStorage>({
                   }
                 }
 
-                errors.forEach((err) => {
-                  const from = byteToCharIndex(node.text!, err.start);
-                  const to = byteToCharIndex(node.text!, err.end);
+                if (errors.length > 0) {
+                  // Constrói o mapa de offsets apenas UMA vez para este parágrafo/nó
+                  const byteToChar = buildByteToCharMap(node.text!);
                   
-                  decoList.push(Decoration.inline(pos + from, pos + to, {
-                    class: 'misspelled',
-                    'data-word': err.word,
-                    'data-suggestions': JSON.stringify(err.suggestions),
-                  }));
-                });
+                  errors.forEach((err) => {
+                    const from = byteToChar[err.start];
+                    const to = byteToChar[err.end];
+                    
+                    decoList.push(Decoration.inline(pos + from, pos + to, {
+                      class: 'misspelled',
+                      'data-word': err.word,
+                    }));
+                  });
+                }
               });
 
               return { decorations: decos.add(tr.doc, decoList), forceCheck: !!forceCheck };

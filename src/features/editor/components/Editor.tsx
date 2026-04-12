@@ -30,7 +30,7 @@ export default function Editor() {
   const [templateToApply, setTemplateToApply] = useState<string | null>(null);
   
   // Estado do Menu de Contexto do Dicionário
-  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, word: string, suggestions: string[] } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, word: string } | null>(null);
 
   const { setMarkdownContent, loadContent, save, typography, setWordCount, setMetadata } = useEditorStore();
   const saveTimeoutRef = useRef<any>(null);
@@ -182,13 +182,9 @@ export default function Editor() {
     const isMisspelled = target.classList.contains('misspelled');
     
     let word = '';
-    let suggestions: string[] = [];
 
     if (isMisspelled) {
       word = target.getAttribute('data-word') || '';
-      try {
-        suggestions = JSON.parse(target.getAttribute('data-suggestions') || '[]');
-      } catch (err) {}
     } else {
       const selection = window.getSelection();
       word = selection?.toString().trim() || '';
@@ -208,7 +204,7 @@ export default function Editor() {
     }
 
     if (word) {
-      setContextMenu({ x: e.clientX, y: e.clientY, word, suggestions });
+      setContextMenu({ x: e.clientX, y: e.clientY, word });
     }
   };
 

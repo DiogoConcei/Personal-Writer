@@ -34,6 +34,7 @@ Transformar o editor em uma estação de trabalho literária completa, focada em
 - **Acentuação Brasileira:** Motor Rust (`Spellbook`) validado. ✅
 - **Conflito de UI (Menus):** Bubble Menu ocultado automaticamente sobre erros ortográficos. ✅
 - **Estabilidade:** Integrado via TipTap Storage para evitar bugs de recarregamento do React. ✅
+- **Heurística de Sugestão:** Implementado motor híbrido (Edições + Fonética) para resolver falhas do Hunspell nativo (ex: "axabacate"). ✅
 
 ### Feature 5 — Motor de Indexação SQLite (Universo & Metas)
 **Objetivo:** Eliminar o gargalo de leitura de arquivos físicos para operações de busca, dashboard e métricas.

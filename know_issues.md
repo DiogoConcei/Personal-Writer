@@ -187,19 +187,36 @@ Este documento registra erros que já aconteceram durante o desenvolvimento, sua
 
 ---
 
-## KI-032 — Latência Excessiva no Sublinhado (UI/UX Lag)
+## KI-032 — Latência Excessiva no Sublinhado (UI/UX Lag) — RESOLVIDO
 
 **Sintoma:** O sublinhado vermelho aparece, mas leva muito tempo para ser renderizado após a digitação (mesmo com debounce baixo).
 
-**Causa:** O plugin ortográfico realizava um `descendants()` sobre todo o documento a cada verificação, disparando centenas de chamadas assíncronas ao comando Rust `check_spelling`.
+**Causa:** O plugin ortográfico realizava um `descendants()` sobre todo o documento a cada verificação, disparando centenas de chamadas assíncronas ao comando Rust `check_spelling`. Além disso, o motor de sugestões (`engine.suggest`) era chamado de forma síncrona dentro do loop de verificação, bloqueando a thread principal.
 
-**Solução:** 
-1. **Delta Check:** Implementado cache de nós imutáveis (`WeakSet`) para ignorar parágrafos não modificados.
-2. **Batch IPC:** Implementado comando `check_spelling_batch` no Rust para processar todos os nós modificados em uma única chamada de sistema.
-
-**Observação:** Mesmo após estas otimizações, o lag pode persistir em palavras isoladas. Investigação futura sugere que o motor de sugestões (`engine.suggest`) do `spellbook` pode ser o novo gargalo.
+**Solução (Zero-Lag Architecture):** 
+1. **Pipeline de Check vs Suggest:** O comando `check_spelling_batch` agora apenas verifica erros (O(n) rápido). As sugestões são calculadas **on-demand** apenas quando o usuário abre o menu de contexto.
+2. **Isolamento de CPU (Rust):** Todos os comandos de dicionário agora rodam em `spawn_blocking`, evitando o congelamento da thread de eventos do Tauri.
+3. **Mapeamento de Char JS Eficiente:** Implementada a função `buildByteToCharMap` no `Spelling.ts` que utiliza um único `TextEncoder` reutilizável para converter offsets de bytes para caracteres com custo de alocação zero por erro.
+4. **Otimização de DOM:** Removido o atributo `data-suggestions` (JSON pesado) das decorações do ProseMirror.
 
 ---
+
+---
+
+## KI-033 — Falha de Sugestão e Lentidão no Motor Hunspell (Levenshtein Explosion)
+
+**Sintoma:** Palavras com erros simples (ex: "axabacate") demoram mais de 20s para sugerir ou retornam apenas sugestões com espaço (ex: "a xabacate") ignorando a palavra correta ("abacate").
+
+**Causa:** 
+1. **Dicionários Defasados:** Dicionários pt-BR (Vero 3.2 e derivados) carecem de regras `REP` fonéticas e de digitação modernas.
+2. **Algoritmo Nativo:** O método `suggest()` do Hunspell realiza busca bruta para distâncias de edição > 1, causando picos de CPU e timeouts em palavras longas.
+3. **Filtro Agressivo:** Heurísticas anteriores descartavam sugestões com espaços, deixando o usuário sem opções quando o motor falhava em encontrar a palavra única.
+
+**Solução (Heurística Híbrida de Alta Performance):**
+Implementado um pipeline de sugestão em três níveis no Rust:
+1. **Gerador de Edições Local:** O Rust gera proativamente variações de Distância 1 e Fonética pt-BR (`x <-> ch`, etc.) e as valida via `engine.check()` (microssegundos).
+2. **Deleção Direcionada (Distância 2):** Se falhar, tenta deleções duplas para capturar teclas acidentais (resolve "axabacate" instantaneamente).
+3. **Ranking por Levenshtein Customizado:** Resultados são ranqueados no Rust priorizando palavras únicas e menor distância real, com um fallback de 150ms para o `suggest()` nativo.
 
 ## Padrões Gerais — Salvamento de Imagens
 

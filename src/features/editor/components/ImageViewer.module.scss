@@ -50,6 +50,24 @@
     align-items: center;
     gap: var(--spacing-sm);
     max-width: 50%;
+
+    .backBtn {
+      background: transparent;
+      border: none;
+      color: var(--color-text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: var(--transition-fast);
+
+      &:hover {
+        background-color: var(--color-bg-hover);
+        color: var(--color-accent);
+      }
+    }
   }
 
   &__actions {

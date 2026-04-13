@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ActivePanel = 'editor' | 'dashboard' | 'gallery';
+export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard';
 
 export interface DragInfo {
   sourcePath: string | null;

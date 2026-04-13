@@ -2,6 +2,61 @@ use std::fs;
 use std::path::Path;
 use serde::{Serialize, Deserialize};
 use std::time::UNIX_EPOCH;
+use walkdir::WalkDir;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ImageAsset {
+    pub name: String,
+    pub path: String, // Caminho relativo para portabilidade (./assets/...)
+    pub full_path: String,
+    pub modified_at: u64,
+}
+
+#[tauri::command]
+pub async fn scan_workspace_images(workspace_root: String) -> Result<Vec<ImageAsset>, String> {
+    let root = Path::new(&workspace_root);
+    let mut images = Vec::new();
+
+    for entry in WalkDir::new(root)
+        .into_iter()
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy();
+            !name.starts_with('.') && name != "node_modules" && name != ".snapshots" && name != ".git"
+        })
+        .filter_map(|e| e.ok()) {
+            
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(ext) = path.extension() {
+                let ext_str = ext.to_string_lossy().to_lowercase();
+                if ["png", "jpg", "jpeg", "gif", "webp"].contains(&ext_str.as_str()) {
+                    let metadata = entry.metadata().map_err(|e| e.to_string())?;
+                    let full_path = path.to_string_lossy().to_string();
+                    
+                    // Converter para caminho relativo (ex: ./assets/image.png)
+                    let relative_path = path.strip_prefix(root)
+                        .map(|p| format!("./{}", p.to_string_lossy().replace("\\", "/")))
+                        .unwrap_or_else(|_| full_path.clone());
+
+                    images.push(ImageAsset {
+                        name: entry.file_name().to_string_lossy().to_string(),
+                        path: relative_path,
+                        full_path,
+                        modified_at: metadata.modified()
+                            .unwrap_or(UNIX_EPOCH)
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs(),
+                    });
+                }
+            }
+        }
+    }
+
+    // Ordenar por data de modificação (mais recentes primeiro)
+    images.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
+    Ok(images)
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FileNode {

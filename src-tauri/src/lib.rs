@@ -50,7 +50,9 @@ pub fn run() {
             commands::dictionary::check_spelling_batch,
             commands::dictionary::get_spell_suggestions,
             commands::dictionary::get_synonyms,
-            commands::dictionary::add_to_dictionary
+            commands::dictionary::add_to_dictionary,
+
+            commands::fs::scan_workspace_images
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

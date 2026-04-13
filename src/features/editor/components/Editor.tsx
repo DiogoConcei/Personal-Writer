@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit';
 import BubbleMenu from '@tiptap/extension-bubble-menu';
 import { WikiLink } from '../extensions/WikiLink/WikiLink';
 import { CustomImage } from '../extensions/Image/Image';
+import { PdfLink } from '../extensions/PdfLink/PdfLink';
 import { FontSize } from '../extensions/FontSize';
 import { Spelling } from '../extensions/Spelling';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -13,29 +14,37 @@ import { useEditorStore } from '../store/editorStore';
 import { parseMarkdownMetadata } from '../store/metadataParser';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
-import { saveImageFromBytes } from '@/tauri-bridge';
+import { copyFileToWorkspace, saveImageFromBytes } from '@/tauri-bridge';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+const PDF_EXTENSIONS = ['.pdf'];
 import VersionHistory from './VersionHistory/VersionHistory';
 import ImageGallery from './ImageGallery/ImageGallery';
 import EditorBubbleMenu from './EditorBubbleMenu';
 import { DictionaryContextMenu } from './DictionaryContextMenu';
+import { DocumentModal } from './DocumentModal/DocumentModal';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
 import styles from './Editor.module.scss';
-import { History, LayoutTemplate, Image as ImageIcon } from 'lucide-react';
+import { History, LayoutTemplate, Image as ImageIcon, FileText } from 'lucide-react';
 import { DEFAULT_TEMPLATES } from '@/features/templates/data/defaultTemplates';
+import { useReferenceStore } from '@/features/references/store/referenceStore';
+import { useUIStore as useGlobalUIStore } from '@/store/uiStore';
 
 export default function Editor() {
   const { activeFile, rootPath } = useWorkspaceStore();
   const [showHistory, setShowHistory] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
   const [templateToApply, setTemplateToApply] = useState<string | null>(null);
   
   // Estado do Menu de Contexto do Dicionário
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, word: string } | null>(null);
 
-  const { setMarkdownContent, loadContent, save, typography, setWordCount, setMetadata } = useEditorStore();
+  const { metadata, setMarkdownContent, loadContent, save, typography, setWordCount, setMetadata } = useEditorStore();
+  const { setActivePdf } = useReferenceStore();
+  const { toggleRightSidebar, isRightSidebarVisible } = useGlobalUIStore();
   const saveTimeoutRef = useRef<any>(null);
 
   const getRelativeSubfolder = () => {
@@ -76,6 +85,7 @@ export default function Editor() {
         },
       } as any),
       CustomImage.configure({ inline: true, allowBase64: true }),
+      PdfLink,
     ],
     content: '',
     onUpdate: ({ editor }) => {
@@ -123,36 +133,107 @@ export default function Editor() {
         }
         return false;
       },
-      handleDrop: (view, event) => {
-        const files = Array.from(event.dataTransfer?.files || []);
-        const imageFile = files.find(file => file.type.startsWith('image'));
-
-        if (imageFile && rootPath) {
-          event.preventDefault();
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            const buffer = e.target?.result as ArrayBuffer;
-            const bytes = Array.from(new Uint8Array(buffer));
-            const fileName = `dropped_${Date.now()}_${imageFile.name}`;
-            const subFolder = getRelativeSubfolder();
-            try {
-              const relativePath = await saveImageFromBytes(fileName, bytes, rootPath, subFolder);
-              const { schema } = view.state;
-              const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
-              if (coordinates) {
-                view.dispatch(view.state.tr.insert(coordinates.pos, schema.nodes.image.create({ src: relativePath })));
-              }
-            } catch (err) {
-              console.error('Erro ao salvar imagem solta:', err);
-            }
-          };
-          reader.readAsArrayBuffer(imageFile);
-          return true;
-        }
-        return false;
-      }
+      handleDrop: (_view, _event) => {
+        // Retornar true informa ao ProseMirror que nós cuidamos do drop,
+        // impedindo a inserção dupla (nativa do browser + nossa lógica Tauri).
+        return true;
+      },
     },
   }, [rootPath]); // activeFile removido das dependências para não recriar o editor
+
+  // Efeito para lidar com o drop nativo do sistema (Tauri)
+  useEffect(() => {
+    const appWindow = getCurrentWebviewWindow();
+    let unlistenFn: (() => void) | undefined;
+
+    // Prevenir overlay nativo do Windows ("Drop here to share")
+    const handleGlobalDrag = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    window.addEventListener('dragenter', handleGlobalDrag);
+    window.addEventListener('dragover', handleGlobalDrag);
+
+    const setupDragDrop = async () => {
+      try {
+        const unlisten = await appWindow.onDragDropEvent(async (event) => {
+          if (event.payload.type === 'drop') {
+            const paths = event.payload.paths;
+            if (!paths || paths.length === 0 || !rootPath || !editor) return;
+
+            for (const path of paths) {
+              const isImage = IMAGE_EXTENSIONS.some(ext => path.toLowerCase().endsWith(ext));
+              const isPdf = PDF_EXTENSIONS.some(ext => path.toLowerCase().endsWith(ext));
+
+              if (isImage || isPdf) {
+                const x = event.payload.position?.x || window.innerWidth / 2;
+                const y = event.payload.position?.y || window.innerHeight / 2;
+                const coordinates = editor.view.posAtCoords({ left: x, top: y });
+                const pos = coordinates ? coordinates.pos : editor.state.selection.from;
+
+                // Normalizar caminhos para comparação segura (Windows usa \ mas JS/Tauri podem usar /)
+                const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
+                const normalizedRoot = rootPath.replace(/\\/g, '/').toLowerCase();
+                const isInsideWorkspace = normalizedPath.startsWith(normalizedRoot);
+                
+                let relativePath: string;
+                
+                if (isInsideWorkspace) {
+                  // Apenas converter para caminho relativo se já estiver dentro
+                  relativePath = path
+                    .replace(rootPath, '')
+                    .replace(/^[\\/]/, './')
+                    .replace(/\\/g, '/');
+                } else {
+                  // Copiar para a pasta correta (assets ou docs)
+                  const folderName = isImage ? 'assets' : 'docs';
+                  const subFolder = getRelativeSubfolder();
+                  try {
+                    relativePath = await copyFileToWorkspace(path, rootPath, folderName, subFolder);
+                  } catch (err) {
+                    console.error(`Erro ao copiar ${folderName}:`, err);
+                    continue;
+                  }
+                }
+
+                if (isImage) {
+                  editor.chain().focus().insertContentAt(pos, {
+                    type: 'image',
+                    attrs: { src: relativePath }
+                  }).run();
+                } else if (isPdf) {
+                  // Buscar metadados atuais via store para evitar stale closure
+                  const currentMetadata = useEditorStore.getState().metadata;
+                  const currentDocs = currentMetadata.documents || [];
+                  
+                  if (!currentDocs.includes(relativePath)) {
+                    setMetadata({
+                      ...currentMetadata,
+                      documents: [...currentDocs, relativePath]
+                    });
+                    const activeFile = useWorkspaceStore.getState().activeFile;
+                    if (activeFile) save(activeFile, rootPath || undefined);
+                  }
+                }
+              }
+            }
+          }
+        });
+        unlistenFn = unlisten;
+      } catch (err) {
+        console.error('Erro ao configurar drag-and-drop nativo:', err);
+      }
+    };
+
+    setupDragDrop();
+
+    return () => {
+      window.removeEventListener('dragenter', handleGlobalDrag);
+      window.removeEventListener('dragover', handleGlobalDrag);
+      if (unlistenFn) unlistenFn();
+    };
+  }, [editor, rootPath]); // metadata e activeFile removidos para evitar re-registros constantes
 
   // Efeito para lidar com o drop customizado da Sidebar
   useEffect(() => {
@@ -166,8 +247,9 @@ export default function Editor() {
         
         if (rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
           const isImage = IMAGE_EXTENSIONS.some(ext => sourcePath.toLowerCase().endsWith(ext));
+          const isPdf = PDF_EXTENSIONS.some(ext => sourcePath.toLowerCase().endsWith(ext));
           
-          if (isImage) {
+          if (isImage || isPdf) {
             const coordinates = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
             if (coordinates) {
               // Converter caminho absoluto para relativo ./assets/...
@@ -176,10 +258,25 @@ export default function Editor() {
                 .replace(/^[\\/]/, './')
                 .replace(/\\/g, '/');
                 
-              editor.chain().focus().insertContentAt(coordinates.pos, {
-                type: 'image',
-                attrs: { src: relativePath }
-              }).run();
+              if (isImage) {
+                editor.chain().focus().insertContentAt(coordinates.pos, {
+                  type: 'image',
+                  attrs: { src: relativePath }
+                }).run();
+              } else if (isPdf) {
+                // Buscar metadados atuais via store
+                const currentMetadata = useEditorStore.getState().metadata;
+                const currentDocs = currentMetadata.documents || [];
+                
+                if (!currentDocs.includes(relativePath)) {
+                  setMetadata({
+                    ...currentMetadata,
+                    documents: [...currentDocs, relativePath]
+                  });
+                  const activeFile = useWorkspaceStore.getState().activeFile;
+                  if (activeFile) save(activeFile, rootPath || undefined);
+                }
+              }
             }
           }
         }
@@ -188,7 +285,7 @@ export default function Editor() {
 
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [editor, rootPath]);
+  }, [editor, rootPath]); // metadata removido daqui também
 
   useEffect(() => {
     let isMounted = true;
@@ -264,10 +361,26 @@ export default function Editor() {
       const newHtml = editor.getHTML();
       setMarkdownContent(newHtml);
       
-      if (activeFile) save(activeFile);
+      if (activeFile) save(activeFile, rootPath || undefined);
       setTemplateToApply(null);
       setShowTemplates(false);
     }
+  };
+
+  const handleRemoveDocument = (path: string) => {
+    const currentDocs = metadata.documents || [];
+    const newDocs = currentDocs.filter(d => d !== path);
+    setMetadata({
+      ...metadata,
+      documents: newDocs
+    });
+    if (activeFile) save(activeFile, rootPath || undefined);
+  };
+
+  const openPdfAnexo = (path: string) => {
+    setActivePdf(path);
+    if (!isRightSidebarVisible) toggleRightSidebar();
+    setShowDocuments(false);
   };
 
   if (!activeFile) return null;
@@ -290,6 +403,16 @@ export default function Editor() {
               </div>
             )}
           </div>
+          
+          <div className={styles.templateDropdown}>
+            <button className={styles.historyBtn} onClick={() => setShowDocuments(true)}>
+              <FileText size={14} /> Documentos
+              {metadata.documents && metadata.documents.length > 0 && (
+                <span className={styles.badge}>{metadata.documents.length}</span>
+              )}
+            </button>
+          </div>
+
           <button className={styles.historyBtn} onClick={() => setShowGallery(true)}><ImageIcon size={14} /> Galeria</button>
           <button className={styles.historyBtn} onClick={() => setShowHistory(true)}><History size={14} /> Histórico</button>
         </div>
@@ -298,8 +421,11 @@ export default function Editor() {
       <div 
         className={styles.scrollContainer} 
         onContextMenu={handleContextMenu} 
-        onClick={() => setContextMenu(null)}
-        onDragOver={(e) => e.preventDefault()}
+        onClick={() => {
+          setContextMenu(null);
+          setShowDocuments(false);
+          setShowTemplates(false);
+        }}
       >
         <MetadataHeader />
         <EditorBubbleMenu editor={editor} />
@@ -317,6 +443,14 @@ export default function Editor() {
         <ImageGallery onSelect={(src) => editor?.chain().focus().setImage({ src }).run()} onClose={() => setShowGallery(false)} />
       )}
       {showHistory && <VersionHistory editor={editor} onClose={() => setShowHistory(false)} />}
+      {showDocuments && (
+        <DocumentModal 
+          documents={metadata.documents || []} 
+          onClose={() => setShowDocuments(false)} 
+          onOpen={openPdfAnexo}
+          onRemove={handleRemoveDocument}
+        />
+      )}
       <ConfirmModal 
         isOpen={!!templateToApply} 
         onClose={() => setTemplateToApply(null)} 

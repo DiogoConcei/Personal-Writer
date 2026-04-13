@@ -1,7 +1,7 @@
 import styles from './DefaultHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
-import { FileText, ChevronRight } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { AttributeGrid } from './AttributeGrid';
 
 import { Metadata } from '@/features/editor/store/metadataParser';
@@ -19,13 +19,15 @@ export function DefaultHeader({ metadata: propMetadata, readOnly }: DefaultHeade
 
   const noteName = activeFile ? activeFile.split(/[\\/]/).pop()?.replace('.md', '') : 'Nova Nota';
 
+  const displayType = metadata.type || 'Nota';
+
   return (
     <div className={styles.defaultHeader}>
       <div className={styles.hero}>
         <div className={styles.badgeRow}>
-          <span className={styles.typeTag}><FileText size={12} /> Documento</span>
-          <ChevronRight size={14} className={styles.separator} />
-          <span className={styles.statusTag}>Rascunho</span>
+          <span className={styles.typeTag}>
+            <FileText size={12} /> {displayType}
+          </span>
         </div>
         <h1 className={styles.name}>{noteName}</h1>
       </div>

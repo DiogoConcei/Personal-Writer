@@ -12,6 +12,14 @@ pub struct ImageAsset {
     pub modified_at: u64,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PdfAsset {
+    pub name: String,
+    pub path: String,
+    pub full_path: String,
+    pub modified_at: u64,
+}
+
 #[tauri::command]
 pub async fn scan_workspace_images(workspace_root: String) -> Result<Vec<ImageAsset>, String> {
     let root = Path::new(&workspace_root);
@@ -56,6 +64,50 @@ pub async fn scan_workspace_images(workspace_root: String) -> Result<Vec<ImageAs
     // Ordenar por data de modificação (mais recentes primeiro)
     images.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
     Ok(images)
+}
+
+#[tauri::command]
+pub async fn scan_workspace_pdfs(workspace_root: String) -> Result<Vec<PdfAsset>, String> {
+    let root = Path::new(&workspace_root);
+    let mut pdfs = Vec::new();
+
+    for entry in WalkDir::new(root)
+        .into_iter()
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy();
+            !name.starts_with('.') && name != "node_modules" && name != ".snapshots" && name != ".git"
+        })
+        .filter_map(|e| e.ok()) {
+            
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(ext) = path.extension() {
+                if ext.to_string_lossy().to_lowercase() == "pdf" {
+                    let metadata = entry.metadata().map_err(|e| e.to_string())?;
+                    let full_path = path.to_string_lossy().to_string();
+                    
+                    let relative_path = path.strip_prefix(root)
+                        .map(|p| format!("./{}", p.to_string_lossy().replace("\\", "/")))
+                        .unwrap_or_else(|_| full_path.clone());
+
+                    pdfs.push(PdfAsset {
+                        name: entry.file_name().to_string_lossy().to_string(),
+                        path: relative_path,
+                        full_path,
+                        modified_at: metadata.modified()
+                            .unwrap_or(UNIX_EPOCH)
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs(),
+                    });
+                }
+            }
+        }
+    }
+
+    // Ordenar por data de modificação (mais recentes primeiro)
+    pdfs.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
+    Ok(pdfs)
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -128,54 +180,94 @@ pub async fn rename_item(old_path: String, new_path: String) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub async fn copy_image_to_assets(source_path: String, workspace_root: String, sub_folder: Option<String>) -> Result<String, String> {
-    let mut assets_dir = Path::new(&workspace_root).join("assets");
+pub async fn copy_file_to_workspace(
+    source_path: String, 
+    workspace_root: String, 
+    folder_name: String,
+    sub_folder: Option<String>
+) -> Result<String, String> {
+    let mut dest_dir = Path::new(&workspace_root).join(&folder_name);
     
     if let Some(ref sub) = sub_folder {
-        assets_dir = assets_dir.join(sub);
+        dest_dir = dest_dir.join(sub);
     }
     
-    if !assets_dir.exists() {
-        fs::create_dir_all(&assets_dir).map_err(|e| e.to_string())?;
+    if !dest_dir.exists() {
+        fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
     }
 
     let source = Path::new(&source_path);
     let file_name = source.file_name().ok_or("Invalid file name")?;
-    let dest_path = assets_dir.join(file_name);
+    let dest_path = dest_dir.join(file_name);
 
-    fs::copy(source, &dest_path).map_err(|e| e.to_string())?;
+    // Se origem e destino forem o mesmo caminho absoluto, ignorar
+    if source.canonicalize().ok() == dest_path.canonicalize().ok() {
+        let relative_prefix = if let Some(sub) = sub_folder {
+            format!("./{}/{}/", folder_name, sub.replace("\\", "/"))
+        } else {
+            format!("./{}/", folder_name)
+        };
+        return Ok(format!("{}{}", relative_prefix, file_name.to_string_lossy()));
+    }
+
+    // Tentar copiar. Se falhar por estar em uso, verificar se o arquivo já existe
+    if let Err(e) = fs::copy(source, &dest_path) {
+        if dest_path.exists() {
+            // Se o arquivo já existe e deu erro de acesso (provavelmente em uso), 
+            // assumimos que o arquivo destino é o que o usuário quer usar.
+            println!("Aviso: Falha ao sobrescrever arquivo em uso, mantendo versão existente: {}", e);
+        } else {
+            return Err(e.to_string());
+        }
+    }
 
     let relative_prefix = if let Some(sub) = sub_folder {
-        format!("./assets/{}/", sub.replace("\\", "/"))
+        format!("./{}/{}/", folder_name, sub.replace("\\", "/"))
     } else {
-        "./assets/".to_string()
+        format!("./{}/", folder_name)
     };
 
     Ok(format!("{}{}", relative_prefix, file_name.to_string_lossy()))
 }
 
 #[tauri::command]
-pub async fn save_image_from_bytes(file_name: String, bytes: Vec<u8>, workspace_root: String, sub_folder: Option<String>) -> Result<String, String> {
-    let mut assets_dir = Path::new(&workspace_root).join("assets");
+pub async fn save_file_from_bytes_to_workspace(
+    file_name: String, 
+    bytes: Vec<u8>, 
+    workspace_root: String, 
+    folder_name: String,
+    sub_folder: Option<String>
+) -> Result<String, String> {
+    let mut dest_dir = Path::new(&workspace_root).join(&folder_name);
     
     if let Some(ref sub) = sub_folder {
-        assets_dir = assets_dir.join(sub);
+        dest_dir = dest_dir.join(sub);
     }
     
-    if !assets_dir.exists() {
-        fs::create_dir_all(&assets_dir).map_err(|e| e.to_string())?;
+    if !dest_dir.exists() {
+        fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
     }
 
-    let dest_path = assets_dir.join(&file_name);
+    let dest_path = dest_dir.join(&file_name);
     fs::write(dest_path, bytes).map_err(|e| e.to_string())?;
 
     let relative_prefix = if let Some(sub) = sub_folder {
-        format!("./assets/{}/", sub.replace("\\", "/"))
+        format!("./{}/{}/", folder_name, sub.replace("\\", "/"))
     } else {
-        "./assets/".to_string()
+        format!("./{}/", folder_name)
     };
 
     Ok(format!("{}{}", relative_prefix, file_name))
+}
+
+#[tauri::command]
+pub async fn copy_image_to_assets(source_path: String, workspace_root: String, sub_folder: Option<String>) -> Result<String, String> {
+    copy_file_to_workspace(source_path, workspace_root, "assets".to_string(), sub_folder).await
+}
+
+#[tauri::command]
+pub async fn save_image_from_bytes(file_name: String, bytes: Vec<u8>, workspace_root: String, sub_folder: Option<String>) -> Result<String, String> {
+    save_file_from_bytes_to_workspace(file_name, bytes, workspace_root, "assets".to_string(), sub_folder).await
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

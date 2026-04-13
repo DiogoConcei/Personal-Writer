@@ -40,7 +40,7 @@ export const WikiLink = Node.create<WikiLinkOptions>({
   },
 
   renderHTML({ node, HTMLAttributes }) {
-    return ['span', mergeAttributes({ 'data-type': 'wiki-link' }, HTMLAttributes, { 'data-label': node.attrs.label }), `[[${node.attrs.label}]]` ];
+    return ['span', mergeAttributes({ 'data-type': 'wiki-link' }, HTMLAttributes, { 'data-label': node.attrs.label })];
   },
 
   addNodeView() {

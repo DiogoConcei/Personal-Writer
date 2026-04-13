@@ -39,6 +39,8 @@ pub fn run() {
             commands::fs::rename_item,
             commands::fs::copy_image_to_assets,
             commands::fs::save_image_from_bytes,
+            commands::fs::copy_file_to_workspace,
+            commands::fs::save_file_from_bytes_to_workspace,
             commands::fs::create_snapshot,
 
             commands::fs::list_snapshots,
@@ -52,7 +54,8 @@ pub fn run() {
             commands::dictionary::get_synonyms,
             commands::dictionary::add_to_dictionary,
 
-            commands::fs::scan_workspace_images
+            commands::fs::scan_workspace_images,
+            commands::fs::scan_workspace_pdfs
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

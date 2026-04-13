@@ -2,7 +2,6 @@ import { useEditorStore } from '@/features/editor/store/editorStore';
 import { Metadata } from '@/features/editor/store/metadataParser';
 import { CharacterHeader } from './CharacterHeader';
 import { LocationHeader } from './LocationHeader';
-import { DefaultHeader } from './DefaultHeader';
 
 interface MetadataHeaderProps {
   metadata?: Metadata;
@@ -23,5 +22,5 @@ export function MetadataHeader({ metadata: propMetadata, readOnly }: MetadataHea
     return <LocationHeader metadata={propMetadata} readOnly={readOnly} />;
   }
 
-  return <DefaultHeader metadata={propMetadata} readOnly={readOnly} />;
+  return null;
 }

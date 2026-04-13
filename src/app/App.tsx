@@ -13,6 +13,7 @@ import { EntityPreview } from '@/features/editor/components/EntityPreview';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
+import { useReferenceStore } from '@/features/references/store/referenceStore';
 import { useUIStore } from '@/store/uiStore';
 import { ToastContainer } from '@/shared/components/Toast/ToastContainer';
 import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon } from 'lucide-react';
@@ -23,6 +24,7 @@ function App() {
   const { activeFile, rootPath, setRootPath, selectWorkspace } = useWorkspaceStore();
   const { typography, setTypography, save } = useEditorStore();
   const { entities } = useUniverseStore();
+  const { activePdfPath } = useReferenceStore();
   const { 
     activePanel, 
     setActivePanel, 
@@ -37,6 +39,40 @@ function App() {
     setPreview,
     addNotification
   } = useUIStore();
+
+  const [rightSidebarWidth, setRightSidebarWidth] = React.useState(300);
+  const isResizing = React.useRef(false);
+
+  // Resetar largura ao fechar o PDF
+  useEffect(() => {
+    if (!activePdfPath) {
+      setRightSidebarWidth(300);
+    } else {
+      setRightSidebarWidth(450); // Largura inicial sugerida para PDF
+    }
+  }, [activePdfPath]);
+
+  const startResizing = React.useCallback((_e: React.MouseEvent) => {
+    isResizing.current = true;
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', stopResizing);
+    document.body.style.cursor = 'col-resize';
+  }, []);
+
+  const stopResizing = React.useCallback(() => {
+    isResizing.current = false;
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', stopResizing);
+    document.body.style.cursor = 'default';
+  }, []);
+
+  const handleMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!isResizing.current) return;
+    const newWidth = window.innerWidth - e.clientX;
+    if (newWidth > 250 && newWidth < 800) {
+      setRightSidebarWidth(newWidth);
+    }
+  }, []);
 
   const isImage = activeFile && IMAGE_EXTENSIONS.some(ext => activeFile.toLowerCase().endsWith(ext));
 
@@ -284,9 +320,12 @@ function App() {
       </main>
 
       {isRightSidebarVisible && !isZenMode && (
-        <aside className={styles.app__rightSidebar}>
-          <ReferenceSidebar />
-        </aside>
+        <>
+          {activePdfPath && <div className={styles.app__resizer} onMouseDown={startResizing} />}
+          <aside className={styles.app__rightSidebar} style={{ width: rightSidebarWidth }}>
+            <ReferenceSidebar />
+          </aside>
+        </>
       )}
 
       <CommandPalette />

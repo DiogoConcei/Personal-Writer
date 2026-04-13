@@ -63,12 +63,41 @@
     color: var(--color-text-secondary);
     border-radius: var(--radius-sm);
     transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
     &:hover {
       background-color: var(--color-bg-hover);
       color: var(--color-text-primary);
     }
   }
+
+  &__empty {
+    padding: 12px;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    text-align: center;
+    font-style: italic;
+  }
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-accent);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  height: 16px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 10px;
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  box-shadow: 0 0 0 2px var(--color-bg-base);
 }
 
 .historyBtn {

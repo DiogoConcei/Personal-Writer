@@ -4,14 +4,22 @@ import type { FileNode } from './types';
 
 export function resolveAssetPath(path: string, workspaceRoot: string | null): string {
   if (path.startsWith('http')) return path;
-  if (!workspaceRoot || !path.includes('assets')) return path;
 
-  // Normalizar caminho relativo para o formato nativo do SO
-  const relativePart = path.replace('./', '');
-  const separator = workspaceRoot.includes('\\') ? '\\' : '/';
-  const fullPath = `${workspaceRoot}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
-  
-  return convertFileSrc(fullPath);
+  // Se for um caminho absoluto (Windows: C:\... ou Unix: /...)
+  const isAbsolute = /^[a-zA-Z]:[\\/]/.test(path) || path.startsWith('/');
+  if (isAbsolute) {
+    return convertFileSrc(path);
+  }
+
+  // Se for um caminho relativo ao workspace (começa com ./)
+  if (workspaceRoot && path.startsWith('./')) {
+    const relativePart = path.replace('./', '');
+    const separator = workspaceRoot.includes('\\') ? '\\' : '/';
+    const fullPath = `${workspaceRoot}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
+    return convertFileSrc(fullPath);
+  }
+
+  return path;
 }
 
 export interface ImageAsset {
@@ -21,8 +29,19 @@ export interface ImageAsset {
   modified_at: number;
 }
 
+export interface PdfAsset {
+  name: string;
+  path: string;
+  full_path: string;
+  modified_at: number;
+}
+
 export async function scanWorkspaceImages(workspaceRoot: string): Promise<ImageAsset[]> {
   return invoke<ImageAsset[]>('scan_workspace_images', { workspaceRoot });
+}
+
+export async function scanWorkspacePdfs(workspaceRoot: string): Promise<PdfAsset[]> {
+  return invoke<PdfAsset[]>('scan_workspace_pdfs', { workspaceRoot });
 }
 
 export async function selectDirectory(): Promise<string | null> {
@@ -57,6 +76,14 @@ export async function deleteItem(path: string): Promise<void> {
 
 export async function renameItem(oldPath: string, newPath: string): Promise<void> {
   return invoke<void>('rename_item', { oldPath: oldPath, newPath: newPath });
+}
+
+export async function copyFileToWorkspace(sourcePath: string, workspaceRoot: string, folderName: string, subFolder?: string): Promise<string> {
+  return invoke<string>('copy_file_to_workspace', { sourcePath, workspaceRoot, folderName, subFolder });
+}
+
+export async function saveFileFromBytesToWorkspace(fileName: string, bytes: number[], workspaceRoot: string, folderName: string, subFolder?: string): Promise<string> {
+  return invoke<string>('save_file_from_bytes_to_workspace', { fileName, bytes, workspaceRoot, folderName, subFolder });
 }
 
 export async function copyImageToAssets(sourcePath: String, workspaceRoot: string, subFolder?: string): Promise<string> {

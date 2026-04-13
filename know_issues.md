@@ -217,9 +217,22 @@ Implementado um pipeline de sugestão em três níveis no Rust:
 1. **Gerador de Edições Local:** O Rust gera proativamente variações de Distância 1 e Fonética pt-BR (`x <-> ch`, etc.) e as valida via `engine.check()` (microssegundos).
 2. **Deleção Direcionada (Distância 2):** Se falhar, tenta deleções duplas para capturar teclas acidentais (resolve "axabacate" instantaneamente).
 3. **Ranking por Levenshtein Customizado:** Resultados são ranqueados no Rust priorizando palavras únicas e menor distância real, com um fallback de 150ms para o `suggest()` nativo.
+---
+
+## KI-034 — Interceptação do Windows Shell Overlay ("Drop here to share")
+
+**Sintoma:** Ao arrastar um arquivo para o editor, o Windows 11 exibe um overlay no topo da tela escrito "Solte aqui para compartilhar" (Drag Tray), impedindo que o drop chegue ao app ou causando um comportamento visual confuso.
+
+**Causa:** O Windows identifica o arraste sobre o WebView2 como uma operação que pode ser gerenciada pelo Shell, especialmente se o mouse passar sobre regiões de arraste (`data-tauri-drag-region`). O WebView2, por padrão, não bloqueia essa interceptação do sistema.
+
+**Solução:** 
+1. Manter `dragDropEnabled: true` no `tauri.conf.json` para permitir o listener nativo do Tauri.
+2. No componente principal (ex: `App.tsx` ou `Editor.tsx`), adicionar listeners globais de `dragenter` e `dragover` que chamam `e.preventDefault()` e `e.stopPropagation()`. Isso sinaliza ao Windows que o aplicativo já está gerenciando o drop, desativando o overlay de compartilhamento.
+3. Utilizar o `onDragDropEvent` da API do Tauri 2 para capturar os caminhos reais dos arquivos.
+
+---
 
 ## Padrões Gerais — Salvamento de Imagens
-
 | Contexto              | Regra de Ouro                                                                        |
 | :-------------------- | :----------------------------------------------------------------------------------- |
 | **Colar/Soltar**      | Sempre converter para Bytes e salvar via comando Rust `save_image_from_bytes`.       |

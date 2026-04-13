@@ -159,12 +159,36 @@
     position: relative;
   }
 
+  &__resizer {
+    width: 4px;
+    background-color: transparent;
+    cursor: col-resize;
+    z-index: 20;
+    transition: background-color 0.2s;
+    position: relative;
+
+    &:hover, &:active {
+      background-color: var(--color-accent);
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: -4px;
+      right: -4px;
+      top: 0;
+      bottom: 0;
+    }
+  }
+
   &__rightSidebar {
-    width: 300px;
+    min-width: 250px;
     border-left: 1px solid var(--color-border);
     background-color: var(--color-bg-surface);
     z-index: 10;
     animation: slideInRight var(--transition-smooth);
+    display: flex;
+    flex-direction: column;
   }
 }
 

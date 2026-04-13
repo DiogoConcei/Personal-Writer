@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useReferenceStore } from '../store/referenceStore';
+import { PdfLibrary } from './PdfLibrary';
+import { PdfViewer } from './PdfViewer';
 import styles from './ReferenceSidebar.module.scss';
 import { X, User, Tag } from 'lucide-react';
 
 export default function ReferenceSidebar() {
-  const { pinnedNotes } = useReferenceStore();
+  const { pinnedNotes, activePdfPath } = useReferenceStore();
   
-  const [activeTab, setActiveTab] = useState<'backlinks' | 'metadata'>('backlinks');
+  const [activeTab, setActiveTab] = useState<'backlinks' | 'metadata' | 'library'>('backlinks');
+
+  if (activePdfPath) {
+    return <PdfViewer />;
+  }
 
   return (
     <div className={styles.sidebar}>
@@ -24,16 +30,24 @@ export default function ReferenceSidebar() {
           >
             Fixados
           </button>
+          <button 
+            className={`${styles.tab} ${activeTab === 'library' ? styles['tab--active'] : ''}`}
+            onClick={() => setActiveTab('library')}
+          >
+            Acervo
+          </button>
         </div>
       </header>
 
       <div className={styles.content}>
-        {activeTab === 'backlinks' ? (
+        {activeTab === 'backlinks' && (
           <div className={styles.empty}>
             <Tag size={32} />
             <p>Nenhuma retro-referência encontrada para esta nota.</p>
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'metadata' && (
           <div className={styles.pinnedList}>
             {pinnedNotes.length === 0 ? (
               <div className={styles.empty}>
@@ -49,6 +63,10 @@ export default function ReferenceSidebar() {
               ))
             )}
           </div>
+        )}
+
+        {activeTab === 'library' && (
+          <PdfLibrary />
         )}
       </div>
     </div>

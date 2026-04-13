@@ -7,6 +7,7 @@ export interface Metadata {
   type?: string;
   icon?: string;
   images?: string[];
+  documents?: string[];
   music?: string;
   linked_characters?: string[];
   wordGoal?: number;
@@ -29,6 +30,7 @@ export const parseMarkdownMetadata = (content: string) => {
   const configMatch = yamlStr.match(/config:\s*'(.*?)'/i);
 
   const imagesMatch = yamlStr.match(/images:\s*\[(.*?)\]/i);
+  const docsMatch = yamlStr.match(/documents:\s*\[(.*?)\]/i);
   const linkedMatch = yamlStr.match(/linked_characters:\s*\[(.*?)\]/i);
 
   if (typeMatch) data.type = typeMatch[1].trim();
@@ -39,6 +41,12 @@ export const parseMarkdownMetadata = (content: string) => {
     data.images = imagesMatch[1].split(',').map(s => s.trim().replace(/["']/g, '')).filter(Boolean);
   } else {
     data.images = [];
+  }
+
+  if (docsMatch) {
+    data.documents = docsMatch[1].split(',').map(s => s.trim().replace(/["']/g, '')).filter(Boolean);
+  } else {
+    data.documents = [];
   }
 
   if (linkedMatch) {
@@ -79,6 +87,9 @@ export const stringifyYAML = (metadata: Metadata) => {
   if (metadata.music !== undefined) yaml += `music: "${normalize(metadata.music)}"\n`;
   if (metadata.images && metadata.images.length > 0) {
     yaml += `images: [${metadata.images.map(i => `"${normalize(i)}"`).join(', ')}]\n`;
+  }
+  if (metadata.documents && metadata.documents.length > 0) {
+    yaml += `documents: [${metadata.documents.map(d => `"${normalize(d)}"`).join(', ')}]\n`;
   }
   if (metadata.linked_characters && metadata.linked_characters.length > 0) {
     yaml += `linked_characters: [${metadata.linked_characters.map(c => `"${c}"`).join(', ')}]\n`;

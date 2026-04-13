@@ -14,15 +14,17 @@ import {
   Trash2, 
   Edit3,
   Check,
-  X 
+  X,
+  ArrowLeft
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 interface ImageViewerProps {
   path: string;
+  onBack?: () => void;
 }
 
-export default function ImageViewer({ path }: ImageViewerProps) {
+export default function ImageViewer({ path, onBack }: ImageViewerProps) {
   const { setActiveFile, refreshFiles } = useWorkspaceStore();
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -117,6 +119,11 @@ export default function ImageViewer({ path }: ImageViewerProps) {
     >
       <div className={styles.toolbar}>
         <div className={styles.toolbar__info}>
+          {onBack && (
+            <button className={styles.backBtn} onClick={onBack} title="Voltar para a Galeria">
+              <ArrowLeft size={16} />
+            </button>
+          )}
           {isEditingName ? (
             <form className={styles.renameForm} onSubmit={handleRenameSubmit}>
               <input

@@ -14,6 +14,17 @@ export function resolveAssetPath(path: string, workspaceRoot: string | null): st
   return convertFileSrc(fullPath);
 }
 
+export interface ImageAsset {
+  name: string;
+  path: string;
+  full_path: string;
+  modified_at: number;
+}
+
+export async function scanWorkspaceImages(workspaceRoot: string): Promise<ImageAsset[]> {
+  return invoke<ImageAsset[]>('scan_workspace_images', { workspaceRoot });
+}
+
 export async function selectDirectory(): Promise<string | null> {
   const selected = await open({
     directory: true,

@@ -27,7 +27,7 @@ interface FileTreeItemProps {
   depth: number;
 }
 
-const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
 export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -36,6 +36,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const [tempName, setTempName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [virtualChildren, setVirtualChildren] = useState<FileNode[]>([]);
   
   const { 
     activeFile, 
@@ -79,7 +80,20 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
     e?.stopPropagation();
     if (node.is_dir) {
       if (!isOpen) {
-        await loadSubItems();
+        if (node.isVirtual) {
+          try {
+            const { listDirectory } = await import('@/tauri-bridge');
+            const items = await listDirectory(node.path);
+            setVirtualChildren(items.filter(n => !n.name.startsWith('.')).sort((a, b) => {
+              if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+              return a.is_dir ? -1 : 1;
+            }));
+          } catch (err) {
+            console.error('Erro ao carregar pasta virtual:', err);
+          }
+        } else {
+          await loadSubItems();
+        }
       }
       setIsOpen(!isOpen);
     } else if (isSelectable) {
@@ -332,7 +346,11 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
               </div>
             </form>
           )}
-          {children.length > 0 ? (
+          {node.isVirtual ? (
+            virtualChildren.map((child) => (
+              <FileTreeItem key={child.path} node={child} depth={depth + 1} />
+            ))
+          ) : children.length > 0 ? (
             children.map((child) => (
               <FileTreeItem key={child.path} node={child} depth={depth + 1} />
             ))

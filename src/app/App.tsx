@@ -4,6 +4,7 @@ import FileTree from '@/features/workspace/components/FileTree';
 import Editor from '@/features/editor/components/Editor';
 import ImageViewer from '@/features/editor/components/ImageViewer';
 import Dashboard from '@/features/dashboard/components/Dashboard';
+import MoodBoard from '@/features/dashboard/components/MoodBoard';
 import CharacterGallery from '@/features/dashboard/components/CharacterGallery';
 import StatusBar from '@/features/editor/components/StatusBar';
 import ReferenceSidebar from '@/features/references/components/ReferenceSidebar';
@@ -14,9 +15,9 @@ import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { useUIStore } from '@/store/uiStore';
 import { ToastContainer } from '@/shared/components/Toast/ToastContainer';
-import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users } from 'lucide-react';
+import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon } from 'lucide-react';
 
-const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
 function App() {
   const { activeFile, rootPath, setRootPath, selectWorkspace } = useWorkspaceStore();
@@ -69,6 +70,10 @@ function App() {
         e.preventDefault();
         setActivePanel('gallery');
       }
+      if (e.ctrlKey && e.key === 'm') {
+        e.preventDefault();
+        setActivePanel('moodboard');
+      }
       if (e.ctrlKey && e.key === 'e') {
         e.preventDefault();
         setActivePanel('editor');
@@ -104,11 +109,13 @@ function App() {
   };
 
   const renderBreadcrumb = () => {
-    if (activePanel === 'dashboard' || activePanel === 'gallery') {
+    if (activePanel === 'dashboard' || activePanel === 'gallery' || activePanel === 'moodboard') {
       const { dashboardFilterPath } = useWorkspaceStore.getState();
-      const prefix = activePanel === 'dashboard' ? 'Dashboard' : 'Galeria';
+      let prefix = 'Dashboard';
+      if (activePanel === 'gallery') prefix = 'Galeria';
+      if (activePanel === 'moodboard') prefix = 'Mood Board';
       
-      if (!dashboardFilterPath || !rootPath) return <span>{prefix}</span>;
+      if (!dashboardFilterPath || !rootPath || activePanel === 'moodboard') return <span>{prefix}</span>;
       
       const relativePath = dashboardFilterPath.replace(rootPath, '').replace(/^[\\/]/, '');
       const parts = relativePath.split(/[\\/]/);
@@ -204,13 +211,15 @@ function App() {
               </button>
 
               {activePanel === 'editor' && !isImage && (
-                <button 
-                  className={styles.app__iconBtn} 
-                  onClick={toggleTypography}
-                  title="Alternar Tipografia"
-                >
-                  <Type size={18} />
-                </button>
+                <>
+                  <button 
+                    className={styles.app__iconBtn} 
+                    onClick={toggleTypography}
+                    title="Alternar Tipografia"
+                  >
+                    <Type size={18} />
+                  </button>
+                </>
               )}
               
               <nav className={styles.app__nav}>
@@ -235,6 +244,13 @@ function App() {
                 >
                   <Users size={18} />
                 </button>
+                <button 
+                  className={`${styles.app__iconBtn} ${activePanel === 'moodboard' ? styles['app__iconBtn--active'] : ''}`}
+                  onClick={() => setActivePanel('moodboard')}
+                  title="Mood Board Espacial (Ctrl+M)"
+                >
+                  <ImageIcon size={18} />
+                </button>
               </nav>
 
               <button 
@@ -253,6 +269,8 @@ function App() {
             <Dashboard />
           ) : activePanel === 'gallery' ? (
             <CharacterGallery />
+          ) : activePanel === 'moodboard' ? (
+            <MoodBoard />
           ) : activeFile ? (
             isImage ? <ImageViewer path={activeFile} /> : <Editor />
           ) : (

@@ -12,7 +12,10 @@ import { MetadataHeader } from './MetadataHeader';
 import { useEditorStore } from '../store/editorStore';
 import { parseMarkdownMetadata } from '../store/metadataParser';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
+import { useUIStore } from '@/store/uiStore';
 import { saveImageFromBytes } from '@/tauri-bridge';
+
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 import VersionHistory from './VersionHistory/VersionHistory';
 import ImageGallery from './ImageGallery/ImageGallery';
 import EditorBubbleMenu from './EditorBubbleMenu';
@@ -151,6 +154,42 @@ export default function Editor() {
     },
   }, [rootPath]); // activeFile removido das dependências para não recriar o editor
 
+  // Efeito para lidar com o drop customizado da Sidebar
+  useEffect(() => {
+    const handleMouseUp = (e: MouseEvent) => {
+      const { isDragging, sourcePath } = useUIStore.getState().dragInfo;
+      
+      if (isDragging && sourcePath && editor && rootPath) {
+        // Verificar se soltou sobre o editor
+        const editorElement = document.querySelector(`.${styles.scrollContainer}`);
+        const rect = editorElement?.getBoundingClientRect();
+        
+        if (rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          const isImage = IMAGE_EXTENSIONS.some(ext => sourcePath.toLowerCase().endsWith(ext));
+          
+          if (isImage) {
+            const coordinates = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
+            if (coordinates) {
+              // Converter caminho absoluto para relativo ./assets/...
+              const relativePath = sourcePath
+                .replace(rootPath, '')
+                .replace(/^[\\/]/, './')
+                .replace(/\\/g, '/');
+                
+              editor.chain().focus().insertContentAt(coordinates.pos, {
+                type: 'image',
+                attrs: { src: relativePath }
+              }).run();
+            }
+          }
+        }
+      }
+    };
+
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, [editor, rootPath]);
+
   useEffect(() => {
     let isMounted = true;
     if (activeFile && editor) {
@@ -256,7 +295,12 @@ export default function Editor() {
         </div>
       </div>
       
-      <div className={styles.scrollContainer} onContextMenu={handleContextMenu} onClick={() => setContextMenu(null)}>
+      <div 
+        className={styles.scrollContainer} 
+        onContextMenu={handleContextMenu} 
+        onClick={() => setContextMenu(null)}
+        onDragOver={(e) => e.preventDefault()}
+      >
         <MetadataHeader />
         <EditorBubbleMenu editor={editor} />
         {editor && contextMenu && (

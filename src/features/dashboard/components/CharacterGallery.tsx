@@ -10,16 +10,14 @@ export default function CharacterGallery() {
   const { entities, isIndexing } = useUniverseStore();
   const { setActiveFile, rootPath } = useWorkspaceStore();
   const { setActivePanel, setPreview } = useUIStore();
-  
+
   const [search, setSearch] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
-  // 1. Obter todos os personagens
   const characters = useMemo(() => {
     return Object.values(entities).filter(e => e.type === 'character');
   }, [entities]);
 
-  // 2. Extrair chaves de filtros dinâmicos (campos que existem em pelo menos um personagem)
   const filterKeys = useMemo(() => {
     const keys = new Set<string>();
     characters.forEach(c => {
@@ -32,7 +30,6 @@ export default function CharacterGallery() {
     return Array.from(keys);
   }, [characters]);
 
-  // 3. Obter opções para cada filtro
   const filterOptions = useMemo(() => {
     const options: Record<string, string[]> = {};
     filterKeys.forEach(key => {
@@ -46,17 +43,15 @@ export default function CharacterGallery() {
     return options;
   }, [characters, filterKeys]);
 
-  // 4. Filtrar personagens
   const filteredCharacters = useMemo(() => {
     return characters.filter(c => {
-      // Busca por nome
+
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-      
-      // Filtros dinâmicos
+
       for (const [key, value] of Object.entries(activeFilters)) {
         if (value && String(c.fields?.[key]) !== value) return false;
       }
-      
+
       return true;
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [characters, search, activeFilters]);
@@ -77,7 +72,7 @@ export default function CharacterGallery() {
       }
       return icon;
     }
-    return null; // É emoji ou nulo
+    return null;
   };
 
   return (
@@ -91,8 +86,8 @@ export default function CharacterGallery() {
         <div className={styles.controls}>
           <div className={styles.search}>
             <Search size={18} />
-            <input 
-              placeholder="Buscar personagem..." 
+            <input
+              placeholder="Buscar personagem..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -102,7 +97,7 @@ export default function CharacterGallery() {
           <div className={styles.filters}>
             <Filter size={18} />
             {filterKeys.map(key => (
-              <select 
+              <select
                 key={key}
                 value={activeFilters[key] || ''}
                 onChange={(e) => setActiveFilters({ ...activeFilters, [key]: e.target.value })}
@@ -129,13 +124,13 @@ export default function CharacterGallery() {
           const isEmoji = char.icon && !imageUrl;
 
           return (
-            <div 
-              key={char.path} 
+            <div
+              key={char.path}
               className={styles.card}
               onClick={() => handleOpen(char.path)}
-              onMouseEnter={(e) => setPreview({ 
-                entityPath: char.path, 
-                position: { x: e.clientX, y: e.clientY } 
+              onMouseEnter={(e) => setPreview({
+                entityPath: char.path,
+                position: { x: e.clientX, y: e.clientY }
               })}
               onMouseLeave={() => setPreview({ entityPath: null, position: null })}
             >

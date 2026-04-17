@@ -8,9 +8,10 @@ interface WorkspaceState {
   activeFile: string | null;
   dashboardFilterPath: string | null;
   isLoading: boolean;
-  
-  // Actions
+  isPathInvalid: boolean;
+
   setRootPath: (path: string) => Promise<void>;
+  validateWorkspace: () => Promise<void>;
   selectWorkspace: () => Promise<void>;
   refreshFiles: () => Promise<void>;
   fetchChildren: (path: string) => Promise<void>;
@@ -22,30 +23,29 @@ interface WorkspaceState {
   deleteItem: (path: string) => Promise<void>;
   renameItem: (oldPath: string, newName: string) => Promise<void>;
   moveItem: (sourcePath: string, targetDirPath: string) => Promise<void>;
+  scanWorkspace: () => Promise<void>;
 }
 
 const STORAGE_KEY = 'hybrid-editor-root-path';
+const HIDDEN_ITEMS = ['assets', 'docs', 'moodboard.json'];
 
-// Auxiliar para atualizar caminhos recursivamente após um move
 function updatePathsRecursively(node: FileNode, newPath: string): FileNode {
   const separator = newPath.includes('\\') ? '\\' : '/';
   const updatedNode = { ...node, path: newPath };
-  
+
   if (updatedNode.children) {
     updatedNode.children = updatedNode.children.map(child => {
       const childNewPath = `${newPath}${separator}${child.name}`;
       return updatePathsRecursively(child, childNewPath);
     });
   }
-  
+
   return updatedNode;
 }
 
-// Função auxiliar para mover nó na árvore (Otimista e Imutável)
 function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: string, newPath: string): FileNode[] {
   let draggedNode: FileNode | null = null;
 
-  // 1. Remover o nó da origem e capturá-lo
   const removeNode = (list: FileNode[]): FileNode[] => {
     return list.reduce((acc: FileNode[], node) => {
       if (node.path === sourcePath) {
@@ -66,11 +66,10 @@ function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: st
 
   if (!draggedNode) return nodes;
 
-  // 2. Inserir o nó no destino
   const insertNode = (list: FileNode[]): FileNode[] => {
     const { rootPath } = useWorkspaceStore.getState();
     const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
-    
+
     if (normalize(targetDirPath) === normalize(rootPath || '')) {
       return [...list, draggedNode!].sort((a, b) => {
         if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
@@ -81,7 +80,7 @@ function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: st
     return list.map(node => {
       if (node.path === targetDirPath) {
         const currentChildren = node.children || [];
-        // Evitar duplicatas no otimista
+
         const filteredChildren = currentChildren.filter(c => c.path !== newPath);
         const newChildren = [...filteredChildren, draggedNode!].sort((a, b) => {
           if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
@@ -117,31 +116,61 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   activeFile: null,
   dashboardFilterPath: null,
   isLoading: false,
+  isPathInvalid: false,
 
   setRootPath: async (path: string) => {
     localStorage.setItem(STORAGE_KEY, path);
-    set({ rootPath: path, isLoading: true, dashboardFilterPath: null });
+    set({ rootPath: path, isLoading: true, dashboardFilterPath: null, isPathInvalid: false });
     try {
-      const { createDirectory, listDirectory } = await import('@/tauri-bridge');
+      const { createDirectory, listDirectory, exists } = await import('@/tauri-bridge');
+
+      const pathExists = await exists(path);
+      if (!pathExists) {
+        set({ isPathInvalid: true, isLoading: false, files: [] });
+        return;
+      }
+
       const separator = path.includes('\\') ? '\\' : '/';
       const assetsPath = `${path}${separator}assets`;
-      
+
       try {
         await createDirectory(assetsPath);
       } catch (e) {}
 
       const files = await listDirectory(path);
-      const filteredFiles = files.filter(node => !node.name.startsWith('.'));
+      const filteredFiles = files.filter(node =>
+        !node.name.startsWith('.') &&
+        !HIDDEN_ITEMS.includes(node.name.toLowerCase())
+      );
       const sortedFiles = filteredFiles.sort((a, b) => {
         if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
         return a.is_dir ? -1 : 1;
       });
-      
+
       set({ files: sortedFiles, isLoading: false });
       useUniverseStore.getState().indexWorkspace(sortedFiles);
     } catch (error) {
       console.error('Erro ao carregar workspace:', error);
       set({ files: [], isLoading: false });
+    }
+  },
+
+  validateWorkspace: async () => {
+    const { rootPath } = get();
+    if (!rootPath) return;
+
+    try {
+      const { exists } = await import('@/tauri-bridge');
+      const pathExists = await exists(rootPath);
+      if (!pathExists) {
+        set({ isPathInvalid: true, files: [] });
+      } else {
+        set({ isPathInvalid: false });
+        if (get().files.length === 0) await get().setRootPath(rootPath);
+      }
+    } catch (error) {
+      console.error('Erro ao validar workspace:', error);
+      set({ isPathInvalid: true });
     }
   },
 
@@ -152,8 +181,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       const { listDirectory } = await import('@/tauri-bridge');
       const rootFiles = await listDirectory(rootPath);
-      const filteredFiles = rootFiles.filter(node => !node.name.startsWith('.'));
-      
+      const filteredFiles = rootFiles.filter(node =>
+        !node.name.startsWith('.') &&
+        !HIDDEN_ITEMS.includes(node.name.toLowerCase())
+      );
+
       const preserveChildren = (newList: FileNode[], oldList: FileNode[]): FileNode[] => {
         return newList.map(newNode => {
           const oldNode = oldList.find(o => o.path === newNode.path);
@@ -180,7 +212,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       const { listDirectory } = await import('@/tauri-bridge');
       const children = await listDirectory(path);
-      const sortedChildren = children.filter(n => !n.name.startsWith('.')).sort((a, b) => {
+      const sortedChildren = children.filter(n =>
+        !n.name.startsWith('.') &&
+        !HIDDEN_ITEMS.includes(n.name.toLowerCase())
+      ).sort((a, b) => {
         if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
         return a.is_dir ? -1 : 1;
       });
@@ -195,7 +230,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   syncNode: async (path: string) => {
     const { rootPath } = get();
     const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
-    
+
     if (normalize(path) === normalize(rootPath || '')) {
       await get().refreshFiles();
     } else {
@@ -262,11 +297,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       const separator = path.includes('\\') ? '\\' : '/';
       const parentPath = path.substring(0, path.lastIndexOf(separator)) || rootPath;
-      
+
       const { deleteItem } = await import('@/tauri-bridge');
       await deleteItem(path);
       if (activeFile === path) setActiveFile(null);
-      
+
       useUniverseStore.getState().removeEntity(path);
       if (parentPath) await syncNode(parentPath);
     } catch (error) {
@@ -279,11 +314,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     try {
       const separator = oldPath.includes('\\') ? '\\' : '/';
       const parentPath = oldPath.substring(0, oldPath.lastIndexOf(separator)) || rootPath;
-      
+
       const { renameItem } = await import('@/tauri-bridge');
       let finalName = newName.endsWith('.md') || !oldPath.endsWith('.md') ? newName : `${newName}.md`;
       const newPath = `${parentPath}${separator}${finalName}`;
-      
+
       await renameItem(oldPath, newPath);
       if (activeFile === oldPath) setActiveFile(newPath);
 
@@ -307,15 +342,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
       const sourceParentPath = sourcePath.substring(0, sourcePath.lastIndexOf(separator)) || rootPath;
 
-      // 1. Atualização Otimista (Recursive Path Update)
       const updatedFiles = moveNodeInTree(files, sourcePath, targetDirPath, newPath);
       set({ files: updatedFiles });
 
-      // 2. Execução real no disco
       const { renameItem } = await import('@/tauri-bridge');
       await renameItem(sourcePath, newPath);
-      
-      // Atualizar activeFile: se o arquivo ativo era o movido OU estava dentro da pasta movida
+
       if (activeFile === sourcePath) {
         setActiveFile(newPath);
       } else if (activeFile && activeFile.startsWith(sourcePath + separator)) {
@@ -325,16 +357,18 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
       useUniverseStore.getState().removeEntity(sourcePath);
 
-      // 3. Delay de segurança para indexação do SO
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // 4. Sincronização Direcionada (Sync apenas onde mudou)
+
       if (sourceParentPath) await syncNode(sourceParentPath);
       await syncNode(targetDirPath);
-      
+
     } catch (error) {
       console.error('Erro ao mover item (revertendo):', error);
       set({ files: previousFiles });
     }
   },
+
+  scanWorkspace: async () => {
+    await get().refreshFiles();
+  }
 }));

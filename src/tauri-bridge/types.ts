@@ -3,9 +3,8 @@ export interface FileNode {
   path: string;
   is_dir: boolean;
   children?: FileNode[];
-  modified_at: number; // Unix timestamp em segundos
-  
-  // Virtual mirroring
+  modified_at: number;
+
   hasVirtualImages?: boolean;
   virtualImagesPath?: string;
   isVirtual?: boolean;

@@ -22,3 +22,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Project Internal Documentation
+PRD_*.md
+ARCHITECTURE.md
+know_issues.md
+GEMINI.md
+.gemini/
+.env*
+
+# Executables and Build Artifacts (extra precaution)
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb

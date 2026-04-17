@@ -3,7 +3,7 @@
 
 .container {
   height: 100%;
-  display: block; // Removido flex para que floats funcionem
+  display: block;
   overflow-y: auto;
   padding: var(--spacing-xl) var(--spacing-md);
   @include scrollbar;
@@ -28,11 +28,11 @@
   justify-content: flex-end;
   margin-bottom: var(--spacing-sm);
   outline: none !important;
-  padding-right: 5rem; // Alinhar com o padding do scrollContainer
+  padding-right: 5rem;
 
   &__actions {
     display: flex;
-    gap: var(--spacing-lg); // Aumentado para dar mais respiro
+    gap: var(--spacing-lg);
   }
 }
 
@@ -142,7 +142,7 @@
 
   p {
     margin-bottom: var(--spacing-md);
-    display: block; // Garante que floats funcionem dentro do P
+    display: block;
     clear: none;
   }
 
@@ -152,7 +152,6 @@
     background-color: rgba(239, 68, 68, 0.1);
   }
 
-  // Previne que outros elementos limpem o float sem necessidade
   h1, h2, h3, ul, ol, blockquote {
     clear: none;
   }
@@ -193,7 +192,7 @@
     overflow-x: auto;
     margin-bottom: var(--spacing-md);
     border: 1px solid var(--color-border);
-    clear: both; // Blocos de código devem limpar o float
+    clear: both;
 
     code {
       background: transparent;

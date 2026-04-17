@@ -52,7 +52,7 @@ export function SummaryEditor({ value, onChange, placeholder, readOnly }: Summar
     onUpdate: ({ editor }) => {
       if (readOnly) return;
       const html = editor.getHTML();
-      // Se o editor estiver vazio (apenas tags <p></p>), enviamos string vazia
+
       if (editor.isEmpty) {
         onChange('');
       } else {
@@ -67,13 +67,11 @@ export function SummaryEditor({ value, onChange, placeholder, readOnly }: Summar
     },
   });
 
-  // Sincronizar valor externo apenas se for diferente do conteúdo atual do editor
-  // para evitar loops de cursor e perda de foco ao digitar
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      // Pequeno ajuste: se o valor for vazio e o editor também, não faz nada
+
       if (!value && editor.isEmpty) return;
-      
+
       editor.commands.setContent(value, { emitUpdate: false });
     }
   }, [value, editor]);
@@ -81,14 +79,13 @@ export function SummaryEditor({ value, onChange, placeholder, readOnly }: Summar
   const handleContextMenu = (e: React.MouseEvent) => {
     if (readOnly) return;
     e.preventDefault();
-    e.stopPropagation(); // Impedir que o menu do editor principal apareça
-    
+    e.stopPropagation();
+
     if (!editor) return;
 
-    // Tentar encontrar a palavra sob o mouse
     const target = e.target as HTMLElement;
     const isMisspelled = target.classList.contains('misspelled');
-    
+
     let word = '';
 
     if (isMisspelled) {
@@ -96,7 +93,7 @@ export function SummaryEditor({ value, onChange, placeholder, readOnly }: Summar
     } else {
       const selection = window.getSelection();
       word = selection?.toString().trim() || '';
-      
+
       if (!word) {
         const { view } = editor;
         const pos = view.posAtCoords({ left: e.clientX, top: e.clientY });
@@ -117,17 +114,17 @@ export function SummaryEditor({ value, onChange, placeholder, readOnly }: Summar
   };
 
   return (
-    <div 
-      className={styles.summaryContainer} 
+    <div
+      className={styles.summaryContainer}
       onContextMenu={handleContextMenu}
       onClick={() => setContextMenu(null)}
     >
       {editor && <EditorBubbleMenu editor={editor as Editor} />}
       {editor && contextMenu && (
-        <DictionaryContextMenu 
-          editor={editor as Editor} 
-          {...contextMenu} 
-          onClose={() => setContextMenu(null)} 
+        <DictionaryContextMenu
+          editor={editor as Editor}
+          {...contextMenu}
+          onClose={() => setContextMenu(null)}
         />
       )}
       <EditorContent editor={editor} className={styles.editorContent} />

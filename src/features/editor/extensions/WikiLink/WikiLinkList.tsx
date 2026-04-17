@@ -6,7 +6,6 @@ const WikiLinkList = forwardRef((props: any, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { files } = useWorkspaceStore();
 
-  // Filtra as notas .txt do workspace
   const getFilesRecursive = (nodeList: any[]): any[] => {
     let result: any[] = [];
     nodeList.forEach(node => {
@@ -33,7 +32,7 @@ const WikiLinkList = forwardRef((props: any, ref) => {
     if (item) {
       props.command({ id: item.id });
     } else {
-      // Se não houver correspondência, cria com o texto digitado
+
       props.command({ id: props.query });
     }
   };

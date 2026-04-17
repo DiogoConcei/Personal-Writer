@@ -197,4 +197,6 @@
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   opacity: 0.9;
+  left: var(--ghost-x, 0);
+  top: var(--ghost-y, 0);
 }

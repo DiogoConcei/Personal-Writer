@@ -3,8 +3,8 @@ import styles from './LocationHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { Metadata, parseMarkdownMetadata } from '@/features/editor/store/metadataParser';
-import { 
-  MapPin, Music, Play, Pause, Plus, 
+import {
+  MapPin, Music, Play, Pause, Plus,
   ChevronRight, Info, User, X
 } from 'lucide-react';
 import ImageGallery from '@/features/editor/components/ImageGallery/ImageGallery';
@@ -28,19 +28,29 @@ interface LocationHeaderProps {
 export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHeaderProps) {
   const { rootPath, activeFile, setActiveFile } = useWorkspaceStore();
   const { metadata: storeMetadata, setMetadata, save } = useEditorStore();
-  
+
   const metadata = propMetadata || storeMetadata;
-  
+
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [showCharacterPicker, setShowCharacterPicker] = useState(false);
   const [availableCharacters, setAvailableCharacters] = useState<CharacterLink[]>([]);
-  
-  // Player de Áudio
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
   const noteName = activeFile ? activeFile.split(/[\\/]/).pop()?.replace('.md', '') : 'Nova Localização';
+
+  useEffect(() => {
+    if (isEditingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [isEditingName]);
 
   useEffect(() => {
     if (showCharacterPicker && !readOnly) {
@@ -53,7 +63,7 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
     try {
       const files = await listDirectory(rootPath);
       const characters: CharacterLink[] = [];
-      
+
       const scanFiles = async (nodes: any[]) => {
         for (const node of nodes) {
           if (node.is_dir) {
@@ -82,7 +92,7 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
   const updateMetadata = (newData: Metadata) => {
     if (readOnly) return;
     setMetadata(newData);
-    // Forçar salvamento no disco para persistir mudanças de cabeçalho (images/fields)
+
     if (activeFile) {
       save(activeFile, rootPath || undefined);
     }
@@ -145,9 +155,34 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
     }
   };
 
+  const handleStartEditing = () => {
+    if (readOnly) return;
+    setEditedName(noteName || '');
+    setIsEditingName(true);
+  };
+
+  const handleRename = async () => {
+    if (!activeFile || !editedName || editedName === noteName) {
+      setIsEditingName(false);
+      return;
+    }
+
+    const { renameItem } = useWorkspaceStore.getState();
+    await renameItem(activeFile, editedName);
+    setIsEditingName(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleRename();
+    } else if (e.key === 'Escape') {
+      setIsEditingName(false);
+    }
+  };
+
   return (
     <div className={`${styles.locationHeader} ${readOnly ? styles['locationHeader--readonly'] : ''}`}>
-      {/* Galeria de Imagens */}
+      {}
       {(metadata.images && metadata.images.length > 0) || (showImagePicker && !readOnly) ? (
         <div className={styles.gallery}>
           <div className={styles.galleryScroll}>
@@ -185,15 +220,33 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
               <ChevronRight size={14} className={styles.separator} />
               <span className={styles.statusTag}>Explorado</span>
             </div>
-            <h1 className={styles.name}>{noteName}</h1>
+
+            {isEditingName ? (
+              <input
+                ref={nameInputRef}
+                className={styles.nameInput}
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onBlur={handleRename}
+                onKeyDown={handleKeyDown}
+              />
+            ) : (
+              <h1
+                className={`${styles.name} ${!readOnly ? styles['name--editable'] : ''}`}
+                onClick={handleStartEditing}
+                title={readOnly ? "" : "Clique para renomear"}
+              >
+                {noteName}
+              </h1>
+            )}
           </div>
 
-          {/* Player de Música */}
+          {}
           {metadata.music && (
             <div className={styles.audioPlayer}>
-              <audio 
-                ref={audioRef} 
-                src={resolveAssetPath(metadata.music, rootPath)} 
+              <audio
+                ref={audioRef}
+                src={resolveAssetPath(metadata.music, rootPath)}
                 onTimeUpdate={onTimeUpdate}
                 onEnded={() => setIsPlaying(false)}
               />
@@ -204,10 +257,10 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
                 <span className={styles.trackName}>
                   {metadata.music.split(/[\\/]/).pop() || 'Trilha Sonora'}
                 </span>
-                <input 
-                  type="range" 
-                  min="0" max="100" 
-                  value={progress} 
+                <input
+                  type="range"
+                  min="0" max="100"
+                  value={progress}
                   onChange={handleSeek}
                   className={styles.progressBar}
                   disabled={readOnly}
@@ -217,7 +270,7 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
           )}
         </div>
 
-        {/* Personagens Vinculados */}
+        {}
         <div className={styles.linkedSection}>
           <div className={styles.sectionHeader}>
             <User size={14} />
@@ -248,7 +301,7 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
           </div>
           <AttributeGrid metadata={metadata} onUpdate={updateMetadata} readOnly={readOnly} />
         </div>
-        
+
         {!readOnly && activeFile && <Backlinks targetPath={activeFile} />}
       </div>
 
@@ -281,4 +334,3 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
     </div>
   );
 }
-

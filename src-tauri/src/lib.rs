@@ -14,20 +14,18 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle();
             let state = handle.state::<DictionaryState>();
-            
-            // Localizar recursos do dicionário
+
             let aff_path = handle.path().resolve("resources/dict/pt_BR.aff", tauri::path::BaseDirectory::Resource).unwrap();
             let dic_path = handle.path().resolve("resources/dict/pt_BR.dic", tauri::path::BaseDirectory::Resource).unwrap();
             let th_path = handle.path().resolve("resources/dict/th_pt_BR.dat", tauri::path::BaseDirectory::Resource).unwrap();
-            
-            // Caminho para o dicionário pessoal no AppData
+
             let personal_path = dirs::data_dir()
                 .unwrap_or_else(|| std::env::current_dir().unwrap())
                 .join("editor-hibrido")
                 .join("user_dictionary.txt");
-            
+
             state.init(aff_path, dic_path, personal_path, th_path);
-            
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -55,7 +53,8 @@ pub fn run() {
             commands::dictionary::add_to_dictionary,
 
             commands::fs::scan_workspace_images,
-            commands::fs::scan_workspace_pdfs
+            commands::fs::scan_workspace_pdfs,
+            commands::fs::export_workspace_zip
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -9,85 +9,91 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { DEFAULT_TEMPLATES } from '@/features/templates/data/defaultTemplates';
 
 export default function FileTree() {
-  const { 
-    files, 
-    rootPath, 
-    setRootPath, 
-    refreshFiles, 
-    isLoading, 
-    createFile, 
+  const {
+    files,
+    rootPath,
+    setRootPath,
+    refreshFiles,
+    isLoading,
+    createFile,
     createDirectory,
-    moveItem 
+    moveItem
   } = useWorkspaceStore();
-  
+
   const { dragInfo, setDragInfo, resetDrag } = useUIStore();
   const [showInput, setShowInput] = useState<'file' | 'dir' | null>(null);
   const [newName, setNewName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
 
-  // --- Custom Global Drag Logic ---
   useEffect(() => {
     if (!dragInfo.sourcePath) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const { startX, startY, startTime, isDragging, sourcePath } = useUIStore.getState().dragInfo;
-      
+      const { startX, startY, isDragging, sourcePath } = useUIStore.getState().dragInfo;
+
       if (!sourcePath) return;
 
-      // Se ainda não é drag, verificar threshold
+      let newIsDragging = isDragging;
+
       if (!isDragging) {
         const deltaX = Math.abs(e.clientX - startX);
         const deltaY = Math.abs(e.clientY - startY);
-        const deltaTime = Date.now() - startTime;
 
-        if (deltaX > 5 || deltaY > 5 || deltaTime > 150) {
-          setDragInfo({ isDragging: true });
+        if (deltaX > 5 || deltaY > 5) {
+          newIsDragging = true;
         } else {
-          // Ainda não atingiu o threshold, apenas atualiza posição para caso venha a atingir
-          setDragInfo({ currentX: e.clientX, currentY: e.clientY });
           return;
         }
       }
 
-      // Identificar o que está sob o mouse
       const element = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
       const targetItem = element?.closest('[data-path]') as HTMLElement;
-      
-      let targetPath: string | null = null;
-      
+
+      let newTargetPath: string | null = null;
+
       if (targetItem) {
         const isDir = targetItem.getAttribute('data-is-dir') === "true";
         if (isDir) {
-          targetPath = targetItem.getAttribute('data-path');
+          newTargetPath = targetItem.getAttribute('data-path');
+        } else {
+
+          const p = targetItem.getAttribute('data-path');
+          if (p && rootPath) {
+            const separator = p.includes('\\') ? '\\' : '/';
+            newTargetPath = p.substring(0, p.lastIndexOf(separator)) || rootPath;
+          }
         }
       }
 
       setDragInfo({
+        isDragging: newIsDragging,
         currentX: e.clientX,
         currentY: e.clientY,
-        targetPath: targetPath
+        targetPath: newTargetPath
       });
     };
 
     const handleMouseUp = async (e: MouseEvent) => {
       const { sourcePath, targetPath, isDragging } = useUIStore.getState().dragInfo;
-      
-      // SÓ executa o move se o threshold de drag foi atingido
+
       if (isDragging && sourcePath) {
-        // Tenta encontrar a raiz se soltar no container mas não em um item específico
         const treeElement = document.querySelector(`.${styles.tree}`);
         const rect = treeElement?.getBoundingClientRect();
         const isInTree = rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
 
-        const finalTarget = targetPath || (isInTree ? rootPath : null);
+        const element = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
+        const targetItem = element?.closest('[data-path]');
 
-        if (sourcePath && finalTarget) {
-          // Normalização OBRIGATÓRIA antes da comparação
+        const finalTarget = targetPath || (isInTree && !targetItem ? rootPath : null);
+
+        if (finalTarget && rootPath) {
           const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '');
           const normSource = normalize(sourcePath);
           const normTarget = normalize(finalTarget);
 
-          if (normSource !== normTarget && !normTarget.startsWith(normSource + '/')) {
+          const sourceParent = normSource.substring(0, normSource.lastIndexOf('/')) || normalize(rootPath);
+
+          if (normSource !== normTarget && !normTarget.startsWith(normSource + '/') && sourceParent !== normTarget) {
             await moveItem(sourcePath, finalTarget);
           }
         }
@@ -154,7 +160,7 @@ export default function FileTree() {
           <button className={styles.tree__action} onClick={refreshFiles} disabled={isLoading} title="Atualizar"><RefreshCw size={14} className={isLoading ? styles.spinning : ''} /></button>
         </div>
       </header>
-      
+
       <div className={styles.tree__content}>
         {showInput && (
           <form className={styles.tree__inputForm} onSubmit={handleSubmit}>
@@ -173,14 +179,14 @@ export default function FileTree() {
         ))}
       </div>
 
-      {/* Ghost Element (Elemento que segue o mouse) */}
+      {}
       {dragInfo.sourcePath && (
-        <div 
+        <div
           className={styles.ghost}
-          style={{ 
-            left: dragInfo.currentX + 10, 
-            top: dragInfo.currentY + 10 
-          }}
+          style={{
+            '--ghost-x': `${dragInfo.currentX + 10}px`,
+            '--ghost-y': `${dragInfo.currentY + 10}px`
+          } as React.CSSProperties}
         >
           {dragInfo.sourceName?.endsWith('.md') ? <FileText size={14} /> : <FolderIcon size={14} />}
           <span>{dragInfo.sourceName?.replace(/\.md$/, '')}</span>

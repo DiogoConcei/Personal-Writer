@@ -14,10 +14,10 @@
   top: 0;
   bottom: 0;
   width: 4px;
-  background: linear-gradient(to bottom, 
-    transparent, 
-    var(--color-accent) 10%, 
-    var(--color-accent) 90%, 
+  background: linear-gradient(to bottom,
+    transparent,
+    var(--color-accent) 10%,
+    var(--color-accent) 90%,
     transparent
   );
   transform: translateX(-50%);
@@ -60,7 +60,7 @@
 
   &.dragOver {
     padding-top: var(--spacing-3xl);
-    
+
     &::before {
       content: '';
       position: absolute;
@@ -74,10 +74,9 @@
     }
   }
 
-  // Alternar lados
   &:nth-child(even) {
     flex-direction: row-reverse;
-    
+
     .itemContent {
       text-align: right;
       padding-right: var(--spacing-2xl);

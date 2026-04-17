@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard';
+export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard' | 'assets' | 'documents';
 
 export interface DragInfo {
   sourcePath: string | null;
@@ -8,7 +8,7 @@ export interface DragInfo {
   currentX: number;
   currentY: number;
   targetPath: string | null;
-  // Threshold Info
+
   startX: number;
   startY: number;
   startTime: number;
@@ -33,14 +33,11 @@ interface UIState {
   isZenMode: boolean;
   isCommandPaletteOpen: boolean;
   notifications: ToastNotification[];
-  
-  // Quick Look State
+
   preview: PreviewState;
-  
-  // Custom Drag State
+
   dragInfo: DragInfo;
-  
-  // Actions
+
   setActivePanel: (panel: ActivePanel) => void;
   toggleSidebar: () => void;
   toggleRightSidebar: () => void;
@@ -85,14 +82,14 @@ export const useUIStore = create<UIState>((set) => ({
   toggleRightSidebar: () => set((state) => ({ isRightSidebarVisible: !state.isRightSidebarVisible })),
   toggleZenMode: () => set((state) => ({ isZenMode: !state.isZenMode })),
   setCommandPaletteOpen: (isOpen) => set({ isCommandPaletteOpen: isOpen }),
-  setPreview: (preview) => set((state) => ({ 
-    preview: { ...state.preview, ...preview } 
+  setPreview: (preview) => set((state) => ({
+    preview: { ...state.preview, ...preview }
   })),
-  
-  setDragInfo: (info) => set((state) => ({ 
-    dragInfo: { ...state.dragInfo, ...info } 
+
+  setDragInfo: (info) => set((state) => ({
+    dragInfo: { ...state.dragInfo, ...info }
   })),
-  
+
   resetDrag: () => set({ dragInfo: INITIAL_DRAG }),
 
   addNotification: (message, type = 'info') => {
@@ -101,7 +98,6 @@ export const useUIStore = create<UIState>((set) => ({
       notifications: [...state.notifications, { id, message, type }]
     }));
 
-    // Auto-remove após 3 segundos
     setTimeout(() => {
       set((state) => ({
         notifications: state.notifications.filter((n) => n.id !== id)

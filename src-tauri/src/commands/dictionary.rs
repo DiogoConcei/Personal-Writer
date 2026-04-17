@@ -34,7 +34,7 @@ impl DictionaryState {
     pub fn init(&self, aff_path: PathBuf, dic_path: PathBuf, personal_path: PathBuf, th_path: PathBuf) {
         let aff_content = read_to_string(&aff_path).unwrap_or_default();
         let dic_content = read_to_string(&dic_path).unwrap_or_default();
-        
+
         match Dictionary::new(&aff_content, &dic_content) {
             Ok(mut dict) => {
                 if let Ok(content) = read_to_string(&personal_path) {
@@ -50,11 +50,11 @@ impl DictionaryState {
             }
             Err(e) => eprintln!("Erro ao inicializar Spellbook: {:?}", e),
         }
-        
+
         if let Ok(th_content) = read_to_string(&th_path) {
             let mut synonyms_map = HashMap::new();
             let mut lines = th_content.lines();
-            lines.next(); // skip encoding
+            lines.next();
 
             while let Some(line) = lines.next() {
                 let parts: Vec<&str> = line.split('|').collect();
@@ -66,10 +66,10 @@ impl DictionaryState {
                             if let Some(syn_line) = lines.next() {
                                 let syn_parts: Vec<&str> = syn_line.split('|').collect();
                                 let mut group = Vec::new();
-                                // O primeiro item após o separador é o sentido/categoria, pulamos
+
                                 for s in syn_parts.iter().skip(1) {
                                     let s_clean = s.trim().to_string();
-                                    // Filtra se for a própria palavra ou vazio
+
                                     if !s_clean.is_empty() && s_clean.to_lowercase() != word && !group.contains(&s_clean) {
                                         group.push(s_clean);
                                     }
@@ -80,7 +80,6 @@ impl DictionaryState {
                             }
                         }
 
-                        // Intercalação (Round-Robin) para garantir diversidade de sentidos no topo da lista
                         let mut word_synonyms = Vec::new();
                         let mut i = 0;
                         let mut added = true;
@@ -141,7 +140,6 @@ fn generate_edits_1(word: &str) -> Vec<String> {
     let chars: Vec<char> = word.chars().collect();
     let n = chars.len();
 
-    // Deletions
     for i in 0..n {
         let mut s = String::new();
         for (j, &c) in chars.iter().enumerate() {
@@ -150,7 +148,6 @@ fn generate_edits_1(word: &str) -> Vec<String> {
         edits.push(s);
     }
 
-    // Transpositions
     for i in 0..n - 1 {
         let mut s = String::new();
         for j in 0..n {
@@ -161,10 +158,8 @@ fn generate_edits_1(word: &str) -> Vec<String> {
         edits.push(s);
     }
 
-    // pt-BR Alphabet (lowercase only for simplicity in heuristics)
     let alphabet = "abcdefghijklmnopqrstuvwxyzáàãâéêíóõôúüç";
 
-    // Substitutions
     for i in 0..n {
         for c in alphabet.chars() {
             let mut s = String::new();
@@ -176,7 +171,6 @@ fn generate_edits_1(word: &str) -> Vec<String> {
         }
     }
 
-    // Insertions
     for i in 0..=n {
         for c in alphabet.chars() {
             let mut s = String::new();
@@ -195,32 +189,27 @@ fn generate_edits_1(word: &str) -> Vec<String> {
 
 fn generate_lemma_fallbacks(word: &str) -> Vec<String> {
     let mut fallbacks = Vec::new();
-    
-    // 1. Advérbios (mente -> remove mente)
+
     if let Some(stripped) = word.strip_suffix("mente") {
         fallbacks.push(stripped.to_string());
     }
-    
-    // 2. Plurais Nasais (ões -> ão, ães -> ão)
+
     if word.ends_with("ões") || word.ends_with("ães") {
         if let Some(stripped) = word.get(..word.len() - 3) {
             fallbacks.push(format!("{}ão", stripped));
         }
     }
-    
-    // 3. Plurais em L (is -> l)
+
     if let Some(stripped) = word.strip_suffix("is") {
         fallbacks.push(format!("{}l", stripped));
     }
-    
-    // 4. Plurais simples (s, es)
+
     if let Some(stripped) = word.strip_suffix("es") {
         fallbacks.push(stripped.to_string());
     } else if let Some(stripped) = word.strip_suffix('s') {
         fallbacks.push(stripped.to_string());
     }
-    
-    // 5. Femininos (a -> o) - Heurística simples para adjetivos
+
     if let Some(stripped) = word.strip_suffix('a') {
         fallbacks.push(format!("{}o", stripped));
     }
@@ -248,15 +237,14 @@ fn apply_phonetic_rules(word: &str) -> Vec<String> {
     variants
 }
 
-/// Helper para processar uma palavra detectada e aplicar heurísticas de limpeza antes do check
 fn process_word(text: &str, start: usize, mut end: usize, engine: &Dictionary, errors: &mut Vec<SpellError>) {
     let mut word = &text[start..end];
-    // Remove caracteres de ligação (hífen, apóstrofo) que ficaram presos no final da palavra
+
     while (word.ends_with('-') || word.ends_with('\'')) && end > start {
         end -= 1;
         word = &text[start..end];
     }
-    
+
     if !word.is_empty() && !engine.check(word) {
         errors.push(SpellError {
             word: word.to_string(),
@@ -272,20 +260,20 @@ pub async fn check_spelling(
     state: State<'_, DictionaryState>,
 ) -> Result<Vec<SpellError>, String> {
     let engine_arc = Arc::clone(&state.engine);
-    
+
     spawn_blocking(move || {
         let lock = engine_arc.read().unwrap();
         let mut errors = Vec::new();
-        
+
         if let Some(engine) = &*lock {
             let mut start_idx = None;
             for (i, c) in text.char_indices() {
                 // Aceita caracteres alfabéticos, hífens e apóstrofos como partes de uma palavra
                 let is_word_char = c.is_alphabetic() || c == '-' || c == '\'';
-                
+
                 if is_word_char {
                     if start_idx.is_none() {
-                        // Só inicia uma palavra se for uma letra (evita "-teste" ou "'teste")
+
                         if c.is_alphabetic() {
                             start_idx = Some(i);
                         }
@@ -295,7 +283,7 @@ pub async fn check_spelling(
                     start_idx = None;
                 }
             }
-            // Verifica a última palavra se houver uma pendente
+
             if let Some(start) = start_idx {
                 process_word(&text, start, text.len(), engine, &mut errors);
             }
@@ -312,11 +300,11 @@ pub async fn check_spelling_batch(
     state: State<'_, DictionaryState>,
 ) -> Result<Vec<Vec<SpellError>>, String> {
     let engine_arc = Arc::clone(&state.engine);
-    
+
     spawn_blocking(move || {
         let lock = engine_arc.read().unwrap();
         let mut results = Vec::with_capacity(texts.len());
-        
+
         if let Some(engine) = &*lock {
             for text in texts {
                 let mut errors = Vec::new();
@@ -355,7 +343,7 @@ pub async fn get_spell_suggestions(
 ) -> Result<Vec<String>, String> {
     let engine_arc = Arc::clone(&state.engine);
     let word_clone = word.clone();
-    
+
     // 1. Run our custom heuristic first (Sync in spawn_blocking)
     let heuristic_results = spawn_blocking(move || -> Vec<String> {
         let lock = engine_arc.read().unwrap();
@@ -418,7 +406,7 @@ pub async fn get_spell_suggestions(
     // 2. Fallback to native suggest with a very short timeout (150ms)
     let engine_arc_native = Arc::clone(&state.engine);
     let word_native = word.clone();
-    
+
     let native_result = timeout(
         Duration::from_millis(150),
         spawn_blocking(move || -> Vec<String> {
@@ -445,11 +433,11 @@ pub async fn get_spell_suggestions(
     final_suggestions.sort_by(|a, b| {
         let dist_a = levenshtein_distance(&word, a);
         let dist_b = levenshtein_distance(&word, b);
-        
+
         // Prioritize single words over spaced words
         let spaced_a = a.contains(' ');
         let spaced_b = b.contains(' ');
-        
+
         spaced_a.cmp(&spaced_b)
             .then_with(|| dist_a.cmp(&dist_b))
             .then_with(|| a.len().cmp(&b.len()))
@@ -465,23 +453,21 @@ pub async fn get_synonyms(
 ) -> Result<Vec<String>, String> {
     let synonyms_arc = Arc::clone(&state.synonyms);
     let word_lower = word.to_lowercase();
-    
+
     spawn_blocking(move || {
         let syn_lock = synonyms_arc.lock().unwrap();
-        
-        // 1. Busca Exata (Fast Path)
+
         if let Some(syns) = syn_lock.get(&word_lower) {
             return Ok(syns.clone());
         }
-        
-        // 2. Fallbacks de Flexão/Plural (Lematização básica)
+
         let fallbacks = generate_lemma_fallbacks(&word_lower);
         for lemma in fallbacks {
             if let Some(syns) = syn_lock.get(&lemma) {
                 return Ok(syns.clone());
             }
         }
-        
+
         Ok(Vec::new())
     })
     .await
@@ -495,9 +481,9 @@ pub async fn add_to_dictionary(
 ) -> Result<bool, String> {
     let engine_arc = Arc::clone(&state.engine);
     let path_arc = Arc::clone(&state.personal_dict_path);
-    
+
     spawn_blocking(move || {
-        // Aqui sim usamos write() para garantir exclusividade ao modificar o motor
+
         let mut lock = engine_arc.write().unwrap();
         if let Some(engine) = &mut *lock {
             if engine.add(&word).is_ok() {

@@ -1,4 +1,4 @@
-import styles from './MetadataHeader.module.scss';
+import styles from './MetadataPreview.module.scss';
 import { Metadata } from '@/features/editor/store/metadataParser';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { User, ChevronRight, Info } from 'lucide-react';
@@ -36,7 +36,7 @@ export function MetadataPreview({ metadata, rootPath, noteName }: MetadataPrevie
   if (!metadata.type && !metadata.fields) return null;
 
   return (
-    <div className={styles.profile} style={{ pointerEvents: 'none' }}>
+    <div className={styles.profile}>
       <div className={styles.hero}>
         <div className={styles.portraitWrapper}>
           {renderVisualIcon()}
@@ -54,8 +54,7 @@ export function MetadataPreview({ metadata, rootPath, noteName }: MetadataPrevie
           <h1 className={styles.name}>{noteName}</h1>
           {metadata.fields?.summary && (
             <div 
-              className={styles.summaryInput} 
-              style={{ border: 'none', minHeight: 'auto' }}
+              className={styles.summary} 
               dangerouslySetInnerHTML={{ __html: metadata.fields.summary }}
             />
           )}
@@ -78,12 +77,7 @@ export function MetadataPreview({ metadata, rootPath, noteName }: MetadataPrevie
                     <span className={styles.label}>{key}</span>
                   </div>
                   <div className={styles.inputArea}>
-                    <div style={{ 
-                      padding: '0.5rem 0', 
-                      color: 'var(--color-text-primary)',
-                      fontWeight: 600,
-                      borderBottom: '2px solid var(--color-border-strong)'
-                    }}>
+                    <div className={styles.value}>
                       {String(value)}
                     </div>
                   </div>

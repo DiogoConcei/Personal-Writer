@@ -8,9 +8,8 @@
   user-select: none;
   line-height: 0;
 
-  // Layouts de envolvimento (Wrap)
   &--layout-wrap-left {
-    display: block; 
+    display: block;
     float: left;
     margin: 0.5rem 1.5rem 0.5rem 0;
     clear: left;
@@ -23,7 +22,6 @@
     clear: right;
   }
 
-  // Layout Centralizado
   &--layout-center {
     display: flex;
     justify-content: center;
@@ -37,7 +35,6 @@
     }
   }
 
-  // No modo "Na linha", a imagem flui como texto
   &--layout-inline {
     display: inline;
     margin: 0 4px;
@@ -69,11 +66,12 @@
   display: inline-block;
   line-height: 0;
   max-width: 100%;
+  width: var(--image-width, auto);
 
-  img {
-    max-width: 100%;
+  .image {
+    width: 100%;
     height: auto;
-    display: block; 
+    display: block;
     border-radius: 2px;
   }
 }
@@ -113,7 +111,7 @@
 
 .toolbar {
   position: absolute;
-  top: -42px; 
+  top: -42px;
   left: 50%;
   transform: translateX(-50%);
   background-color: var(--color-bg-elevated);

@@ -22,7 +22,7 @@ export function DictionaryContextMenu({ editor, x, y, word, onClose }: Dictionar
       if (!word) return;
       setLoading(true);
       try {
-        // Busca paralela de sinônimos e sugestões ortográficas (On-Demand)
+
         const [synList, sugList] = await Promise.all([
           getSynonyms(word),
           getSpellSuggestions(word)
@@ -39,8 +39,8 @@ export function DictionaryContextMenu({ editor, x, y, word, onClose }: Dictionar
   }, [word]);
 
   const replaceWord = (newWord: string) => {
-    onClose(); // Fechar o menu PRIMEIRO
-    // Usar requestAnimationFrame para garantir que o menu sumiu da DOM antes da transação pesada
+    onClose();
+
     requestAnimationFrame(() => {
       editor.chain().focus().insertContent(newWord).run();
     });
@@ -50,7 +50,7 @@ export function DictionaryContextMenu({ editor, x, y, word, onClose }: Dictionar
     onClose();
     try {
       await addToDictionary(word);
-      // Forçar recheck imediato
+
       (editor.commands as any).recheckSpelling();
     } catch (e) {
       console.error(e);
@@ -61,16 +61,23 @@ export function DictionaryContextMenu({ editor, x, y, word, onClose }: Dictionar
   const adjustedY = Math.min(y, window.innerHeight - 250);
 
   return (
-    <div className={styles.menu} style={{ top: adjustedY, left: adjustedX }} onMouseDown={e => e.stopPropagation()}>
+    <div
+      className={styles.menu}
+      style={{
+        '--menu-y': `${adjustedY}px`,
+        '--menu-x': `${adjustedX}px`
+      } as React.CSSProperties}
+      onMouseDown={e => e.stopPropagation()}
+    >
       <div className={styles.group}>
         <div className={styles.label}><Check size={10} /> Corrigir</div>
         {loading ? (
           <div className={styles.status}><Loader2 size={10} className={styles.spin} /> Buscando...</div>
         ) : suggestions.length > 0 ? (
           suggestions.map(s => (
-            <button 
-              key={s} 
-              className={styles.item} 
+            <button
+              key={s}
+              className={styles.item}
               onMouseDown={(e) => { e.preventDefault(); replaceWord(s); }}
             >
               {s}
@@ -88,9 +95,9 @@ export function DictionaryContextMenu({ editor, x, y, word, onClose }: Dictionar
         ) : synonyms.length > 0 ? (
           <div className={styles.pillGrid}>
             {synonyms.slice(0, 8).map(s => (
-              <button 
-                key={s} 
-                className={styles.pill} 
+              <button
+                key={s}
+                className={styles.pill}
                 onMouseDown={(e) => { e.preventDefault(); replaceWord(s); }}
               >
                 {s}
@@ -104,8 +111,8 @@ export function DictionaryContextMenu({ editor, x, y, word, onClose }: Dictionar
 
       <div className={styles.divider} />
 
-      <button 
-        className={styles.actionItem} 
+      <button
+        className={styles.actionItem}
         onMouseDown={(e) => { e.preventDefault(); handleAddToDict(); }}
       >
         <Plus size={12} /> Aprender "{word}"

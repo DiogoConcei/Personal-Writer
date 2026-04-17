@@ -10,15 +10,14 @@ export default function Dashboard() {
   const { dashboardFilterPath, rootPath, setDashboardFilterPath } = useWorkspaceStore();
   const { entities, isIndexing } = useUniverseStore();
   const [activeTab, setActiveTab] = useState<'gallery' | 'timeline'>('gallery');
-  
-  // Filtrar e categorizar notas usando o índice em memória
+
   const categorized = useMemo(() => {
     const chars: Entity[] = [];
     const locs: Entity[] = [];
     const rest: Entity[] = [];
 
     Object.values(entities).forEach((entity) => {
-      // Aplicar filtro de pasta se existir
+
       if (dashboardFilterPath && !entity.path.startsWith(dashboardFilterPath)) {
         return;
       }
@@ -81,14 +80,14 @@ export default function Dashboard() {
         <div className={styles.header__left}>
           <h2 className={styles.title}>{getTitle()}</h2>
           <div className={styles.tabs}>
-            <button 
+            <button
               className={`${styles.tab} ${activeTab === 'gallery' ? styles.active : ''}`}
               onClick={() => setActiveTab('gallery')}
             >
               <LayoutGrid size={16} />
               Galeria
             </button>
-            <button 
+            <button
               className={`${styles.tab} ${activeTab === 'timeline' ? styles.active : ''}`}
               onClick={() => setActiveTab('timeline')}
             >
@@ -104,7 +103,7 @@ export default function Dashboard() {
         </div>
         {isIndexing && <div className={styles.indexingBadge}>Indexando universo...</div>}
       </header>
-      
+
       <div className={styles.content}>
         {activeTab === 'gallery' ? (
           <>

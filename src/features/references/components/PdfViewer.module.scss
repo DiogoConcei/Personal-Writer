@@ -84,7 +84,7 @@
     padding: 40px 20px;
     display: flex;
     justify-content: center;
-    background: #2c2e33; // Cor de fundo clássica de leitores PDF para contraste
+    background: #2c2e33;
 
     &::-webkit-scrollbar {
       width: 10px;
@@ -141,7 +141,7 @@
     margin: 100px auto;
     text-align: center;
     font-size: var(--font-size-md);
-    
+
     p {
       margin-top: 8px;
       font-size: var(--font-size-sm);

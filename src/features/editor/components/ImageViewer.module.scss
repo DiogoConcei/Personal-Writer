@@ -224,6 +224,8 @@
   align-items: center;
   justify-content: center;
   min-width: min-content;
+  transform: rotate(var(--rotation, 0deg)) scale(var(--zoom, 1));
+  transition: transform 0.2s ease-out;
 }
 
 .imageFit {

@@ -8,26 +8,26 @@ import { CustomImage } from '../../extensions/Image/Image';
 import { FontSize } from '../../extensions/FontSize';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { FontFamily } from '@tiptap/extension-font-family';
-import { 
-  listSnapshots, 
-  readSnapshot, 
-  SnapshotInfo, 
-  createSnapshot, 
+import {
+  listSnapshots,
+  readSnapshot,
+  SnapshotInfo,
+  createSnapshot,
   deleteSnapshot,
-  toggleSnapshotLock 
+  toggleSnapshotLock
 } from '@/tauri-bridge';
 import { parseMarkdownMetadata, stringifyYAML, Metadata } from '../../store/metadataParser';
 import { MetadataHeader } from '../MetadataHeader';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
 import styles from './VersionHistory.module.scss';
 import editorStyles from '../Editor.module.scss';
-import { 
-  History, 
-  RotateCcw, 
-  X, 
-  Trash2, 
-  Lock, 
-  Unlock, 
+import {
+  History,
+  RotateCcw,
+  X,
+  Trash2,
+  Lock,
+  Unlock,
   FileClock,
   Eye,
   Loader2,
@@ -36,43 +36,42 @@ import {
 
 interface VersionHistoryProps {
   onClose: () => void;
-  editor: any; // Editor principal para restauração
+  editor: any;
 }
 
 export default function VersionHistory({ onClose, editor: mainEditor }: VersionHistoryProps) {
   const { activeFile, rootPath } = useWorkspaceStore();
   const { markdownContent: currentContent, loadContent, typography, metadata: currentMetadata } = useEditorStore();
-  
+
   const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
   const [selectedSnapshot, setSelectedSnapshot] = useState<SnapshotInfo | null>(null);
   const [previewMetadata, setPreviewMetadata] = useState<Metadata | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [isConfirmingRestore, setIsConfirmingRestore] = useState(false);
   const [snapshotToDelete, setSnapshotToDelete] = useState<SnapshotInfo | null>(null);
   const [loadingList, setLoadingList] = useState(false);
 
   const noteName = activeFile ? activeFile.split(/[\\/]/).pop()?.replace('.md', '') : '';
 
-  // Editor de Preview (Somente Leitura)
   const previewEditor = useEditor({
     extensions: [
       StarterKit,
       TextStyle,
       FontFamily,
       FontSize,
-      WikiLink.configure({ 
-        onLinkClick: () => {}, // Desabilitado no preview
+      WikiLink.configure({
+        onLinkClick: () => {},
       } as any),
       CustomImage.configure({ inline: true, allowBase64: true }),
     ],
     content: '',
     editable: false,
     editorProps: {
-      attributes: { 
+      attributes: {
         class: `${editorStyles.prose} ${styles.previewProse}`,
-        spellcheck: 'false' 
+        spellcheck: 'false'
       },
     },
   });
@@ -117,7 +116,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
     try {
       const yaml = stringifyYAML(currentMetadata);
       const fullContent = yaml ? `${yaml}\n\n${currentContent}` : currentContent;
-      
+
       await createSnapshot(activeFile, rootPath, fullContent);
       await loadSnapshots();
     } catch (e) {
@@ -215,8 +214,8 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                 <FileClock size={14} />
                 <span>{snapshots.length} versões</span>
               </div>
-              <button 
-                className={styles.btnSaveNow} 
+              <button
+                className={styles.btnSaveNow}
                 onClick={handleCreateManualSnapshot}
                 disabled={isSaving}
                 title="Criar novo snapshot do estado atual"
@@ -225,7 +224,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                 <span>Salvar agora</span>
               </button>
             </div>
-            
+
             <div className={styles.scrollArea}>
               {loadingList ? (
                 <div className={styles.empty}>Carregando...</div>
@@ -236,10 +235,10 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                   const date = formatDate(s.timestamp);
                   const isSelected = selectedSnapshot?.id === s.id;
                   return (
-                    <div 
-                      key={s.id} 
+                    <div
+                      key={s.id}
                       className={`
-                        ${styles.item} 
+                        ${styles.item}
                         ${isSelected ? styles['item--active'] : ''}
                         ${s.is_locked ? styles['item--locked'] : ''}
                       `}
@@ -254,7 +253,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                       </div>
 
                       <div className={styles.item__actions}>
-                        <button 
+                        <button
                           className={`${styles.actionBtn} ${s.is_locked ? styles['actionBtn--locked'] : ''}`}
                           onClick={(e) => handleToggleLock(e, s)}
                           title={s.is_locked ? "Descongelar" : "Congelar"}
@@ -262,8 +261,8 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                           {s.is_locked ? <Lock size={12} /> : <Unlock size={12} />}
                         </button>
                         {!s.is_locked && (
-                          <button 
-                            className={styles.actionBtn} 
+                          <button
+                            className={styles.actionBtn}
                             onClick={(e) => handleDeleteClick(e, s)}
                           >
                             <Trash2 size={12} />
@@ -294,7 +293,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                     <strong>{formatDate(selectedSnapshot.timestamp).full}</strong>
                   </div>
                 </header>
-                
+
                 <div className={`${styles.previewScroll} ${styles[`previewScroll--${typography}`]}`}>
                   {loadingPreview && (
                     <div className={styles.previewLoading}>
@@ -315,7 +314,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
         </div>
       </div>
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={isConfirmingRestore}
         onClose={() => setIsConfirmingRestore(false)}
         onConfirm={confirmRestore}
@@ -324,7 +323,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
         confirmLabel="Restaurar agora"
       />
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={!!snapshotToDelete}
         onClose={() => setSnapshotToDelete(null)}
         onConfirm={confirmDelete}

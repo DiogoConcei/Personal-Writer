@@ -6,21 +6,18 @@ export interface Metadata {
 }
 
 interface ReferenceState {
-  pinnedNotes: string[]; // paths das notas fixadas
-  metadata: Record<string, Metadata>; // metadados por path
-  
-  // PDF Library state
+  pinnedNotes: string[];
+  metadata: Record<string, Metadata>;
+
   pdfs: PdfAsset[];
   activePdfPath: string | null;
   isLoadingPdfs: boolean;
 
-  // Actions
   pinNote: (path: string) => void;
   unpinNote: (path: string) => void;
   updateMetadata: (path: string, data: Metadata) => void;
   clearPins: () => void;
 
-  // PDF Actions
   fetchPdfs: (workspaceRoot: string) => Promise<void>;
   setActivePdf: (path: string | null) => void;
 }
@@ -33,8 +30,8 @@ export const useReferenceStore = create<ReferenceState>((set) => ({
   isLoadingPdfs: false,
 
   pinNote: (path) => set((state) => ({
-    pinnedNotes: state.pinnedNotes.includes(path) 
-      ? state.pinnedNotes 
+    pinnedNotes: state.pinnedNotes.includes(path)
+      ? state.pinnedNotes
       : [...state.pinnedNotes, path]
   })),
 

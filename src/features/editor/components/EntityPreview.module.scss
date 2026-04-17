@@ -6,6 +6,8 @@
   pointer-events: none;
   animation: fadeIn var(--transition-fast);
   max-width: 320px;
+  top: var(--preview-y, 0);
+  left: var(--preview-x, 0);
 }
 
 @keyframes fadeIn {

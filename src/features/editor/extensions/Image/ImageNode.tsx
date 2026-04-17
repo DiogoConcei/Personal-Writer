@@ -82,9 +82,10 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
         className={styles.imageContainer}
         onMouseEnter={() => setShowToolbar(true)}
         onMouseLeave={() => setShowToolbar(false)}
+        style={{ '--image-width': node.attrs.width } as React.CSSProperties}
       >
         {hasError ? (
-          <span className={styles.errorPlaceholder} style={{ width: node.attrs.width }}>
+          <span className={styles.errorPlaceholder}>
             <ImageOff size={20} />
           </span>
         ) : (
@@ -92,7 +93,7 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
             ref={imgRef}
             src={src} 
             alt={node.attrs.alt} 
-            style={{ width: node.attrs.width, height: 'auto', display: 'inherit' }}
+            className={styles.image}
             onDoubleClick={() => setIsFullscreen(true)}
             onError={() => setHasError(true)}
             onLoad={() => setHasError(false)}

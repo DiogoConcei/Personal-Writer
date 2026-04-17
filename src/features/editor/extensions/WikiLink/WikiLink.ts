@@ -1,6 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, ReactRenderer } from '@tiptap/react';
 import Suggestion from '@tiptap/suggestion';
+import { PluginKey } from '@tiptap/pm/state';
 import tippy, { Instance } from 'tippy.js';
 import WikiLinkNode from './WikiLinkNode';
 import WikiLinkList from './WikiLinkList';
@@ -10,6 +11,8 @@ export interface WikiLinkOptions {
   onLinkClick?: (noteName: string) => void;
   suggestion: any;
 }
+
+export const WikiLinkSuggestionKey = new PluginKey('wikiLinkSuggestion');
 
 export const WikiLink = Node.create<WikiLinkOptions>({
   name: 'wikiLink',
@@ -53,7 +56,6 @@ export const WikiLink = Node.create<WikiLinkOptions>({
       onLinkClick: undefined,
       suggestion: {
         char: '[[',
-        // Removido pluginKey manual para evitar erro de getState
         command: ({ editor, range, props }: any) => {
           editor
             .chain()
@@ -121,7 +123,7 @@ export const WikiLink = Node.create<WikiLinkOptions>({
             },
 
             onExit() {
-              if (popup) {
+              if (popup && !popup.state.isDestroyed) {
                 popup.destroy();
                 popup = null;
               }
@@ -140,6 +142,7 @@ export const WikiLink = Node.create<WikiLinkOptions>({
     return [
       Suggestion({
         editor: this.editor,
+        pluginKey: WikiLinkSuggestionKey,
         ...this.options.suggestion,
       }),
     ];

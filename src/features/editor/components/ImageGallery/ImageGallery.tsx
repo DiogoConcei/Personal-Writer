@@ -6,14 +6,14 @@ import { open } from '@tauri-apps/plugin-dialog';
 import DeleteModal from '@/features/workspace/components/DeleteModal';
 import InputModal from '@/shared/components/Modal/InputModal';
 import styles from './ImageGallery.module.scss';
-import { 
-  Folder, 
-  Image as ImageIcon, 
-  X, 
-  ChevronLeft, 
-  Search, 
-  ArrowUpDown, 
-  Trash2, 
+import {
+  Folder,
+  Image as ImageIcon,
+  X,
+  ChevronLeft,
+  Search,
+  ArrowUpDown,
+  Trash2,
   Move,
   Upload,
   Plus
@@ -49,7 +49,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
     setLoading(true);
     try {
       const files = await listDirectory(path);
-      const filtered = files.filter(item => 
+      const filtered = files.filter(item =>
         item.is_dir || /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(item.name)
       );
       setItems(filtered);
@@ -64,7 +64,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
 
   const handleUpload = async () => {
     if (!rootPath) return;
-    
+
     try {
       const selected = await open({
         multiple: false,
@@ -76,14 +76,10 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
 
       if (selected && typeof selected === 'string') {
         setIsUploading(true);
-        
-        // Calcular subpasta relativa a 'assets'
-        // currentPath: C:/notes/assets/sub
-        // rootPath: C:/notes
-        // assetsBase: C:/notes/assets
+
         const separator = rootPath.includes('\\') ? '\\' : '/';
         const assetsBase = `${rootPath}${separator}${ASSETS_DIR}`;
-        
+
         let subFolder: string | undefined = undefined;
         if (currentPath !== assetsBase && currentPath.startsWith(assetsBase)) {
           subFolder = currentPath.replace(assetsBase, '').replace(/^[\\/]/, '');
@@ -148,11 +144,11 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
   const handleDrop = async (e: React.DragEvent, target: FileNode) => {
     e.preventDefault();
     e.currentTarget.classList.remove(styles['folderItem--dragOver']);
-    
+
     if (draggedItem && target.is_dir && draggedItem.path !== target.path) {
       const separator = target.path.includes('\\') ? '\\' : '/';
       const newPath = `${target.path}${separator}${draggedItem.name}`;
-      
+
       try {
         await renameItem(draggedItem.path, newPath);
         loadFolder(currentPath);
@@ -184,7 +180,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
   };
 
   const sortedAndFilteredItems = useMemo(() => {
-    const filtered = items.filter(item => 
+    const filtered = items.filter(item =>
       item.name.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -231,13 +227,13 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
         <div className={styles.searchBar}>
           <div className={styles.searchBar__input}>
             <Search size={16} />
-            <input 
-              placeholder="Buscar imagens ou pastas..." 
+            <input
+              placeholder="Buscar imagens ou pastas..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <button 
+          <button
             className={`${styles.sortBtn} ${!imagesFirst ? styles['sortBtn--active'] : ''}`}
             onClick={() => setImagesFirst(!imagesFirst)}
             title={imagesFirst ? "Mostrar Pastas Primeiro" : "Mostrar Imagens Primeiro"}
@@ -261,8 +257,8 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
           ) : (
             <div className={styles.grid}>
               {sortedAndFilteredItems.map(item => (
-                <div 
-                  key={item.path} 
+                <div
+                  key={item.path}
                   draggable
                   onDragStart={() => handleDragStart(item)}
                   onDragOver={(e) => handleDragOver(e, item)}
@@ -271,8 +267,8 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
                   className={item.is_dir ? styles.folderItem : styles.imageItem}
                   onClick={() => item.is_dir ? handleFolderClick(item.path) : handleImageSelect(item)}
                 >
-                  <button 
-                    className={styles.deleteBtn} 
+                  <button
+                    className={styles.deleteBtn}
                     onClick={(e) => handleDelete(e, item)}
                     title="Excluir"
                   >
@@ -290,9 +286,9 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
                     </div>
                   ) : (
                     <div className={styles.imageWrapper}>
-                      <img 
-                        src={convertFileSrc(item.path)} 
-                        alt={item.name} 
+                      <img
+                        src={convertFileSrc(item.path)}
+                        alt={item.name}
                       />
                       <span className={styles.imageName}>{item.name}</span>
                     </div>
@@ -304,7 +300,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
         </div>
       </div>
 
-      <DeleteModal 
+      <DeleteModal
         isOpen={!!itemToDelete}
         onClose={() => setItemToDelete(null)}
         onConfirm={confirmDelete}
@@ -312,7 +308,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
         isDir={itemToDelete?.is_dir || false}
       />
 
-      <InputModal 
+      <InputModal
         isOpen={showFolderModal}
         onClose={() => setShowFolderModal(false)}
         onConfirm={handleCreateFolder}

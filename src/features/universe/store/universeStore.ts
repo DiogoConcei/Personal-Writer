@@ -7,8 +7,8 @@ export interface Entity extends Metadata {
   name: string;
   lastModified: number;
   excerpt: string;
-  links: string[]; // Caminhos citados via [[ ]]
-  previewImage?: string; // Primeira imagem encontrada no corpo do texto
+  links: string[];
+  previewImage?: string;
 }
 
 interface UniverseState {
@@ -16,7 +16,6 @@ interface UniverseState {
   isIndexing: boolean;
   lastIndexed: number | null;
 
-  // Actions
   indexWorkspace: (files: FileNode[]) => Promise<void>;
   updateEntity: (path: string, content: string, lastModified?: number) => void;
   removeEntity: (path: string) => void;
@@ -37,8 +36,8 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
 
     return Object.values(entities).filter(entity => {
       if (entity.path === targetPath) return false;
-      // Verifica se o nome da nota ou o path está na lista de links da entidade
-      return entity.links?.some(link => 
+
+      return entity.links?.some(link =>
         link === targetName || link === targetPath || targetPath.endsWith(link + '.md')
       );
     });
@@ -54,16 +53,15 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
       if (entity) {
         if (!entity.fields) entity.fields = {};
         entity.fields.order = i;
-        
+
         try {
-          // Ler o conteúdo original para preservar o corpo do markdown
+
           const fullContent = await readFile(path);
           const { markdown } = parseMarkdownMetadata(fullContent);
-          
-          // Gerar novo YAML com o campo order atualizado
+
           const newYaml = stringifyYAML(entity);
           const newContent = `${newYaml}\n\n${markdown}`;
-          
+
           await writeFile(path, newContent);
           updatedEntities[path] = { ...entity };
         } catch (e) {
@@ -83,9 +81,9 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
     const scan = async (nodes: FileNode[]) => {
       for (const node of nodes) {
         if (node.is_dir) {
-          // Ignorar pastas ocultas ou assets
+
           if (node.name.startsWith('.') || node.name === 'assets' || node.name === '.snapshots') continue;
-          
+
           try {
             const subFiles = await listDirectory(node.path);
             await scan(subFiles);
@@ -96,7 +94,7 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
           try {
             const content = await readFile(node.path);
             const { metadata, markdown } = parseMarkdownMetadata(content);
-            
+
             const links: string[] = [];
             const linkRegex = /\[\[(.*?)\]\]/g;
             let match;
@@ -104,7 +102,6 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
               links.push(match[1]);
             }
 
-            // Extrair a primeira imagem do corpo do texto (HTML <img> ou Markdown ![]())
             const imgMatch = markdown.match(/<img\s+src=["'](.*?)["']/i) || markdown.match(/!\[.*?\]\((.*?)\)/i);
             const previewImage = imgMatch ? imgMatch[1] : undefined;
 
@@ -137,7 +134,7 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
   updateEntity: (path: string, content: string, lastModified?: number) => {
     const { entities } = get();
     const { metadata, markdown } = parseMarkdownMetadata(content);
-    
+
     const links: string[] = [];
     const linkRegex = /\[\[(.*?)\]\]/g;
     let match;
@@ -167,8 +164,8 @@ export const useUniverseStore = create<UniverseState>((set, get) => ({
       previewImage
     };
 
-    set({ 
-      entities: { ...entities, [path]: updatedEntity } 
+    set({
+      entities: { ...entities, [path]: updatedEntity }
     });
   },
 

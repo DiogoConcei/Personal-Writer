@@ -33,9 +33,9 @@ export function EntityPreview({ entity, position }: EntityPreviewProps) {
     <div 
       className={styles.preview} 
       style={{ 
-        top: position.y + 15, 
-        left: position.x + 15 
-      }}
+        '--preview-y': `${position.y + 15}px`, 
+        '--preview-x': `${position.x + 15}px` 
+      } as React.CSSProperties}
     >
       <div className={styles.card}>
         <div className={styles.visual}>

@@ -1,17 +1,18 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import styles from './ImageViewer.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
+import { useUIStore } from '@/store/uiStore';
 import { deleteItem, renameItem } from '@/tauri-bridge';
 import DeleteModal from '@/features/workspace/components/DeleteModal';
-import { 
-  Maximize2, 
-  Minimize2, 
-  ZoomIn, 
-  ZoomOut, 
-  RotateCw, 
-  Maximize, 
-  Minimize, 
-  Trash2, 
+import {
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  Maximize,
+  Minimize,
+  Trash2,
   Edit3,
   Check,
   X,
@@ -26,6 +27,7 @@ interface ImageViewerProps {
 
 export default function ImageViewer({ path, onBack }: ImageViewerProps) {
   const { setActiveFile, refreshFiles } = useWorkspaceStore();
+  const { addNotification } = useUIStore();
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [isFitToScreen, setIsFitToScreen] = useState(true);
@@ -40,7 +42,6 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
   const extension = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')) : '';
   const nameWithoutExt = fileName.replace(extension, '');
 
-  // O convertFileSrc no Windows precisa do caminho nativo (com \)
   const imgSrc = convertFileSrc(path);
 
   useEffect(() => {
@@ -62,7 +63,7 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.2, 5));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.2, 0.1));
   const handleRotate = () => setRotation(prev => (prev + 90) % 360);
-  
+
   const toggleFit = () => {
     setIsFitToScreen(!isFitToScreen);
     setZoom(1);
@@ -87,10 +88,13 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
   const confirmDelete = async () => {
     try {
       await deleteItem(path);
+      addNotification('Imagem excluída com sucesso', 'success');
       setActiveFile(null);
       await refreshFiles();
+      if (onBack) onBack();
     } catch (err) {
       console.error('Erro ao excluir imagem:', err);
+      addNotification('Erro ao excluir imagem', 'error');
     }
   };
 
@@ -101,20 +105,22 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
         const parentDir = path.substring(0, path.lastIndexOf(path.includes('\\') ? '\\' : '/'));
         const separator = path.includes('\\') ? '\\' : '/';
         const newPath = `${parentDir}${separator}${tempName.trim()}${extension}`;
-        
+
         await renameItem(path, newPath);
+        addNotification('Imagem renomeada', 'success');
         setActiveFile(newPath);
         await refreshFiles();
       } catch (err) {
         console.error('Erro ao renomear imagem:', err);
+        addNotification('Erro ao renomear imagem', 'error');
       }
     }
     setIsEditingName(false);
   };
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className={`${styles.container} ${isFullscreen ? styles['container--fullscreen'] : ''}`}
     >
       <div className={styles.toolbar}>
@@ -143,7 +149,7 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
             </div>
           )}
         </div>
-        
+
         <div className={styles.toolbar__actions}>
           <button onClick={handleZoomOut} title="Zoom Out"><ZoomOut size={18} /></button>
           <span className={styles.toolbar__zoom}>{Math.round(zoom * 100)}%</span>
@@ -163,22 +169,22 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
       </div>
 
       <div className={styles.viewer}>
-        <div 
+        <div
           className={styles.imageWrapper}
           style={{
-            transform: `rotate(${rotation}deg) scale(${zoom})`,
-            transition: 'transform 0.2s ease-out'
-          }}
+            '--rotation': `${rotation}deg`,
+            '--zoom': zoom
+          } as React.CSSProperties}
         >
-          <img 
-            src={imgSrc} 
-            alt="Visualização" 
+          <img
+            src={imgSrc}
+            alt="Visualização"
             className={isFitToScreen ? styles.imageFit : styles.imageOriginal}
           />
         </div>
       </div>
 
-      <DeleteModal 
+      <DeleteModal
         isOpen={isDeleting}
         onClose={() => setIsDeleting(false)}
         onConfirm={confirmDelete}

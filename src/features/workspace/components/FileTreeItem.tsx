@@ -6,16 +6,16 @@ import { useUIStore } from '@/store/uiStore';
 import DeleteModal from './DeleteModal';
 import styles from './FileTreeItem.module.scss';
 import { DEFAULT_TEMPLATES } from '@/features/templates/data/defaultTemplates';
-import { 
-  ChevronRight, 
-  ChevronDown, 
-  FileText, 
+import {
+  ChevronRight,
+  ChevronDown,
+  FileText,
   FileImage,
-  Folder, 
-  FileQuestion, 
-  Trash2, 
-  Edit3, 
-  FilePlus, 
+  Folder,
+  FileQuestion,
+  Trash2,
+  Edit3,
+  FilePlus,
   FolderPlus,
   Pin,
   Check,
@@ -28,6 +28,7 @@ interface FileTreeItemProps {
 }
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+const PDF_EXTENSIONS = ['.pdf'];
 
 export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,33 +38,36 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [virtualChildren, setVirtualChildren] = useState<FileNode[]>([]);
-  
-  const { 
-    activeFile, 
-    setActiveFile, 
-    deleteItem, 
-    renameItem, 
-    createFile, 
+
+  const rootPath = useWorkspaceStore(s => s.rootPath);
+  const activeFile = useWorkspaceStore(s => s.activeFile);
+  const {
+    setActiveFile,
+    deleteItem,
+    renameItem,
+    createFile,
     createDirectory,
-    fetchChildren,
-    rootPath
+    fetchChildren
   } = useWorkspaceStore();
 
-  const { dragInfo, setDragInfo } = useUIStore();
+  const isDragTarget = useUIStore(s => s.dragInfo.targetPath === node.path && node.is_dir && !node.isVirtual);
+  const isDraggingThis = useUIStore(s => s.dragInfo.sourcePath === node.path);
+  const { setDragInfo } = useUIStore();
 
   const [hasVirtualImages, setHasVirtualImages] = useState(node.hasVirtualImages || false);
   const [virtualImagesPath, setVirtualImagesPath] = useState<string | null>(node.virtualImagesPath || null);
 
-  const { pinNote, pinnedNotes, unpinNote } = useReferenceStore();
-  const { toggleRightSidebar, isRightSidebarVisible } = useUIStore();
+  const isPinned = useReferenceStore(s => s.pinnedNotes.includes(node.path));
+  const { pinNote, unpinNote, setActivePdf } = useReferenceStore();
+
+  const isRightSidebarVisible = useUIStore(s => s.isRightSidebarVisible);
+  const { toggleRightSidebar } = useUIStore();
 
   const isEditableFile = node.name.endsWith('.md');
   const isImageFile = IMAGE_EXTENSIONS.some(ext => node.name.toLowerCase().endsWith(ext));
-  const isSelectable = isEditableFile || isImageFile;
+  const isPdfFile = PDF_EXTENSIONS.some(ext => node.name.toLowerCase().endsWith(ext));
+  const isSelectable = isEditableFile || isImageFile || isPdfFile;
   const isActive = activeFile === node.path;
-  const isPinned = pinnedNotes.includes(node.path);
-  const isDragTarget = dragInfo.targetPath === node.path && node.is_dir && !node.isVirtual;
-  const isDraggingThis = dragInfo.sourcePath === node.path;
 
   const children = node.children || [];
 
@@ -96,6 +100,9 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
         }
       }
       setIsOpen(!isOpen);
+    } else if (isPdfFile) {
+      setActivePdf(node.path);
+      if (!isRightSidebarVisible) toggleRightSidebar();
     } else if (isSelectable) {
       setActiveFile(node.path);
     }
@@ -110,23 +117,23 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
         const normRoot = normalize(rootPath);
         const normNode = normalize(node.path);
         const separator = rootPath.includes('\\') ? '\\' : '/';
-        
+
         if (normNode.startsWith(normRoot)) {
           let relativePath = normNode.substring(normRoot.length);
           if (relativePath.startsWith('/')) relativePath = relativePath.substring(1);
-          
-          const nativeRelativePath = relativePath.replace(/\//g, separator);
-          const nodeAssetsPath = nativeRelativePath 
+
+          const nativeRelativePath = relativePath.replace(/\
+          const nodeAssetsPath = nativeRelativePath
             ? `${rootPath}${separator}assets${separator}${nativeRelativePath}`
             : `${rootPath}${separator}assets`;
-            
+
           try {
             const { listDirectory } = await import('@/tauri-bridge');
             const assetsContent = await listDirectory(nodeAssetsPath);
-            const hasImages = assetsContent.some(file => 
+            const hasImages = assetsContent.some(file =>
               IMAGE_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext))
             );
-            
+
             if (hasImages) {
               setHasVirtualImages(true);
               setVirtualImagesPath(nodeAssetsPath);
@@ -197,9 +204,8 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
     setTempName('');
   };
 
-  // --- Custom Drag Handlers (Mouse Events) ---
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Apenas clique esquerdo e não em botões/inputs
+
     if (e.button !== 0 || (e.target as HTMLElement).closest('button, input, select') || node.isVirtual) return;
 
     setDragInfo({
@@ -216,7 +222,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
 
   const getIcon = () => {
     if (node.is_dir) return isOpen ? ChevronDown : ChevronRight;
-    if (isEditableFile) return FileText;
+    if (isEditableFile || isPdfFile) return FileText;
     if (isImageFile) return FileImage;
     return FileQuestion;
   };
@@ -225,12 +231,11 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const FolderIcon = node.is_dir ? Folder : null;
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} style={{ '--depth': depth } as React.CSSProperties}>
       {isEditing ? (
-        <form 
-          className={styles.editForm} 
-          onSubmit={handleRenameSubmit} 
-          style={{ paddingLeft: `${depth * 12 + 12}px` }}
+        <form
+          className={styles.editForm}
+          onSubmit={handleRenameSubmit}
         >
           <input
             ref={inputRef}
@@ -242,42 +247,41 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
           />
         </form>
       ) : (
-        <div 
+        <div
           className={`
-            ${styles.item} 
+            ${styles.item}
             ${isActive ? styles['item--active'] : ''}
             ${!node.is_dir && !isSelectable ? styles['item--disabled'] : ''}
             ${node.isVirtual ? styles['item--virtual'] : ''}
             ${isDragTarget ? styles['item--dragover'] : ''}
             ${isDraggingThis ? styles['item--dragging-source'] : ''}
           `}
-          style={{ paddingLeft: `${depth * 12 + 12}px` }}
           onClick={handleToggle}
           onMouseDown={handleMouseDown}
-          // Atributos para o document.elementFromPoint
+
           data-path={node.path}
           data-is-dir={node.is_dir && !node.isVirtual ? "true" : "false"}
         >
           <span className={styles.item__arrow}>
             <Icon size={14} />
           </span>
-          
+
           {FolderIcon && (
             <span className={styles.item__folder}>
               <FolderIcon size={14} />
             </span>
           )}
-          
+
           <span className={styles.item__name} title={node.name}>
-            {node.is_dir ? node.name : node.name.replace(/\.md$/, '')}
+            {node.is_dir ? node.name : node.name.replace(/\.(md|pdf)$/, '')}
           </span>
 
           <div className={styles.actions}>
             {!node.isVirtual && (
               <>
                 {isEditableFile && (
-                  <button 
-                    onClick={(e) => handleAction(e, 'pin')} 
+                  <button
+                    onClick={(e) => handleAction(e, 'pin')}
                     title={isPinned ? "Desafixar" : "Fixar na Referência"}
                     className={isPinned ? styles.actions__pinned : ''}
                   >
@@ -301,22 +305,21 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
       {node.is_dir && isOpen && (
         <div className={styles.children}>
           {hasVirtualImages && (
-            <FileTreeItem 
+            <FileTreeItem
               node={{
                 name: 'Imagens',
                 path: virtualImagesPath!,
                 is_dir: true,
                 isVirtual: true,
                 modified_at: Date.now()
-              }} 
-              depth={depth + 1} 
+              }}
+              depth={depth + 1}
             />
           )}
           {isCreating && (
-            <form 
-              className={styles.editFormContainer} 
-              onSubmit={handleCreateSubmit} 
-              style={{ paddingLeft: `${(depth + 1) * 12 + 12}px` }}
+            <form
+              className={styles.editFormContainer}
+              onSubmit={handleCreateSubmit}
             >
               <div className={styles.editInputWrapper}>
                 <input
@@ -328,7 +331,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
                   onKeyDown={(e) => e.key === 'Escape' && setIsCreating(null)}
                 />
                 {isCreating === 'file' && (
-                  <select 
+                  <select
                     className={styles.editSelect}
                     value={selectedTemplate}
                     onChange={(e) => setSelectedTemplate(e.target.value)}
@@ -355,9 +358,8 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
               <FileTreeItem key={child.path} node={child} depth={depth + 1} />
             ))
           ) : !isCreating && (
-            <div 
-              className={styles.item__empty} 
-              style={{ paddingLeft: `${(depth + 1) * 12 + 28}px` }}
+            <div
+              className={styles.item__empty}
             >
               (vazio)
             </div>
@@ -365,7 +367,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
         </div>
       )}
 
-      <DeleteModal 
+      <DeleteModal
         isOpen={isDeleting}
         onClose={() => setIsDeleting(false)}
         onConfirm={() => deleteItem(node.path)}

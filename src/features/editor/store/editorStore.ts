@@ -18,7 +18,6 @@ interface EditorState {
   sessionGoal: number;
   sessionStartWordCount: number;
 
-  // Actions
   loadContent: (path: string) => Promise<void>;
   setMarkdownContent: (content: string) => void;
   setMetadata: (metadata: Metadata) => void;
@@ -50,12 +49,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     try {
       const fullContent = await readFile(path);
       const { metadata, markdown } = parseMarkdownMetadata(fullContent);
-      
-      // Se o arquivo tiver uma meta salva no YAML, carregamos ela
+
       const wordGoal = metadata.wordGoal ? Number(metadata.wordGoal) : 0;
       const sessionGoal = metadata.sessionGoal ? Number(metadata.sessionGoal) : 0;
 
-      set({ 
+      set({
         metadata,
         markdownContent: markdown,
         saveStatus: 'idle',
@@ -82,30 +80,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ saveStatus: 'saving' });
 
     try {
-      // Sincronizar as metas com os metadados antes de salvar
-      const updatedMetadata = { 
-        ...metadata, 
+
+      const updatedMetadata = {
+        ...metadata,
         wordGoal: wordGoal > 0 ? wordGoal : undefined,
         sessionGoal: sessionGoal > 0 ? sessionGoal : undefined
       };
-      
+
       const yaml = stringifyYAML(updatedMetadata);
       const fullContent = yaml ? `${yaml}\n\n${markdownContent}` : markdownContent;
       await writeFile(path, fullContent);
-      
+
       const now = new Date();
-      
-      // Atualizar o índice do Universo (Aqui usamos o acesso dinâmico para evitar problemas de init circular)
+
       useUniverseStore.getState().updateEntity(path, fullContent, now.getTime() / 1000);
 
-      // Snapshot automático a cada 10 min
       if (workspaceRoot && (!lastSnapshotAt || now.getTime() - lastSnapshotAt.getTime() > 10 * 60 * 1000)) {
         await createSnapshot(path, workspaceRoot, fullContent);
         set({ lastSnapshotAt: now });
       }
 
-      set({ 
-        saveStatus: 'saved', 
+      set({
+        saveStatus: 'saved',
         lastSavedAt: now,
         metadata: updatedMetadata
       });

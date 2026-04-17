@@ -13,6 +13,8 @@
   flex-direction: column;
   animation: menuAppear 0.1s ease-out;
   backdrop-filter: blur(10px);
+  top: var(--menu-y, 0);
+  left: var(--menu-x, 0);
 }
 
 @keyframes menuAppear {

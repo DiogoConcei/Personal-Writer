@@ -14,13 +14,12 @@ export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
   const currentSize = editor.getAttributes('textStyle').fontSize || '';
 
   return (
-    <BubbleMenu 
-      editor={editor} 
+    <BubbleMenu
+      editor={editor}
       shouldShow={({ from, to }) => {
         if (from === to) return false;
         if (editor.isActive('image') || editor.isActive('customImage')) return false;
 
-        // Ocultar se houver erro ortográfico no range selecionado de forma segura via storage
         const spellingStorage = (editor.storage as any).spelling;
         if (spellingStorage && spellingStorage.pluginKey) {
           const pluginState = spellingStorage.pluginKey.getState(editor.state);
@@ -35,7 +34,7 @@ export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
       className={styles.bubbleMenu}
     >
       <div className={styles.group}>
-        <select 
+        <select
           className={`${styles.select} ${styles['select--font']}`}
           value={currentFont}
           onChange={(e) => {
@@ -53,7 +52,7 @@ export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
           <option value="cursive">Escrita</option>
         </select>
 
-        <select 
+        <select
           className={`${styles.select} ${styles['select--size']}`}
           value={currentSize}
           onChange={(e) => {

@@ -49,8 +49,8 @@ export default function StatusBar() {
     return (
       <div className={styles.status__item} onClick={onClick} title={`${current} / ${goal} palavras (${label})`}>
         <div className={styles.status__goalContainer}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'space-between' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div className={styles.status__goalHeader}>
+            <span className={styles.status__goalInfo}>
               {icon}
               {current} / {goal}
             </span>
@@ -59,7 +59,7 @@ export default function StatusBar() {
           <div className={styles.status__progressBar}>
             <div 
               className={`${styles.status__progressFill} ${isComplete ? styles['status__progressFill--complete'] : ''}`}
-              style={{ width: `${percentage}%` }}
+              style={{ '--percentage': `${percentage}%` } as React.CSSProperties}
             />
           </div>
         </div>

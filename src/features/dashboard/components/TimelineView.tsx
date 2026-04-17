@@ -21,7 +21,6 @@ export default function TimelineView() {
   const dragStartTime = useRef<number>(0);
   const startPos = useRef({ x: 0, y: 0 });
 
-  // Filtrar apenas personagens e ordenar pelo campo 'order'
   const characters = useMemo(() => {
     return Object.values(entities)
       .filter(e => e.type === 'character')
@@ -34,7 +33,7 @@ export default function TimelineView() {
   }, [entities]);
 
   const handleMouseDown = (e: React.MouseEvent, path: string) => {
-    // Apenas botão esquerdo
+
     if (e.button !== 0) return;
 
     dragStartTime.current = Date.now();
@@ -50,7 +49,6 @@ export default function TimelineView() {
       const deltaY = Math.abs(e.clientY - startPos.current.y);
       const timeElapsed = Date.now() - dragStartTime.current;
 
-      // Threshold: 5px de movimento E 150ms de clique (KI-023)
       if (!isDragging && (deltaX > 5 || deltaY > 5) && timeElapsed > 150) {
         setIsDragging(true);
       }
@@ -58,7 +56,6 @@ export default function TimelineView() {
       if (isDragging) {
         setGhostPos({ x: e.clientX, y: e.clientY });
 
-        // Detectar sobre qual item estamos passando
         const element = document.elementFromPoint(e.clientX, e.clientY);
         const itemElement = element?.closest('[data-path]');
         if (itemElement) {
@@ -123,26 +120,26 @@ export default function TimelineView() {
   return (
     <div className={styles.container}>
       <div className={styles.timelineLine} />
-      
+
       <div className={styles.items}>
         {characters.map((char) => (
-          <div 
-            key={char.path} 
+          <div
+            key={char.path}
             className={`${styles.itemWrapper} ${draggedPath === char.path && isDragging ? styles.dragging : ''} ${dragOverPath === char.path ? styles.dragOver : ''}`}
             data-path={char.path}
           >
             <div className={styles.itemContent}>
-              <div 
+              <div
                 className={styles.card}
                 onMouseDown={(e) => handleMouseDown(e, char.path)}
                 onClick={() => handleOpenNote(char.path)}
               >
                 <div className={styles.cardHeader}>
                   {char.icon && char.icon.includes('/') ? (
-                    <img 
-                      src={resolveAssetPath(char.icon, rootPath)} 
-                      alt={char.name} 
-                      className={styles.avatar} 
+                    <img
+                      src={resolveAssetPath(char.icon, rootPath)}
+                      alt={char.name}
+                      className={styles.avatar}
                     />
                   ) : (
                     <div className={styles.noAvatar}>
@@ -160,12 +157,12 @@ export default function TimelineView() {
       </div>
 
       {isDragging && draggedEntity && (
-        <div 
+        <div
           className={styles.ghost}
-          style={{ 
-            left: ghostPos.x - 150, 
-            top: ghostPos.y - 40 
-          }}
+          style={{
+            '--x': `${ghostPos.x - 150}px`,
+            '--y': `${ghostPos.y - 40}px`
+          } as React.CSSProperties}
         >
           <div className={styles.card}>
             <div className={styles.cardHeader}>

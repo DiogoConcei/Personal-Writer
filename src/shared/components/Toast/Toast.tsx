@@ -25,7 +25,6 @@ export const Toast: React.FC<ToastProps> = ({ notification }) => {
       <button 
         className={styles.closeBtn} 
         onClick={() => removeNotification(notification.id)}
-        style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', marginLeft: 'auto', display: 'flex', opacity: 0.6 }}
       >
         <X size={14} />
       </button>

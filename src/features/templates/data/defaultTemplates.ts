@@ -36,7 +36,7 @@ Escreva a história e detalhes aqui...`
     description: 'Cidades, masmorras ou pontos de interesse',
     content: `---
 type: location
-icon: "📍"
+icon: ""
 images: []
 music: ""
 linked_characters: []

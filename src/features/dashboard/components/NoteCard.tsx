@@ -24,14 +24,9 @@ export default function NoteCard({ entity }: NoteCardProps) {
   };
 
   const renderIcon = () => {
-    // Fallback de Ícone:
-    // 1. Se for localização e tiver imagens, usa a primeira
-    // 2. Se tiver icon definido, usa ele (emoji ou caminho)
-    // 3. Se tiver uma imagem no corpo do texto (previewImage)
-    // 4. Fallback genérico por tipo
-    
+
     let iconToRender = entity.icon;
-    
+
     if (entity.type === 'location' && entity.images && entity.images.length > 0) {
       iconToRender = entity.images[0];
     }
@@ -45,7 +40,7 @@ export default function NoteCard({ entity }: NoteCardProps) {
       if (entity.type === 'location') return <MapPin size={24} className={styles.card__icon} />;
       return <FileText size={24} className={styles.card__icon} />;
     }
-    
+
     if (iconToRender.includes('/') || iconToRender.includes('\\') || iconToRender.includes('.')) {
       let iconSrc = iconToRender;
       if (iconSrc.startsWith('./') && rootPath) {
@@ -68,7 +63,7 @@ export default function NoteCard({ entity }: NoteCardProps) {
 
       <div className={styles.card__content}>
         <h3 className={styles.card__title}>{entity.name}</h3>
-        
+
         {entity.fields && Object.keys(entity.fields).length > 0 && (
           <div className={styles.card__fields}>
             {Object.entries(entity.fields)
@@ -87,14 +82,14 @@ export default function NoteCard({ entity }: NoteCardProps) {
           {entity.excerpt || 'Sem descrição...'}
         </p>
       </div>
-      
+
       <div className={styles.card__footer}>
         <div className={styles.card__type}>
           {entity.type === 'character' && <User size={10} />}
           {entity.type === 'location' && <MapPin size={10} />}
           <span>
-            {entity.type === 'character' ? 'Personagem' : 
-             entity.type === 'location' ? 'Localização' : 
+            {entity.type === 'character' ? 'Personagem' :
+             entity.type === 'location' ? 'Localização' :
              entity.type === 'session' ? 'Sessão' : 'Nota'}
           </span>
         </div>

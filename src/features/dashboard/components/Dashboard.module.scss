@@ -83,21 +83,23 @@
 .content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2xl);
+  gap: var(--spacing-3xl);
   max-width: 1200px;
   margin: 0 auto;
+  padding-bottom: var(--spacing-3xl);
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-xl);
 
   &__header {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    padding-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-xs);
     border-bottom: 1px solid var(--color-border);
   }
 

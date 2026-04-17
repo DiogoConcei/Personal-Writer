@@ -3,12 +3,12 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { useReferenceStore } from '../store/referenceStore';
 import { useWorkspaceStore } from '../../workspace/store/workspaceStore';
 import { resolveAssetPath } from '../../../tauri-bridge';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  ZoomIn, 
-  ZoomOut, 
-  Loader2, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
+  Loader2,
   X,
   Maximize
 } from 'lucide-react';
@@ -16,7 +16,6 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import styles from './PdfViewer.module.scss';
 
-// Configurar o worker do PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export const PdfViewer: React.FC = () => {
@@ -27,13 +26,13 @@ export const PdfViewer: React.FC = () => {
   const [scale, setScale] = useState(1.0);
   const [isFitToWidth, setIsFitToWidth] = useState(true);
   const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
-  
+
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const updateWidth = () => {
       if (contentRef.current) {
-        setContainerWidth(contentRef.current.clientWidth - 40); // 40 is padding
+        setContainerWidth(contentRef.current.clientWidth - 40);
       }
     };
 
@@ -68,8 +67,8 @@ export const PdfViewer: React.FC = () => {
     <div className={styles.pdf_viewer}>
       <div className={styles.pdf_viewer__toolbar}>
         <div className={styles.pdf_viewer__controls}>
-          <button 
-            onClick={() => changePage(-1)} 
+          <button
+            onClick={() => changePage(-1)}
             disabled={pageNumber <= 1}
             className={styles.pdf_viewer__button}
           >
@@ -78,8 +77,8 @@ export const PdfViewer: React.FC = () => {
           <span className={styles.pdf_viewer__page_info}>
             Pág. {pageNumber} / {numPages || '--'}
           </span>
-          <button 
-            onClick={() => changePage(1)} 
+          <button
+            onClick={() => changePage(1)}
             disabled={numPages ? pageNumber >= numPages : true}
             className={styles.pdf_viewer__button}
           >
@@ -88,18 +87,18 @@ export const PdfViewer: React.FC = () => {
         </div>
 
         <div className={styles.pdf_viewer__zoom_controls}>
-          <button 
+          <button
             onClick={() => {
               setIsFitToWidth(false);
               setScale(s => Math.max(0.5, s - 0.1));
-            }} 
+            }}
             className={styles.pdf_viewer__button}
           >
             <ZoomOut size={18} />
           </button>
-          
-          <button 
-            onClick={() => setIsFitToWidth(!isFitToWidth)} 
+
+          <button
+            onClick={() => setIsFitToWidth(!isFitToWidth)}
             className={`${styles.pdf_viewer__button} ${isFitToWidth ? styles['pdf_viewer__button--active'] : ''}`}
             title="Ajustar à largura"
           >
@@ -110,11 +109,11 @@ export const PdfViewer: React.FC = () => {
             <span className={styles.pdf_viewer__zoom_info}>{Math.round(scale * 100)}%</span>
           )}
 
-          <button 
+          <button
             onClick={() => {
               setIsFitToWidth(false);
               setScale(s => Math.min(2.5, s + 0.1));
-            }} 
+            }}
             className={styles.pdf_viewer__button}
           >
             <ZoomIn size={18} />
@@ -122,8 +121,8 @@ export const PdfViewer: React.FC = () => {
         </div>
 
         <div className={styles.pdf_viewer__actions}>
-          <button 
-            onClick={() => setActivePdf(null)} 
+          <button
+            onClick={() => setActivePdf(null)}
             className={`${styles.pdf_viewer__button} ${styles['pdf_viewer__button--close']}`}
           >
             <X size={18} />
@@ -148,8 +147,8 @@ export const PdfViewer: React.FC = () => {
             </div>
           }
         >
-          <Page 
-            pageNumber={pageNumber} 
+          <Page
+            pageNumber={pageNumber}
             scale={!isFitToWidth ? scale : undefined}
             width={isFitToWidth ? containerWidth : undefined}
             className={styles.pdf_viewer__page}

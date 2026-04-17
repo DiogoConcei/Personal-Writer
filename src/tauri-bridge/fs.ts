@@ -1,17 +1,32 @@
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, save as saveDialog } from '@tauri-apps/plugin-dialog';
+import { exists as fsExists } from '@tauri-apps/plugin-fs';
 import type { FileNode } from './types';
+
+export async function exists(path: string): Promise<boolean> {
+  return fsExists(path);
+}
+
+export async function exportWorkspaceZip(workspaceRoot: string): Promise<void> {
+  const destPath = await saveDialog({
+    filters: [{ name: 'Arquivo ZIP', extensions: ['zip'] }],
+    defaultPath: 'workspace-backup.zip',
+    title: 'Exportar Backup do Workspace',
+  });
+
+  if (destPath) {
+    return invoke<void>('export_workspace_zip', { workspaceRoot, destZipPath: destPath });
+  }
+}
 
 export function resolveAssetPath(path: string, workspaceRoot: string | null): string {
   if (path.startsWith('http')) return path;
 
-  // Se for um caminho absoluto (Windows: C:\... ou Unix: /...)
   const isAbsolute = /^[a-zA-Z]:[\\/]/.test(path) || path.startsWith('/');
   if (isAbsolute) {
     return convertFileSrc(path);
   }
 
-  // Se for um caminho relativo ao workspace (começa com ./)
   if (workspaceRoot && path.startsWith('./')) {
     const relativePart = path.replace('./', '');
     const separator = workspaceRoot.includes('\\') ? '\\' : '/';
@@ -50,7 +65,7 @@ export async function selectDirectory(): Promise<string | null> {
     multiple: false,
     title: 'Selecionar Workspace',
   });
-  
+
   return typeof selected === 'string' ? selected : null;
 }
 

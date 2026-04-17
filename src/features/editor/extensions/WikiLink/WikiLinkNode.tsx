@@ -3,6 +3,8 @@ import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
+import { FileNode } from '@/tauri-bridge';
+import styles from './WikiLink.module.scss';
 
 export default function WikiLinkNode({ node, selected, extension }: NodeViewProps) {
   const label = node.attrs.label || 'Sem nome';
@@ -17,7 +19,7 @@ export default function WikiLinkNode({ node, selected, extension }: NodeViewProp
   const exists = useMemo(() => {
     if (!label || label === 'Sem nome') return false;
     
-    const checkRecursive = (nodeList: any[]): boolean => {
+    const checkRecursive = (nodeList: FileNode[]): boolean => {
       return nodeList.some(n => {
         if (n.is_dir) return checkRecursive(n.children || []);
         return n.name.replace(/\.md$/, '') === label;
@@ -49,17 +51,16 @@ export default function WikiLinkNode({ node, selected, extension }: NodeViewProp
   };
 
   return (
-    <NodeViewWrapper as="span" className="wiki-link-node-wrapper" style={{ display: 'inline-block' }}>
+    <NodeViewWrapper as="span" className={styles.wrapper}>
       <span 
-        className={`wiki-link ${exists ? 'exists' : 'broken'} ${selected ? 'is-selected' : ''}`}
+        className={`${styles.link} ${exists ? styles.exists : styles.broken} ${selected ? styles['is-selected'] : ''}`}
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        style={{ cursor: 'pointer', position: 'relative', display: 'inline-flex', alignItems: 'center' }}
       >
-        <span className={`wiki-link__bracket ${selected ? 'is-visible' : 'is-hidden'}`}>[[</span>
-        <span className="wiki-link__text">{label}</span>
-        <span className={`wiki-link__bracket ${selected ? 'is-visible' : 'is-hidden'}`}>]]</span>
+        <span className={`${styles.bracket} ${selected ? styles['is-visible'] : styles['is-hidden']}`}>[[</span>
+        <span className={styles.text}>{label}</span>
+        <span className={`${styles.bracket} ${selected ? styles['is-visible'] : styles['is-hidden']}`}>]]</span>
       </span>
     </NodeViewWrapper>
   );

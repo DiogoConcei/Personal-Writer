@@ -6,7 +6,7 @@ import { FileNode } from '@/tauri-bridge';
 import { Search, FileText, FileImage, Type, LayoutGrid, PanelLeft, FolderOpen } from 'lucide-react';
 import styles from './CommandPalette.module.scss';
 
-type ResultItem = 
+type ResultItem =
   | { type: 'file'; node: FileNode; path: string; name: string }
   | { type: 'action'; id: string; name: string; icon: any; action: () => void };
 
@@ -16,7 +16,7 @@ export default function CommandPalette() {
   const { files, rootPath, setActiveFile, selectWorkspace } = useWorkspaceStore();
   const { isCommandPaletteOpen, setCommandPaletteOpen, toggleSidebar, setActivePanel, activePanel } = useUIStore();
   const { typography, setTypography } = useEditorStore();
-  
+
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,7 +30,6 @@ export default function CommandPalette() {
     }
   }, [isCommandPaletteOpen]);
 
-  // Handle Global Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'k' || e.key === 'f')) {
@@ -46,7 +45,6 @@ export default function CommandPalette() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCommandPaletteOpen, setCommandPaletteOpen]);
 
-  // Flatten files array
   const getAllFiles = (nodes: FileNode[]): { node: FileNode, path: string }[] => {
     let result: { node: FileNode, path: string }[] = [];
     nodes.forEach(node => {
@@ -103,7 +101,6 @@ export default function CommandPalette() {
     }
   };
 
-  // Scroll active item into view
   useEffect(() => {
     if (listRef.current) {
       const activeElement = listRef.current.children[selectedIndex] as HTMLElement;
@@ -129,7 +126,7 @@ export default function CommandPalette() {
             onKeyDown={handleKeyDown}
           />
         </div>
-        
+
         <div className={styles.list} ref={listRef}>
           {filteredItems.length === 0 ? (
             <div className={styles.empty}>Nenhum resultado encontrado.</div>
@@ -171,7 +168,7 @@ export default function CommandPalette() {
             })
           )}
         </div>
-        
+
         <div className={styles.footer}>
           <span><kbd>↑</kbd> <kbd>↓</kbd> para navegar</span>
           <span><kbd>↵</kbd> para selecionar</span>

@@ -15,7 +15,7 @@ export const PdfNode: React.FC<any> = ({ node }) => {
     e.stopPropagation();
     if (path) {
       setActivePdf(path);
-      // Abrir a sidebar se estiver fechada
+
       if (!isRightSidebarVisible) {
         toggleRightSidebar();
       }
@@ -24,7 +24,7 @@ export const PdfNode: React.FC<any> = ({ node }) => {
 
   return (
     <NodeViewWrapper className={styles.pdf_node}>
-      <div 
+      <div
         className={styles.pdf_node__card}
         onClick={handleClick}
         title={`Abrir ${name}`}

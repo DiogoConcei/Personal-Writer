@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 
-export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard' | 'assets' | 'documents';
+export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard' | 'assets' | 'documents' | 'drawing' | 'settings';
 
 export interface DragInfo {
   sourcePath: string | null;
   sourceName: string | null;
+  sourceNodePos: number | null;
   currentX: number;
   currentY: number;
   targetPath: string | null;
@@ -53,6 +54,7 @@ interface UIState {
 const INITIAL_DRAG: DragInfo = {
   sourcePath: null,
   sourceName: null,
+  sourceNodePos: null,
   currentX: 0,
   currentY: 0,
   targetPath: null,

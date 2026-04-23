@@ -2,3 +2,4 @@ export * from './types';
 export * from './fs';
 export * from './search';
 export * from './dictionary';
+export * from './plugins';

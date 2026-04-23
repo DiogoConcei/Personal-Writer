@@ -8,10 +8,12 @@ import MoodBoard from '@/features/dashboard/components/MoodBoard';
 import AssetGallery from '@/features/dashboard/components/AssetGallery';
 import DocumentGallery from '@/features/dashboard/components/DocumentGallery';
 import CharacterGallery from '@/features/dashboard/components/CharacterGallery';
+import { PluginManager } from '@/features/settings/components/PluginManager';
 import StatusBar from '@/features/editor/components/StatusBar';
 import ReferenceSidebar from '@/features/references/components/ReferenceSidebar';
 import CommandPalette from '@/features/search/components/CommandPalette';
 import { EntityPreview } from '@/features/editor/components/EntityPreview';
+const DrawingBoard = React.lazy(() => import('@/features/drawing/components/DrawingBoard'));
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
@@ -19,7 +21,7 @@ import { useReferenceStore } from '@/features/references/store/referenceStore';
 import { useUIStore } from '@/store/uiStore';
 import { ToastContainer } from '@/shared/components/Toast/ToastContainer';
 import { exportWorkspaceZip } from '@/tauri-bridge';
-import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon, Download, FileSearch, Images } from 'lucide-react';
+import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon, Download, FileSearch, Images, Pencil, Settings } from 'lucide-react';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
@@ -119,13 +121,17 @@ function App() {
         e.preventDefault();
         setActivePanel('editor');
       }
-      if (e.ctrlKey && e.key === 'a') {
+      if (e.ctrlKey && e.key === 'i') {
         e.preventDefault();
         setActivePanel('assets');
       }
       if (e.ctrlKey && e.key === 'q') {
         e.preventDefault();
         setActivePanel('documents');
+      }
+      if (e.ctrlKey && e.key === ',') {
+        e.preventDefault();
+        setActivePanel('settings');
       }
 
       if (e.ctrlKey && e.key === 's') {
@@ -168,15 +174,17 @@ function App() {
   };
 
   const renderBreadcrumb = () => {
-    if (activePanel === 'dashboard' || activePanel === 'gallery' || activePanel === 'moodboard' || activePanel === 'assets' || activePanel === 'documents') {
+    if (activePanel === 'dashboard' || activePanel === 'gallery' || activePanel === 'moodboard' || activePanel === 'assets' || activePanel === 'documents' || activePanel === 'drawing' || activePanel === 'settings') {
       const { dashboardFilterPath } = useWorkspaceStore.getState();
       let prefix = 'Dashboard';
       if (activePanel === 'gallery') prefix = 'Personagens';
       if (activePanel === 'moodboard') prefix = 'Mood Board';
       if (activePanel === 'assets') prefix = 'Galeria';
       if (activePanel === 'documents') prefix = 'Documentos';
+      if (activePanel === 'drawing') prefix = 'Desenho';
+      if (activePanel === 'settings') prefix = 'Plugin Manager';
 
-      if (!dashboardFilterPath || !rootPath || activePanel === 'moodboard' || activePanel === 'assets' || activePanel === 'documents') return <span>{prefix}</span>;
+      if (!dashboardFilterPath || !rootPath || activePanel === 'moodboard' || activePanel === 'assets' || activePanel === 'documents' || activePanel === 'drawing' || activePanel === 'settings') return <span>{prefix}</span>;
 
       const relativePath = dashboardFilterPath.replace(rootPath, '').replace(/^[\\/]/, '');
       const parts = relativePath.split(/[\\/]/);
@@ -300,7 +308,7 @@ function App() {
                 <button
                   className={`${styles.app__iconBtn} ${activePanel === 'assets' ? styles['app__iconBtn--active'] : ''}`}
                   onClick={() => setActivePanel('assets')}
-                  title="Galeria de Assets (Ctrl+A)"
+                  title="Galeria de Assets (Ctrl+I)"
                 >
                   <Images size={18} />
                 </button>
@@ -311,6 +319,22 @@ function App() {
                   title="Galeria de Documentos (Ctrl+Q)"
                 >
                   <FileSearch size={18} />
+                </button>
+
+                <button
+                  className={`${styles.app__iconBtn} ${activePanel === 'drawing' ? styles['app__iconBtn--active'] : ''}`}
+                  onClick={() => setActivePanel('drawing')}
+                  title="Desenho (Excalidraw)"
+                >
+                  <Pencil size={18} />
+                </button>
+
+                <button
+                  className={`${styles.app__iconBtn} ${activePanel === 'settings' ? styles['app__iconBtn--active'] : ''}`}
+                  onClick={() => setActivePanel('settings')}
+                  title="Configurações e Plugins (Ctrl+,)"
+                >
+                  <Settings size={18} />
                 </button>
               </div>
 
@@ -375,6 +399,10 @@ function App() {
             <AssetGallery />
           ) : activePanel === 'documents' ? (
             <DocumentGallery />
+          ) : activePanel === 'drawing' ? (
+            <DrawingBoard />
+          ) : activePanel === 'settings' ? (
+            <PluginManager />
           ) : activeFile ? (
             isImage ? <ImageViewer path={activeFile} /> : <Editor />
           ) : (

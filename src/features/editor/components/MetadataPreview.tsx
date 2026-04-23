@@ -19,7 +19,7 @@ export function MetadataPreview({ metadata, rootPath, noteName }: MetadataPrevie
       const relativePart = icon.replace('./', '');
       const separator = rootPath.includes('\\') ? '\\' : '/';
       const fullPath = `${rootPath}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
-      return <img src={convertFileSrc(fullPath)} className={styles.imageIcon} alt="Portrait" />;
+      return <img src={convertFileSrc(fullPath) || undefined} className={styles.imageIcon} alt="Portrait" />;
     }
     return <span className={styles.emojiIcon}>{icon}</span>;
   };

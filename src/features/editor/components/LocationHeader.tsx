@@ -188,7 +188,7 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
           <div className={styles.galleryScroll}>
             {metadata.images?.map((img, idx) => (
               <div key={idx} className={styles.galleryItem}>
-                <img src={resolveAssetPath(img, rootPath)} alt={`Location ${idx}`} />
+                <img src={resolveAssetPath(img, rootPath) || undefined} alt={`Location ${idx}`} />
                 {!readOnly && <button className={styles.removeImg} onClick={() => removeImage(img)}><X size={14} /></button>}
               </div>
             ))}
@@ -246,7 +246,7 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
             <div className={styles.audioPlayer}>
               <audio
                 ref={audioRef}
-                src={resolveAssetPath(metadata.music, rootPath)}
+                src={resolveAssetPath(metadata.music, rootPath) || undefined}
                 onTimeUpdate={onTimeUpdate}
                 onEnded={() => setIsPlaying(false)}
               />

@@ -9,6 +9,7 @@ import AssetGallery from '@/features/dashboard/components/AssetGallery';
 import DocumentGallery from '@/features/dashboard/components/DocumentGallery';
 import CharacterGallery from '@/features/dashboard/components/CharacterGallery';
 import { PluginManager } from '@/features/settings/components/PluginManager';
+import { PluginPlaceholder } from '@/features/settings/components/PluginPlaceholder';
 import StatusBar from '@/features/editor/components/StatusBar';
 import ReferenceSidebar from '@/features/references/components/ReferenceSidebar';
 import CommandPalette from '@/features/search/components/CommandPalette';
@@ -19,6 +20,7 @@ import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { useReferenceStore } from '@/features/references/store/referenceStore';
 import { useUIStore } from '@/store/uiStore';
+import { usePluginStore } from '@/features/settings/store/pluginStore';
 import { ToastContainer } from '@/shared/components/Toast/ToastContainer';
 import { exportWorkspaceZip } from '@/tauri-bridge';
 import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon, Download, FileSearch, Images, Pencil, Settings } from 'lucide-react';
@@ -51,6 +53,12 @@ function App() {
     setPreview,
     addNotification
   } = useUIStore();
+
+  const { plugins } = usePluginStore();
+  const isMoodBoardEnabled = plugins.find(p => p.id === 'infinite-canvas')?.status === 'enabled';
+  const isDrawingEnabled = plugins.find(p => p.id === 'drawing-board')?.status === 'enabled';
+  const isDashboardEnabled = plugins.find(p => p.id === 'universe-dashboard')?.status === 'enabled';
+  const isGalleryEnabled = plugins.find(p => p.id === 'character-gallery')?.status === 'enabled';
 
   const [rightSidebarWidth, setRightSidebarWidth] = React.useState(300);
   const isResizing = React.useRef(false);
@@ -107,15 +115,27 @@ function App() {
 
       if (e.ctrlKey && e.key === 'd') {
         e.preventDefault();
-        setActivePanel('dashboard');
+        if (isDashboardEnabled) {
+          setActivePanel('dashboard');
+        } else {
+          addNotification('Plugin "Dashboard" não está ativado.', 'info');
+        }
       }
       if (e.ctrlKey && e.key === 'g') {
         e.preventDefault();
-        setActivePanel('gallery');
+        if (isGalleryEnabled) {
+          setActivePanel('gallery');
+        } else {
+          addNotification('Plugin "Galeria de Personagens" não está ativado.', 'info');
+        }
       }
       if (e.ctrlKey && e.key === 'm') {
         e.preventDefault();
-        setActivePanel('moodboard');
+        if (isMoodBoardEnabled) {
+          setActivePanel('moodboard');
+        } else {
+          addNotification('Plugin "Infinite Canvas" não está ativado.', 'info');
+        }
       }
       if (e.ctrlKey && e.key === 'e') {
         e.preventDefault();
@@ -323,8 +343,9 @@ function App() {
 
                 <button
                   className={`${styles.app__iconBtn} ${activePanel === 'drawing' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => setActivePanel('drawing')}
+                  onClick={() => isDrawingEnabled ? setActivePanel('drawing') : addNotification('Plugin de Desenho não ativado.', 'info')}
                   title="Desenho (Excalidraw)"
+                  style={{ opacity: isDrawingEnabled ? 1 : 0.4 }}
                 >
                   <Pencil size={18} />
                 </button>
@@ -356,22 +377,25 @@ function App() {
                 </button>
                 <button
                   className={`${styles.app__iconBtn} ${activePanel === 'dashboard' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => setActivePanel('dashboard')}
+                  onClick={() => isDashboardEnabled ? setActivePanel('dashboard') : addNotification('Plugin Dashboard não ativado.', 'info')}
                   title="Dashboard (Ctrl+D)"
+                  style={{ opacity: isDashboardEnabled ? 1 : 0.4 }}
                 >
                   <LayoutGrid size={18} />
                 </button>
                 <button
                   className={`${styles.app__iconBtn} ${activePanel === 'gallery' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => setActivePanel('gallery')}
+                  onClick={() => isGalleryEnabled ? setActivePanel('gallery') : addNotification('Plugin Galeria não ativado.', 'info')}
                   title="Galeria de Personagens (Ctrl+G)"
+                  style={{ opacity: isGalleryEnabled ? 1 : 0.4 }}
                 >
                   <Users size={18} />
                 </button>
                 <button
                   className={`${styles.app__iconBtn} ${activePanel === 'moodboard' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => setActivePanel('moodboard')}
+                  onClick={() => isMoodBoardEnabled ? setActivePanel('moodboard') : addNotification('Plugin Infinite Canvas não ativado.', 'info')}
                   title="Mood Board Espacial (Ctrl+M)"
+                  style={{ opacity: isMoodBoardEnabled ? 1 : 0.4 }}
                 >
                   <ImageIcon size={18} />
                 </button>
@@ -390,17 +414,17 @@ function App() {
 
         <div className={styles.app__content}>
           {activePanel === 'dashboard' ? (
-            <Dashboard />
+            isDashboardEnabled ? <Dashboard /> : <PluginPlaceholder name="Dashboard & Timeline" id="universe-dashboard" />
           ) : activePanel === 'gallery' ? (
-            <CharacterGallery />
+            isGalleryEnabled ? <CharacterGallery /> : <PluginPlaceholder name="Galeria de Personagens" id="character-gallery" />
           ) : activePanel === 'moodboard' ? (
-            <MoodBoard />
+            isMoodBoardEnabled ? <MoodBoard /> : <PluginPlaceholder name="Infinite Canvas" id="infinite-canvas" />
           ) : activePanel === 'assets' ? (
             <AssetGallery />
           ) : activePanel === 'documents' ? (
             <DocumentGallery />
           ) : activePanel === 'drawing' ? (
-            <DrawingBoard />
+            isDrawingEnabled ? <DrawingBoard /> : <PluginPlaceholder name="Desenho" id="drawing-board" />
           ) : activePanel === 'settings' ? (
             <PluginManager />
           ) : activeFile ? (

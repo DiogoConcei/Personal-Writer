@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
@@ -7,16 +7,39 @@ import styles from './CharacterGallery.module.scss';
 import { Search, Filter, User, X } from 'lucide-react';
 
 export default function CharacterGallery() {
-  const { entities, isIndexing } = useUniverseStore();
+  const { entities, isIndexing, galleryTitle, updateGalleryTitle, loadSettings } = useUniverseStore();
   const { setActiveFile, rootPath } = useWorkspaceStore();
   const { setActivePanel, setPreview } = useUIStore();
 
   const [search, setSearch] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+  const [localTitle, setLocalTitle] = useState(galleryTitle);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  useEffect(() => {
+    setLocalTitle(galleryTitle);
+  }, [galleryTitle]);
 
   const characters = useMemo(() => {
     return Object.values(entities).filter(e => e.type === 'character');
   }, [entities]);
+
+  const handleTitleBlur = () => {
+    if (localTitle.trim() && localTitle !== galleryTitle) {
+      updateGalleryTitle(localTitle.trim());
+    } else {
+      setLocalTitle(galleryTitle);
+    }
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  };
 
   const filterKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -80,7 +103,18 @@ export default function CharacterGallery() {
       <header className={styles.header}>
         <div className={styles.header__title}>
           <User size={24} />
-          <h1>Elenco do Universo <span>({filteredCharacters.length})</span></h1>
+          <div className={styles.titleWrapper}>
+            <input
+              className={styles.titleInput}
+              value={localTitle}
+              onChange={(e) => setLocalTitle(e.target.value)}
+              onBlur={handleTitleBlur}
+              onKeyDown={handleTitleKeyDown}
+              placeholder="Nome da galeria..."
+              spellCheck={false}
+            />
+            <span className={styles.countBadge}>{filteredCharacters.length}</span>
+          </div>
         </div>
 
         <div className={styles.controls}>
@@ -136,7 +170,7 @@ export default function CharacterGallery() {
             >
               <div className={styles.card__imageWrapper}>
                 {imageUrl ? (
-                  <img src={imageUrl} alt={char.name} className={styles.card__image} />
+                  <img src={imageUrl || undefined} alt={char.name} className={styles.card__image} />
                 ) : (
                   <div className={styles.card__placeholder}>
                     {isEmoji ? <span>{char.icon}</span> : <User size={48} />}

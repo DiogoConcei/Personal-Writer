@@ -42,7 +42,7 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
   const extension = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')) : '';
   const nameWithoutExt = fileName.replace(extension, '');
 
-  const imgSrc = convertFileSrc(path);
+  const imgSrc = convertFileSrc(path) || undefined;
 
   useEffect(() => {
     const handleFullscreenChange = () => {

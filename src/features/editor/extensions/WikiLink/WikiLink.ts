@@ -46,6 +46,71 @@ export const WikiLink = Node.create<WikiLinkOptions>({
     return ['span', mergeAttributes({ 'data-type': 'wiki-link' }, HTMLAttributes, { 'data-label': node.attrs.label })];
   },
 
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: any, node: any) {
+          state.write(`[[${node.attrs.label}]]`);
+        },
+        parse: {
+          setup(markdownit: any) {
+            // Regra para [[WikiLink]] original - Definida primeiro
+            markdownit.inline.ruler.before('link', 'wiki_link', (state: any, silent: boolean) => {
+              const start = state.pos;
+              if (state.src.charCodeAt(start) !== 0x5B /* [ */ || state.src.charCodeAt(start + 1) !== 0x5B /* [ */) {
+                return false;
+              }
+
+              const match = state.src.slice(start).match(/^\[\[([^\]]+)\]\]/);
+              if (!match) return false;
+
+              if (!silent) {
+                const token = state.push('wiki_link_open', 'span', 1);
+                token.attrs = [['data-label', match[1]], ['data-type', 'wiki-link']];
+                
+                const textToken = state.push('text', '', 0);
+                textToken.content = match[1];
+                
+                state.push('wiki_link_close', 'span', -1);
+              }
+
+              state.pos += match[0].length;
+              return true;
+            });
+
+            // Regra para ![[imagem.png]] (Embed de Imagem do Obsidian) - Inserida antes da wiki_link
+            markdownit.inline.ruler.before('wiki_link', 'obsidian_image', (state: any, silent: boolean) => {
+              const start = state.pos;
+              if (
+                state.src.charCodeAt(start) !== 0x21 /* ! */ ||
+                state.src.charCodeAt(start + 1) !== 0x5B /* [ */ ||
+                state.src.charCodeAt(start + 2) !== 0x5B /* [ */
+              ) {
+                return false;
+              }
+
+              const match = state.src.slice(start).match(/^!\[\[([^\]]+)\]\]/);
+              if (!match) return false;
+
+              if (!silent) {
+                const token = state.push('image', 'img', 0);
+                token.attrs = [
+                  ['src', match[1]],
+                  ['alt', match[1]],
+                ];
+                token.children = []; // Necessário para alguns renderers
+                token.content = '';  // Resolve o erro de .length no renderInlineAsText
+              }
+
+              state.pos += match[0].length;
+              return true;
+            });
+          },
+        }
+      }
+    };
+  },
+
   addNodeView() {
     return ReactNodeViewRenderer(WikiLinkNode);
   },

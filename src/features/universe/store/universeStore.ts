@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { readFile, writeFile, FileNode } from '@/tauri-bridge';
+import { readFile, writeFile, FileNode, exists } from '@/tauri-bridge';
 import { Metadata, parseMarkdownMetadata, stringifyYAML } from '@/features/editor/store/metadataParser';
+import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 
 export interface Entity extends Metadata {
   path: string;
@@ -11,10 +12,15 @@ export interface Entity extends Metadata {
   previewImage?: string;
 }
 
+interface UniverseSettings {
+  galleryTitle?: string;
+}
+
 interface UniverseState {
   entities: Record<string, Entity>;
   isIndexing: boolean;
   lastIndexed: number | null;
+  galleryTitle: string;
 
   indexWorkspace: (files: FileNode[]) => Promise<void>;
   updateEntity: (path: string, content: string, lastModified?: number) => void;
@@ -22,12 +28,64 @@ interface UniverseState {
   clearIndex: () => void;
   getBacklinks: (targetPath: string) => Entity[];
   updateEntitiesOrder: (paths: string[]) => Promise<void>;
+  
+  // Configurações do Universo
+  loadSettings: () => Promise<void>;
+  updateGalleryTitle: (title: string) => Promise<void>;
 }
+
+const SETTINGS_FILE = '.universe.json';
 
 export const useUniverseStore = create<UniverseState>((set, get) => ({
   entities: {},
   isIndexing: false,
   lastIndexed: null,
+  galleryTitle: 'Elenco do Universo',
+
+  loadSettings: async () => {
+    const { rootPath } = useWorkspaceStore.getState();
+    if (!rootPath) return;
+
+    try {
+      const separator = rootPath.includes('\\') ? '\\' : '/';
+      const configPath = `${rootPath}${separator}${SETTINGS_FILE}`;
+
+      const fileExists = await exists(configPath);
+      if (fileExists) {
+        const content = await readFile(configPath);
+        const settings: UniverseSettings = JSON.parse(content);
+        if (settings.galleryTitle) {
+          set({ galleryTitle: settings.galleryTitle });
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar configurações do universo:', err);
+    }
+  },
+
+  updateGalleryTitle: async (title: string) => {
+    set({ galleryTitle: title });
+    
+    const { rootPath } = useWorkspaceStore.getState();
+    if (!rootPath) return;
+
+    try {
+      const separator = rootPath.includes('\\') ? '\\' : '/';
+      const configPath = `${rootPath}${separator}${SETTINGS_FILE}`;
+      
+      let currentSettings: UniverseSettings = {};
+      const fileExists = await exists(configPath);
+      if (fileExists) {
+        const content = await readFile(configPath);
+        currentSettings = JSON.parse(content);
+      }
+
+      currentSettings.galleryTitle = title;
+      await writeFile(configPath, JSON.stringify(currentSettings, null, 2));
+    } catch (err) {
+      console.error('Erro ao salvar título da galeria:', err);
+    }
+  },
 
   getBacklinks: (targetPath: string) => {
     const { entities } = get();

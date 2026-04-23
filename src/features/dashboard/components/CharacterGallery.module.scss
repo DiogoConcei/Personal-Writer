@@ -19,21 +19,57 @@
     align-items: center;
     gap: var(--spacing-sm);
     color: var(--color-accent);
-
-    h1 {
-      font-size: var(--font-size-xl);
-      font-weight: 700;
-      margin: 0;
-      color: var(--color-text-primary);
-
-      span {
-        font-size: var(--font-size-sm);
-        font-weight: 400;
-        color: var(--color-text-muted);
-        margin-left: var(--spacing-xs);
-      }
-    }
   }
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+.titleInput {
+  background: transparent;
+  border: none;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  padding: 0;
+  margin: 0;
+  outline: none;
+  width: auto;
+  min-width: 50px;
+  max-width: 600px;
+  transition: var(--transition-normal);
+  border-bottom: 2px solid transparent;
+
+  &:hover {
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--spacing-xs);
+  }
+
+  &:focus {
+    border-bottom-color: var(--color-accent);
+    background: transparent;
+    padding: 0;
+  }
+
+  &::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.5;
+  }
+}
+
+.countBadge {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-bg-surface);
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
 }
 
 .controls {

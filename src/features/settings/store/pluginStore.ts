@@ -59,11 +59,38 @@ const INITIAL_PLUGINS: PluginMetadata[] = [
   {
     id: 'infinite-canvas',
     title: 'Infinite Canvas / Mood Board',
-    description: 'Quadro branco espacial estilo Excalidraw integrado.',
+    description: 'Quadro branco espacial integrado (estilo Miro/Obsidian Canvas).',
     version: '1.0.0',
     category: 'Design',
     level: 3,
     status: 'not-installed',
+  },
+  {
+    id: 'drawing-board',
+    title: 'Desenho (Excalidraw)',
+    description: 'Ferramenta de desenho vetorial com estética de quadro branco.',
+    version: '1.0.0',
+    category: 'Design',
+    level: 2,
+    status: 'not-installed',
+  },
+  {
+    id: 'universe-dashboard',
+    title: 'Dashboard & Timeline',
+    description: 'Visão geral do projeto, estatísticas e linha do tempo dos eventos.',
+    version: '1.0.0',
+    category: 'Writer',
+    level: 2,
+    status: 'enabled', // Mantido ativado por padrão para não quebrar a experiência inicial
+  },
+  {
+    id: 'character-gallery',
+    title: 'Galeria de Personagens',
+    description: 'Gerenciador visual de personagens, locais e itens do universo.',
+    version: '1.0.0',
+    category: 'Writer',
+    level: 2,
+    status: 'enabled',
   }
 ];
 

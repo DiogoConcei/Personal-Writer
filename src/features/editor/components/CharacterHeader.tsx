@@ -91,7 +91,7 @@ export function CharacterHeader({ metadata: propMetadata, readOnly }: CharacterH
 
     const isPath = icon.includes('/') || icon.includes('\\') || icon.includes('.');
     if (isPath) {
-      return <img src={resolveAssetPath(icon, rootPath)} className={styles.imageIcon} alt="Portrait" />;
+      return <img src={resolveAssetPath(icon, rootPath) || undefined} className={styles.imageIcon} alt="Portrait" />;
     }
     return <span className={styles.emojiIcon}>{icon}</span>;
   };

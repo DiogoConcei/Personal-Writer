@@ -49,7 +49,7 @@ export default function NoteCard({ entity }: NoteCardProps) {
         const fullPath = `${rootPath}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
         iconSrc = convertFileSrc(fullPath);
       }
-      return <img src={iconSrc} className={styles.card__imageIcon} alt="Preview" />;
+      return <img src={iconSrc || undefined} className={styles.card__imageIcon} alt="Preview" />;
     }
 
     return <span className={styles.card__emojiIcon}>{iconToRender}</span>;

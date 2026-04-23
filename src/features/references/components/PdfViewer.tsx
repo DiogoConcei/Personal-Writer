@@ -61,6 +61,30 @@ export const PdfViewer: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Evita disparar se o usuário estiver digitando em um input ou textarea
+      if (
+        e.target instanceof HTMLInputElement || 
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        changePage(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        changePage(1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [numPages, activePdfPath]); // Adicionado dependências para garantir o estado correto
+
   if (!activePdfPath) return null;
 
   return (

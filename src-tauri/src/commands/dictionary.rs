@@ -272,12 +272,11 @@ pub async fn check_spelling(
                 let is_word_char = c.is_alphabetic() || c == '-' || c == '\'';
 
                 if is_word_char {
-                    if start_idx.is_none() {
+                    if start_idx.is_none()
 
-                        if c.is_alphabetic() {
+                        && c.is_alphabetic() {
                             start_idx = Some(i);
                         }
-                    }
                 } else if let Some(start) = start_idx {
                     process_word(&text, start, i, engine, &mut errors);
                     start_idx = None;

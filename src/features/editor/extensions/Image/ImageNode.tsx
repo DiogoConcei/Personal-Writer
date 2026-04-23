@@ -2,24 +2,101 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import styles from './ImageNode.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
+import { useUIStore } from '@/store/uiStore';
 import { Maximize2, AlignLeft, AlignRight, AlignCenter, StretchVertical, ImageOff } from 'lucide-react';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
-export default function ImageNode({ node, updateAttributes, selected }: NodeViewProps) {
+export default function ImageNode({ node, updateAttributes, selected, getPos, editor }: NodeViewProps) {
   const { rootPath } = useWorkspaceStore();
+  const { setDragInfo } = useUIStore();
   const [isResizing, setIsResizing] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [resolvedSrc, setResolvedSrc] = useState<string | undefined>(undefined);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  let src = node.attrs.src;
-  if (src.startsWith('./')) {
-    const relativePart = src.replace('./', '');
-    const separator = rootPath?.includes('\\') ? '\\' : '/';
-    const fullPath = `${rootPath}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
-    src = convertFileSrc(fullPath);
-  }
+  // Efeito para resolver o caminho da imagem (suporta caminhos relativos e nomes de arquivo estilo Obsidian)
+  useEffect(() => {
+    const resolve = async () => {
+      let currentSrc = node.attrs.src;
+      if (!currentSrc) return;
+
+      // 1. Caminho Externo (http)
+      if (currentSrc.startsWith('http')) {
+        setResolvedSrc(currentSrc);
+        return;
+      }
+
+      // 2. Caminho Relativo Padrão (./)
+      if (currentSrc.startsWith('./')) {
+        const relativePart = currentSrc.replace('./', '');
+        const separator = rootPath?.includes('\\') ? '\\' : '/';
+        const fullPath = `${rootPath}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
+        setResolvedSrc(convertFileSrc(fullPath));
+        return;
+      }
+
+      // 3. Caminho Absoluto
+      const isAbsolute = /^[a-zA-Z]:[\\/]/.test(currentSrc) || currentSrc.startsWith('/');
+      if (isAbsolute) {
+        setResolvedSrc(convertFileSrc(currentSrc));
+        return;
+      }
+
+      // 4. Nome de Arquivo Solto (Padrão Obsidian ![[imagem.png]])
+      // Buscamos em todo o workspace se o nome do arquivo bate
+      if (rootPath) {
+        try {
+          const { scanWorkspaceImages } = await import('@/tauri-bridge/fs');
+          const allImages = await scanWorkspaceImages(rootPath);
+          
+          // Tenta encontrar uma imagem cujo nome ou caminho final coincida com o src
+          const found = allImages.find(img => 
+            img.name === currentSrc || 
+            img.path.endsWith('/' + currentSrc) || 
+            img.path.endsWith('\\' + currentSrc)
+          );
+
+          if (found) {
+            setResolvedSrc(convertFileSrc(found.full_path));
+            setHasError(false);
+          } else {
+            setHasError(true);
+          }
+        } catch (err) {
+          console.error('Erro ao resolver imagem Obsidian:', err);
+          setHasError(true);
+        }
+      }
+    };
+
+    resolve();
+  }, [node.attrs.src, rootPath]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Ignora se for resize ou botões da toolbar
+    if (e.button !== 0 || (e.target as HTMLElement).closest('button, .handle')) return;
+    
+    e.preventDefault();
+    const pos = getPos();
+
+    if (typeof pos === 'number') {
+      editor.commands.setNodeSelection(pos);
+    }
+    
+    setDragInfo({
+      sourcePath: node.attrs.src, // Mantemos o src como referência
+      sourceName: 'Imagem',
+      sourceNodePos: pos,
+      startX: e.clientX,
+      startY: e.clientY,
+      startTime: Date.now(),
+      isDragging: false,
+      currentX: e.clientX,
+      currentY: e.clientY
+    });
+  };
 
   const onResizeStart = (direction: 'tl' | 'tr' | 'bl' | 'br', event: React.MouseEvent) => {
     event.preventDefault();
@@ -77,6 +154,7 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
         ${styles[`wrapper--layout-${node.attrs.layout}`]}
         ${selected ? styles['wrapper--selected'] : ''}
       `}
+      onMouseDown={handleMouseDown}
     >
       <span 
         className={styles.imageContainer}
@@ -87,11 +165,12 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
         {hasError ? (
           <span className={styles.errorPlaceholder}>
             <ImageOff size={20} />
+            <span className={styles.errorText}>{node.attrs.src}</span>
           </span>
         ) : (
           <img 
             ref={imgRef}
-            src={src} 
+            src={resolvedSrc} 
             alt={node.attrs.alt} 
             className={styles.image}
             onDoubleClick={() => setIsFullscreen(true)}
@@ -149,7 +228,7 @@ export default function ImageNode({ node, updateAttributes, selected }: NodeView
 
       {isFullscreen && (
         <span className={styles.fullscreenOverlay} onClick={() => setIsFullscreen(false)}>
-          <img src={src} alt={node.attrs.alt} onClick={(e) => e.stopPropagation()} />
+          <img src={resolvedSrc} alt={node.attrs.alt} onClick={(e) => e.stopPropagation()} />
           <button className={styles.fullscreenClose} onClick={() => setIsFullscreen(false)}>×</button>
         </span>
       )}

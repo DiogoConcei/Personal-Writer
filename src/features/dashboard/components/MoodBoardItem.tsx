@@ -7,10 +7,9 @@ import styles from './MoodBoard.module.scss';
 
 interface Props {
   item: IMoodBoardItem;
-  containerRef: React.RefObject<HTMLDivElement>;
 }
 
-export const MoodBoardItem: React.FC<Props> = ({ item, containerRef }) => {
+export const MoodBoardItem: React.FC<Props> = ({ item }) => {
   const { rootPath } = useWorkspaceStore();
   const { updateItem, removeItem, bringToFront, saveBoard } = useMoodBoardStore();
   const [isDragging, setIsDragging] = useState(false);
@@ -77,7 +76,7 @@ export const MoodBoardItem: React.FC<Props> = ({ item, containerRef }) => {
       onMouseDown={handleMouseDown}
     >
       <img 
-        src={resolveAssetPath(item.path, rootPath)} 
+        src={resolveAssetPath(item.path, rootPath) || undefined} 
         alt="Mood item" 
         draggable={false}
       />

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useGalleryStore, GalleryCollection } from '../store/galleryStore';
-import { listDirectory, resolveAssetPath, ImageAsset, copyImageToAssets } from '@/tauri-bridge/fs';
+import { resolveAssetPath, ImageAsset, copyImageToAssets, scanWorkspaceImages } from '@/tauri-bridge/fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import ImageViewer from '@/features/editor/components/ImageViewer';
@@ -10,8 +10,8 @@ import InputModal from '@/shared/components/Modal/InputModal';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
 import styles from './AssetGallery.module.scss';
 import {
-  Image as ImageIcon, Search, RefreshCw, FolderPlus,
-  CheckSquare, X, Folder, Upload, ImagePlus,
+  Search, RefreshCw, FolderPlus,
+  CheckSquare, Folder, Upload, ImagePlus,
   Edit2, Trash2, Layers, MoreHorizontal, ChevronRight
 } from 'lucide-react';
 
@@ -31,8 +31,7 @@ export default function AssetGallery() {
     createCollection,
     updateCollection,
     deleteCollection,
-    addToCollection,
-    isLoading: isStoreLoading
+    addToCollection
   } = useGalleryStore();
 
   const [images, setImages] = useState<ImageAsset[]>([]);
@@ -63,28 +62,14 @@ export default function AssetGallery() {
     if (!rootPath) return;
     setIsLoading(true);
     try {
-      const separator = rootPath.includes('\\') ? '\\' : '/';
-      const assetsPath = `${rootPath}${separator}assets`;
-      const scanFolder = async (path: string): Promise<ImageAsset[]> => {
-        const entries = await listDirectory(path);
-        let results: ImageAsset[] = [];
-        for (const entry of entries) {
-          if (entry.is_dir) {
-            results = [...results, ...await scanFolder(entry.path)];
-          } else {
-            if (IMAGE_EXTENSIONS.some(ext => entry.name.toLowerCase().endsWith(ext))) {
-              results.push({
-                name: entry.name,
-                path: entry.path.replace(rootPath, '').replace(/^[\\/]/, './').replace(/\\/g, '/'),
-                full_path: entry.path
-              });
-            }
-          }
-        }
-        return results;
-      };
-      setImages(await scanFolder(assetsPath));
-    } catch (err) { console.error(err); } finally { setIsLoading(false); }
+      const scannedImages = await scanWorkspaceImages(rootPath);
+      setImages(scannedImages);
+    } catch (err) {
+      console.error('Erro ao escanear imagens:', err);
+      addNotification('Erro ao carregar galeria', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -197,7 +182,7 @@ export default function AssetGallery() {
     }
   };
 
-  const handleMouseUp = async (e: MouseEvent) => {
+  const handleMouseUp = async () => {
     window.removeEventListener('mousemove', handleMouseMove);
     window.removeEventListener('mouseup', handleMouseUp);
     document.body.classList.remove('is-dragging');
@@ -357,9 +342,9 @@ export default function AssetGallery() {
               <div className={styles.folderCard__previews}>
                 {col.images.length > 0 ? (
                   <div className={styles.folderCard__heroLayout}>
-                    <div className={styles.folderCard__hero}><img src={resolveAssetPath(col.images[0], rootPath)} alt="" /></div>
+                    <div className={styles.folderCard__hero}><img src={resolveAssetPath(col.images[0], rootPath) || undefined} alt="" /></div>
                     <div className={styles.folderCard__sidebar}>
-                      {col.images.slice(1, 4).map((p, i) => <div key={i} className={styles.folderCard__sideItem}><img src={resolveAssetPath(p, rootPath)} alt="" /></div>)}
+                      {col.images.slice(1, 4).map((p, i) => <div key={i} className={styles.folderCard__sideItem}><img src={resolveAssetPath(p, rootPath) || undefined} alt="" /></div>)}
                       {col.images.length > 4 && <div className={styles.folderCard__more}><MoreHorizontal size={16} /></div>}
                     </div>
                   </div>
@@ -376,12 +361,12 @@ export default function AssetGallery() {
           ))}
           {filteredImages.map((img, i) => (
             <div key={img.full_path} data-drag-type="image" data-drag-id={img.path} onMouseDown={(e) => handleMouseDown(e, img)} onDragStart={(e) => e.preventDefault()} className={`${styles.card} ${selectedPaths.includes(img.path) ? styles['card--selected'] : ''} ${draggedItemState?.path === img.path ? styles['card--dragging'] : ''} ${dropTarget?.id === img.path ? styles['card--dragOver'] : ''}`} style={{ '--delay': `${i * 0.02}s` } as any} onClick={() => { if (isDraggingRef.current || processingDrop.current) return; if (isSelectionMode) { setSelectedPaths(prev => prev.includes(img.path) ? prev.filter(p => p !== img.path) : [...prev, img.path]); } else { setActiveImage(img.full_path); } }}>
-              <div className={styles.card__preview}><img src={resolveAssetPath(img.path, rootPath)} alt={img.name} loading="lazy" onDragStart={(e) => e.preventDefault()} /></div>
+              <div className={styles.card__preview}><img src={resolveAssetPath(img.path, rootPath) || undefined} alt={img.name} loading="lazy" onDragStart={(e) => e.preventDefault()} /></div>
               <div className={styles.card__overlay}><span className={styles.card__name}>{img.name}</span></div>
             </div>
           ))}
         </div>
-        {isDraggingState && draggedItemState && <div className={styles.dragGhost} style={{ left: dragPosition.x, top: dragPosition.y }}><div className={styles.dragGhost__stack}><img src={resolveAssetPath(draggedItemState.path, rootPath)} alt="" />{selectedPaths.length > 1 && <div className={styles.dragGhost__count}><Layers size={14} /> {selectedPaths.length}</div>}</div>{dropTarget && <div className={styles.dragGhost__label}>{dropTarget.type === 'folder' ? 'Adicionar à pasta' : 'Criar nova pasta'}</div>}</div>}
+        {isDraggingState && draggedItemState && <div className={styles.dragGhost} style={{ left: dragPosition.x, top: dragPosition.y }}><div className={styles.dragGhost__stack}><img src={resolveAssetPath(draggedItemState.path, rootPath) || undefined} alt="" />{selectedPaths.length > 1 && <div className={styles.dragGhost__count}><Layers size={14} /> {selectedPaths.length}</div>}</div>{dropTarget && <div className={styles.dragGhost__label}>{dropTarget.type === 'folder' ? 'Adicionar à pasta' : 'Criar nova pasta'}</div>}</div>}
       </div>
 
       {isSelectionMode && selectedPaths.length > 0 && <div className={styles.selectionBar}><span>{selectedPaths.length} itens selecionados</span><div className={styles.actions}><button className={styles.btn} onClick={() => { setSelectedPaths([]); if (isPickingExisting) setIsPickingExisting(false); }}>Cancelar</button>{isPickingExisting && activeCollection ? <button className={`${styles.btn} ${styles['btn--primary']}`} onClick={async () => { await addToCollection(activeCollection.id, selectedPaths); setIsPickingExisting(false); setIsSelectionMode(false); setSelectedPaths([]); }}>Confirmar Adição</button> : <button className={`${styles.btn} ${styles['btn--primary']}`} onClick={() => { setPendingCollectionImages(selectedPaths); setInputModalOpen('create'); setIsInputModalOpen(true); }}><FolderPlus size={16} /> Criar Pasta</button>}</div></div>}
@@ -393,7 +378,7 @@ export default function AssetGallery() {
         title={inputModalMode === 'create' ? "Nova Pasta" : "Renomear Pasta"}
         placeholder="Dê um nome para sua coleção..."
         confirmLabel={inputModalMode === 'create' ? "Criar Pasta" : "Renomear"}
-        initialValue={inputModalMode === 'rename' ? (collections.find(c => c.id === collectionToRename || c.id === activeCollection?.id)?.name || "") : ""}
+        defaultValue={inputModalMode === 'rename' ? (collections.find(c => c.id === collectionToRename || c.id === activeCollection?.id)?.name || "") : ""}
       />
       <ConfirmModal isOpen={!!collectionToDelete} onClose={() => setCollectionToDelete(null)} onConfirm={() => collectionToDelete && handleDeleteCollection(collectionToDelete)} title="Excluir Pasta" message="Tem certeza que deseja excluir esta pasta? As imagens originais não serão apagadas." variant="danger" confirmLabel="Excluir" />
     </div>

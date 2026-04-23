@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent, ReactRenderer } from '@tiptap/react';
+import { Markdown } from 'tiptap-markdown';
 import StarterKit from '@tiptap/starter-kit';
 import BubbleMenu from '@tiptap/extension-bubble-menu';
 import tippy from 'tippy.js';
@@ -14,6 +15,8 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { MetadataHeader } from './MetadataHeader';
 import { useEditorStore } from '../store/editorStore';
+import { usePluginStore } from '@/features/settings/store/pluginStore';
+import { getMathExtension } from '../extensions/MathExtension';
 import { parseMarkdownMetadata } from '../store/metadataParser';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
@@ -38,6 +41,8 @@ import { useUIStore as useGlobalUIStore } from '@/store/uiStore';
 
 export default function Editor() {
   const { activeFile, rootPath } = useWorkspaceStore();
+  const { plugins } = usePluginStore();
+  const isMathEnabled = plugins.find(p => p.id === 'latex-math')?.status === 'enabled';
   const [showHistory, setShowHistory] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
@@ -81,11 +86,17 @@ export default function Editor() {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      Markdown.configure({
+        html: true,
+        tightLists: true,
+        linkify: true,
+      }),
       BubbleMenu,
       TextStyle,
       FontFamily,
       FontSize,
       Spelling.configure({ debounce: 150 }),
+      isMathEnabled ? getMathExtension() : null,
       WikiLink.configure({
         onLinkClick: (noteName: string) => {
           const findFile = (nodeList: any[]): any => {
@@ -164,11 +175,12 @@ export default function Editor() {
           },
         },
       }),
-    ],
+    ].filter(Boolean) as any,
     content: '',
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      setMarkdownContent(html);
+      // @ts-ignore
+      const markdown = editor.storage.markdown.getMarkdown();
+      setMarkdownContent(markdown);
       const text = editor.getText();
       const words = text.trim() ? text.trim().split(/\s+/).length : 0;
       setWordCount(words);
@@ -211,12 +223,6 @@ export default function Editor() {
         }
         return false;
       },
-      handleDrop: (_view, event) => {
-
-        event.preventDefault();
-        event.stopPropagation();
-        return true;
-      },
     },
   }, [rootPath]);
 
@@ -242,13 +248,14 @@ export default function Editor() {
     let unlistenFn: (() => void) | undefined;
 
     const handleGlobalDrag = (e: DragEvent) => {
+      // KI-034: Prevenir apenas dragenter/dragover para evitar Shell Overlay
+      // Mas PERMITIR o drop para que o Tauri Native o capture
       e.preventDefault();
       e.stopPropagation();
     };
 
     window.addEventListener('dragenter', handleGlobalDrag);
     window.addEventListener('dragover', handleGlobalDrag);
-    window.addEventListener('drop', handleGlobalDrag);
 
     const setupDragDrop = async () => {
       try {
@@ -256,7 +263,8 @@ export default function Editor() {
           if (!isMounted) return;
           if (event.payload.type === 'drop') {
             const paths = event.payload.paths;
-            if (!paths || paths.length === 0 || !rootPath || !editor) return;
+            const currentEditor = editor; // Captura o editor atual estável
+            if (!paths || paths.length === 0 || !rootPath || !currentEditor) return;
 
             for (const path of paths) {
               const isImage = IMAGE_EXTENSIONS.some(ext => path.toLowerCase().endsWith(ext));
@@ -265,8 +273,8 @@ export default function Editor() {
               if (isImage || isPdf) {
                 const x = event.payload.position?.x || window.innerWidth / 2;
                 const y = event.payload.position?.y || window.innerHeight / 2;
-                const coordinates = editor.view.posAtCoords({ left: x, top: y });
-                const pos = coordinates ? coordinates.pos : editor.state.selection.from;
+                const coordinates = currentEditor.view.posAtCoords({ left: x, top: y });
+                const pos = coordinates ? coordinates.pos : currentEditor.state.selection.from;
 
                 const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
                 const normalizedRoot = rootPath.replace(/\\/g, '/').toLowerCase();
@@ -275,13 +283,11 @@ export default function Editor() {
                 let relativePath: string;
 
                 if (isInsideWorkspace) {
-
                   relativePath = path
                     .replace(rootPath, '')
                     .replace(/^[\\/]/, './')
                     .replace(/\\/g, '/');
                 } else {
-
                   const folderName = isImage ? 'assets' : 'docs';
                   const subFolder = getRelativeSubfolder();
                   try {
@@ -293,14 +299,13 @@ export default function Editor() {
                 }
 
                 if (isImage) {
-                  editor.chain().focus().insertContentAt(pos, {
+                  currentEditor.chain().focus().insertContentAt(pos, {
                     type: 'image',
                     attrs: { src: relativePath }
                   }).run();
 
                   useWorkspaceStore.getState().scanWorkspace();
                 } else if (isPdf) {
-
                   const currentMetadata = useEditorStore.getState().metadata;
                   const currentDocs = currentMetadata.documents || [];
 
@@ -329,18 +334,49 @@ export default function Editor() {
       isMounted = false;
       window.removeEventListener('dragenter', handleGlobalDrag);
       window.removeEventListener('dragover', handleGlobalDrag);
-      window.removeEventListener('drop', handleGlobalDrag);
       if (unlistenFn) unlistenFn();
     };
   }, [editor, rootPath]);
 
   useEffect(() => {
     const handleMouseUp = (e: MouseEvent) => {
-      const { isDragging, sourcePath } = useUIStore.getState().dragInfo;
+      const { isDragging, sourcePath, sourceNodePos, startX, startY, startTime } = useUIStore.getState().dragInfo;
 
-      if (isDragging && sourcePath && editor && rootPath) {
+      if (!editor || !rootPath) return;
 
-        const editorElement = document.querySelector(`.${styles.scrollContainer}`);
+      // Threshold de segurança (KI-023)
+      const deltaX = Math.abs(e.clientX - startX);
+      const deltaY = Math.abs(e.clientY - startY);
+      const deltaTime = Date.now() - startTime;
+      
+      if (!isDragging && (deltaX < 5 && deltaY < 5) && deltaTime < 150) {
+        useUIStore.getState().resetDrag();
+        return;
+      }
+
+      if (sourceNodePos !== null) {
+        // MOVIMENTAÇÃO INTERNA
+        const editorElement = document.querySelector(`.${styles.container}`);
+        const rect = editorElement?.getBoundingClientRect();
+
+        if (rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          const coordinates = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
+          const from = sourceNodePos;
+          const to = coordinates ? coordinates.pos : editor.state.doc.content.size;
+          
+          const node = editor.state.doc.nodeAt(from);
+          if (node) {
+            editor.chain()
+              .focus()
+              .deleteRange({ from, to: from + node.nodeSize })
+              .insertContentAt(to > from ? to - node.nodeSize : to, node.toJSON())
+              .run();
+          }
+        }
+        useUIStore.getState().resetDrag();
+      } else if (sourcePath) {
+        // MOVIMENTAÇÃO EXTERNA (Sidebar -> Editor)
+        const editorElement = document.querySelector(`.${styles.container}`);
         const rect = editorElement?.getBoundingClientRect();
 
         if (rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
@@ -349,35 +385,30 @@ export default function Editor() {
 
           if (isImage || isPdf) {
             const coordinates = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
-            if (coordinates) {
+            const pos = coordinates ? coordinates.pos : editor.state.doc.content.size;
 
-              const relativePath = sourcePath
-                .replace(rootPath, '')
-                .replace(/^[\\/]/, './')
-                .replace(/\\/g, '/');
+            const relativePath = sourcePath
+              .replace(rootPath, '')
+              .replace(/^[\\/]/, './')
+              .replace(/\\/g, '/');
 
-              if (isImage) {
-                editor.chain().focus().insertContentAt(coordinates.pos, {
-                  type: 'image',
-                  attrs: { src: relativePath }
-                }).run();
-              } else if (isPdf) {
-
-                const currentMetadata = useEditorStore.getState().metadata;
-                const currentDocs = currentMetadata.documents || [];
-
-                if (!currentDocs.includes(relativePath)) {
-                  setMetadata({
-                    ...currentMetadata,
-                    documents: [...currentDocs, relativePath]
-                  });
-                  const activeFile = useWorkspaceStore.getState().activeFile;
-                  if (activeFile) save(activeFile, rootPath || undefined);
-                }
+            if (isImage) {
+              editor.chain().focus().insertContentAt(pos, {
+                type: 'image',
+                attrs: { src: relativePath }
+              }).run();
+            } else if (isPdf) {
+              const currentMetadata = useEditorStore.getState().metadata;
+              const currentDocs = currentMetadata.documents || [];
+              if (!currentDocs.includes(relativePath)) {
+                setMetadata({ ...currentMetadata, documents: [...currentDocs, relativePath] });
+                const activeFile = useWorkspaceStore.getState().activeFile;
+                if (activeFile) save(activeFile, rootPath || undefined);
               }
             }
           }
         }
+        useUIStore.getState().resetDrag();
       }
     };
 
@@ -455,8 +486,9 @@ export default function Editor() {
       setMetadata(metadata);
       editor.commands.setContent(markdown);
 
-      const newHtml = editor.getHTML();
-      setMarkdownContent(newHtml);
+      // @ts-ignore
+      const newMarkdown = editor.storage.markdown.getMarkdown();
+      setMarkdownContent(newMarkdown);
 
       if (activeFile) save(activeFile, rootPath || undefined);
       setTemplateToApply(null);
@@ -516,7 +548,6 @@ export default function Editor() {
       </div>
 
       <div
-        className={styles.scrollContainer}
         onContextMenu={handleContextMenu}
         onClick={() => {
           setContextMenu(null);

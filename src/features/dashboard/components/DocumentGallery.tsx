@@ -2,19 +2,24 @@ import { useEffect, useState } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useReferenceStore } from '@/features/references/store/referenceStore';
 import { useUIStore } from '@/store/uiStore';
-import { listDirectory, PdfAsset, resolveAssetPath } from '@/tauri-bridge/fs';
+import { listDirectory, PdfAsset, resolveAssetPath, copyFileToWorkspace } from '@/tauri-bridge/fs';
+import { open } from '@tauri-apps/plugin-dialog';
 import styles from './DocumentGallery.module.scss';
-import { FileText, Search, RefreshCw, ExternalLink } from 'lucide-react';
+import { FileText, Search, RefreshCw, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { PdfThumbnail } from './PdfThumbnail';
+import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
 
 export default function DocumentGallery() {
-  const { rootPath } = useWorkspaceStore();
+  const { rootPath, deleteItem } = useWorkspaceStore();
   const { setActivePdf } = useReferenceStore();
-  const { toggleRightSidebar, isRightSidebarVisible } = useUIStore();
+  const { toggleRightSidebar, isRightSidebarVisible, addNotification } = useUIStore();
 
   const [pdfs, setPdfs] = useState<PdfAsset[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState('');
+  
+  // Estado para exclusão
+  const [pdfToDelete, setPdfToDelete] = useState<PdfAsset | null>(null);
 
   const loadDocuments = async () => {
     if (!rootPath) return;
@@ -26,15 +31,17 @@ export default function DocumentGallery() {
 
         for (const entry of entries) {
           if (entry.is_dir) {
-
             if (entry.name.startsWith('.')) continue;
+            // Ignorar pastas de sistema conhecidas se necessário, ou varrer tudo
             const subResults = await scanFolder(entry.path);
             results = [...results, ...subResults];
           } else {
             if (entry.name.toLowerCase().endsWith('.pdf')) {
               results.push({
                 name: entry.name,
-                path: entry.path
+                path: entry.path,
+                full_path: entry.path,
+                modified_at: entry.modified_at
               });
             }
           }
@@ -60,6 +67,45 @@ export default function DocumentGallery() {
     if (!isRightSidebarVisible) toggleRightSidebar();
   };
 
+  const handleUpload = async () => {
+    if (!rootPath) return;
+    try {
+      const selected = await open({
+        multiple: true,
+        filters: [{ name: 'Documentos PDF', extensions: ['pdf'] }]
+      });
+
+      if (selected && Array.isArray(selected)) {
+        setIsLoading(true);
+        for (const path of selected) {
+          // Copia para a pasta 'docs' do workspace
+          await copyFileToWorkspace(path, rootPath, 'docs');
+        }
+        addNotification(`${selected.length} documento(s) importado(s)`, 'success');
+        await loadDocuments();
+      }
+    } catch (err) {
+      console.error('Erro ao importar PDFs:', err);
+      addNotification('Erro ao importar documentos', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pdfToDelete) return;
+    try {
+      await deleteItem(pdfToDelete.path);
+      addNotification('Documento excluído com sucesso', 'success');
+      await loadDocuments();
+    } catch (err) {
+      console.error('Erro ao excluir PDF:', err);
+      addNotification('Erro ao excluir documento', 'error');
+    } finally {
+      setPdfToDelete(null);
+    }
+  };
+
   const filteredPdfs = pdfs.filter(pdf =>
     pdf.name.toLowerCase().includes(filter.toLowerCase())
   );
@@ -82,6 +128,16 @@ export default function DocumentGallery() {
               onChange={(e) => setFilter(e.target.value)}
             />
           </div>
+          
+          <button 
+            className={styles.addBtn}
+            onClick={handleUpload}
+            title="Adicionar Documento"
+          >
+            <Plus size={18} />
+            <span>Adicionar</span>
+          </button>
+
           <button
             className={styles.refreshBtn}
             onClick={loadDocuments}
@@ -103,6 +159,11 @@ export default function DocumentGallery() {
           <div className={styles.empty}>
             <FileText size={64} />
             <p>{filter ? 'Nenhum documento corresponde à busca.' : 'Nenhum PDF encontrado no workspace.'}</p>
+            {!filter && (
+              <button className={styles.emptyAddBtn} onClick={handleUpload}>
+                Importar Primeiro PDF
+              </button>
+            )}
           </div>
         ) : (
           <div className={styles.grid} key={filter}>
@@ -113,6 +174,17 @@ export default function DocumentGallery() {
                 style={{ '--delay': `${index * 0.03}s` } as React.CSSProperties}
                 onClick={() => handleOpenPdf(pdf.path)}
               >
+                <button 
+                  className={styles.card__delete}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPdfToDelete(pdf);
+                  }}
+                  title="Excluir Documento"
+                >
+                  <Trash2 size={16} />
+                </button>
+
                 <div className={styles.card__thumbnail}>
                   <div className={styles.card__thumbnailCover}>
                     <PdfThumbnail fileUrl={resolveAssetPath(pdf.path, rootPath || '')} />
@@ -135,6 +207,16 @@ export default function DocumentGallery() {
           </div>
         )}
       </div>
+
+      <ConfirmModal 
+        isOpen={!!pdfToDelete}
+        onClose={() => setPdfToDelete(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Documento"
+        message={`Tem certeza que deseja excluir o documento "${pdfToDelete?.name}"? Esta ação não pode ser desfeita.`}
+        variant="danger"
+        confirmLabel="Excluir"
+      />
     </div>
   );
 }

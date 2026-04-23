@@ -12,8 +12,7 @@ const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
 export default function MoodBoard() {
   const { rootPath } = useWorkspaceStore();
-  const { dragInfo } = useUIStore();
-  const { items, isLoading, loadBoard, addItem, saveBoard } = useMoodBoardStore();
+  const { items, isLoading, addItem, loadBoard, saveBoard } = useMoodBoardStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
 
@@ -158,7 +157,6 @@ export default function MoodBoard() {
           <MoodBoardItem
             key={item.id}
             item={item}
-            containerRef={containerRef}
           />
         ))}
 

@@ -40,7 +40,7 @@ export function EntityPreview({ entity, position }: EntityPreviewProps) {
       <div className={styles.card}>
         <div className={styles.visual}>
           {imageUrl ? (
-            <img src={imageUrl} alt={entity.name} />
+            <img src={imageUrl || undefined} alt={entity.name} />
           ) : (
             <div className={styles.placeholder}>
               {isEmoji ? <span>{entity.icon}</span> : <FileText size={32} />}

@@ -60,8 +60,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const isPinned = useReferenceStore(s => s.pinnedNotes.includes(node.path));
   const { pinNote, unpinNote, setActivePdf } = useReferenceStore();
 
-  const isRightSidebarVisible = useUIStore(s => s.isRightSidebarVisible);
-  const { toggleRightSidebar } = useUIStore();
+  const { setActivePanel, toggleRightSidebar, isRightSidebarVisible } = useUIStore();
 
   const isEditableFile = node.name.endsWith('.md');
   const isImageFile = IMAGE_EXTENSIONS.some(ext => node.name.toLowerCase().endsWith(ext));
@@ -105,6 +104,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
       if (!isRightSidebarVisible) toggleRightSidebar();
     } else if (isSelectable) {
       setActiveFile(node.path);
+      setActivePanel('editor');
     }
   };
 
@@ -122,7 +122,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
           let relativePath = normNode.substring(normRoot.length);
           if (relativePath.startsWith('/')) relativePath = relativePath.substring(1);
 
-          const nativeRelativePath = relativePath.replace(/\
+          const nativeRelativePath = relativePath.replace(/\//g, separator);
           const nodeAssetsPath = nativeRelativePath
             ? `${rootPath}${separator}assets${separator}${nativeRelativePath}`
             : `${rootPath}${separator}assets`;

@@ -137,7 +137,7 @@ export default function TimelineView() {
                 <div className={styles.cardHeader}>
                   {char.icon && char.icon.includes('/') ? (
                     <img
-                      src={resolveAssetPath(char.icon, rootPath)}
+                      src={resolveAssetPath(char.icon, rootPath) || undefined}
                       alt={char.name}
                       className={styles.avatar}
                     />

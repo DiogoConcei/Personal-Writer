@@ -25,6 +25,7 @@ dist-ssr
 
 # Project Internal Documentation
 PRD_*.md
+PLANO_CONFIGURACOES.md
 ARCHITECTURE.md
 know_issues.md
 GEMINI.md

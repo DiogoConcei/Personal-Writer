@@ -17,7 +17,7 @@ export interface Metadata {
 }
 
 export const parseMarkdownMetadata = (content: string) => {
-  const yamlMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const yamlMatch = content.match(/^---\r?\n([\s\S]*?)(?:\r?\n)?---(?:\r?\n|$)/);
   if (!yamlMatch) return { metadata: {}, markdown: content };
 
   const yamlStr = yamlMatch[1];
@@ -28,6 +28,8 @@ export const parseMarkdownMetadata = (content: string) => {
   const iconMatch = yamlStr.match(/icon:\s*["']?([^"'\r\n]+)["']?/i);
   const musicMatch = yamlStr.match(/music:\s*["']?([^"'\r\n]+)["']?/i);
   const configMatch = yamlStr.match(/config:\s*'(.*?)'/i);
+  const wordGoalMatch = yamlStr.match(/wordGoal:\s*(\d+)/i);
+  const sessionGoalMatch = yamlStr.match(/sessionGoal:\s*(\d+)/i);
 
   const imagesMatch = yamlStr.match(/images:\s*\[(.*?)\]/i);
   const docsMatch = yamlStr.match(/documents:\s*\[(.*?)\]/i);
@@ -36,6 +38,8 @@ export const parseMarkdownMetadata = (content: string) => {
   if (typeMatch) data.type = typeMatch[1].trim();
   if (iconMatch) data.icon = iconMatch[1].trim();
   if (musicMatch) data.music = musicMatch[1].trim();
+  if (wordGoalMatch) data.wordGoal = Number(wordGoalMatch[1]);
+  if (sessionGoalMatch) data.sessionGoal = Number(sessionGoalMatch[1]);
   
   if (imagesMatch) {
     data.images = imagesMatch[1].split(',').map(s => s.trim().replace(/["']/g, '')).filter(Boolean);
@@ -77,14 +81,17 @@ export const parseMarkdownMetadata = (content: string) => {
 };
 
 export const stringifyYAML = (metadata: Metadata) => {
-  if (Object.keys(metadata).length === 0) return '';
+  if (!metadata || Object.keys(metadata).length === 0) return '';
 
   const normalize = (path: string) => path.replace(/\\/g, '/');
 
-  let yaml = '---\n';
+  let yaml = '';
   if (metadata.type) yaml += `type: ${metadata.type}\n`;
   if (metadata.icon) yaml += `icon: "${normalize(metadata.icon)}"\n`;
   if (metadata.music !== undefined) yaml += `music: "${normalize(metadata.music)}"\n`;
+  if (metadata.wordGoal !== undefined) yaml += `wordGoal: ${metadata.wordGoal}\n`;
+  if (metadata.sessionGoal !== undefined) yaml += `sessionGoal: ${metadata.sessionGoal}\n`;
+  
   if (metadata.images && metadata.images.length > 0) {
     yaml += `images: [${metadata.images.map(i => `"${normalize(i)}"`).join(', ')}]\n`;
   }
@@ -104,6 +111,7 @@ export const stringifyYAML = (metadata: Metadata) => {
       yaml += `  ${k}: ${formattedValue}\n`;
     });
   }
-  yaml += '---';
-  return yaml;
+  
+  if (!yaml) return '';
+  return `---\n${yaml}---`;
 };

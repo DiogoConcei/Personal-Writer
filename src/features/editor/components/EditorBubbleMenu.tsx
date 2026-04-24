@@ -20,15 +20,6 @@ export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
         if (from === to) return false;
         if (editor.isActive('image') || editor.isActive('customImage')) return false;
 
-        const spellingStorage = (editor.storage as any).spelling;
-        if (spellingStorage && spellingStorage.pluginKey) {
-          const pluginState = spellingStorage.pluginKey.getState(editor.state);
-          if (pluginState?.decorations) {
-            const decos = pluginState.decorations.find(from, to);
-            if (decos.length > 0) return false;
-          }
-        }
-
         return !editor.state.selection.empty;
       }}
       className={styles.bubbleMenu}

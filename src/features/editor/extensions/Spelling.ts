@@ -162,9 +162,26 @@ export const Spelling = Extension.create<SpellingOptions, SpellingStorage>({
                 if (timeout) clearTimeout(timeout);
                 timeout = setTimeout(async () => {
                   const nodesToCheck: { pos: number, node: any }[] = [];
+                  const nodesToClear: { pos: number, node: any }[] = [];
 
                   view.state.doc.descendants((node, pos) => {
+                    // Ignorar blocos de código e matemática
+                    if (node.type.name === 'codeBlock' || node.type.name === 'mathematics') {
+                      node.descendants((child, childPos) => {
+                        if (child.isText) {
+                          nodesToClear.push({ pos: pos + 1 + childPos, node: child });
+                        }
+                      });
+                      return false;
+                    }
+
                     if (node.isText && node.text) {
+                      // Ignorar texto que tenha a marca 'code' (inline code)
+                      if (node.marks.some(mark => mark.type.name === 'code')) {
+                        nodesToClear.push({ pos, node });
+                        return true;
+                      }
+
                       if (isFullCheck || !checkedNodes.has(node)) {
                         nodesToCheck.push({ pos, node });
                       }
@@ -172,14 +189,14 @@ export const Spelling = Extension.create<SpellingOptions, SpellingStorage>({
                     return true;
                   });
 
-                  if (nodesToCheck.length === 0) return;
+                  if (nodesToCheck.length === 0 && nodesToClear.length === 0) return;
 
                   try {
                     const texts = nodesToCheck.map(item => item.node.text!);
-                    const batchErrors = await checkSpellingBatch(texts);
+                    const batchErrors = nodesToCheck.length > 0 ? await checkSpellingBatch(texts) : [];
 
                     if (currentVersion === docVersion) {
-                      const results = nodesToCheck.map((item, index) => {
+                      const checkResults = nodesToCheck.map((item, index) => {
                         checkedNodes.add(item.node);
                         return {
                           pos: item.pos,
@@ -188,8 +205,14 @@ export const Spelling = Extension.create<SpellingOptions, SpellingStorage>({
                         };
                       });
 
+                      const clearResults = nodesToClear.map(item => ({
+                        pos: item.pos,
+                        node: item.node,
+                        errors: []
+                      }));
+
                       view.dispatch(view.state.tr.setMeta('spelling_errors', {
-                        results,
+                        results: [...checkResults, ...clearResults],
                         version: currentVersion,
                         isFullCheck
                       }));

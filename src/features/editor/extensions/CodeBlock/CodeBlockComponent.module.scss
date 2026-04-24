@@ -1,0 +1,78 @@
+.wrapper {
+  position: relative;
+  margin-bottom: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface);
+  transition: all 0.3s ease;
+  clear: both;
+}
+
+.pre {
+  margin: 0 !important;
+  padding: var(--spacing-md) !important;
+  background: transparent !important;
+  border: none !important;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  line-height: 1.5;
+
+  code {
+    background: transparent !important;
+    padding: 0 !important;
+    display: block;
+    white-space: pre;
+  }
+}
+
+.collapsed {
+  max-height: 300px;
+  overflow: hidden;
+
+  .pre {
+    overflow: hidden;
+  }
+}
+
+.overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(transparent, var(--color-bg-surface));
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 5;
+}
+
+.actions {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--spacing-sm);
+  margin-top: -10px;
+}
+
+.toggleBtn {
+  background-color: var(--color-bg-main);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+
+  &:hover {
+    background-color: var(--color-bg-surface);
+    color: var(--color-text-main);
+    border-color: var(--color-accent);
+  }
+}

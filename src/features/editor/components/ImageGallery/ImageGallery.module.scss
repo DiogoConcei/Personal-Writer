@@ -246,6 +246,28 @@
   @include scrollbar;
 }
 
+.groupsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.folderGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.folderTitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -266,7 +288,7 @@
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 
-    .deleteBtn, .dragHandle {
+    .deleteBtn {
       opacity: 1;
     }
   }
@@ -275,16 +297,16 @@
     background-color: var(--color-accent-glow);
     border-color: var(--color-accent);
     transform: scale(1.05);
-    border-style: dashed;
+    box-shadow: 0 0 15px var(--color-accent-glow);
   }
 }
 
 .deleteBtn {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 28px;
-  height: 28px;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background-color: rgba(224, 92, 114, 0.9);
   color: white;
@@ -349,8 +371,9 @@
   img {
     flex: 1;
     width: 100%;
+    height: 100%;
     object-fit: cover;
-    background-color: #000;
+    background-color: var(--color-bg-elevated);
   }
 }
 

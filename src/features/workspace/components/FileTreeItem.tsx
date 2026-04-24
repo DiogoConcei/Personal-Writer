@@ -88,7 +88,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
             const { listDirectory } = await import('@/tauri-bridge');
             const items = await listDirectory(node.path);
             setVirtualChildren(items.filter(n => !n.name.startsWith('.')).sort((a, b) => {
-              if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+              if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
               return a.is_dir ? -1 : 1;
             }));
           } catch (err) {

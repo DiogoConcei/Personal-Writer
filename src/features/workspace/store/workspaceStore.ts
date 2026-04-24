@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { FileNode } from '@/tauri-bridge';
+import type { ImageAsset } from '@/tauri-bridge';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
 
 interface WorkspaceState {
@@ -9,6 +10,8 @@ interface WorkspaceState {
   dashboardFilterPath: string | null;
   isLoading: boolean;
   isPathInvalid: boolean;
+  cachedImages: ImageAsset[] | null;
+  isScanning: boolean;
 
   setRootPath: (path: string) => Promise<void>;
   validateWorkspace: () => Promise<void>;
@@ -24,6 +27,8 @@ interface WorkspaceState {
   renameItem: (oldPath: string, newName: string) => Promise<void>;
   moveItem: (sourcePath: string, targetDirPath: string) => Promise<void>;
   scanWorkspace: () => Promise<void>;
+  scanImages: () => Promise<void>;
+  invalidateImageCache: () => void;
 }
 
 const STORAGE_KEY = 'hybrid-editor-root-path';
@@ -72,7 +77,7 @@ function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: st
 
     if (normalize(targetDirPath) === normalize(rootPath || '')) {
       return [...list, draggedNode!].sort((a, b) => {
-        if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+        if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
         return a.is_dir ? -1 : 1;
       });
     }
@@ -83,7 +88,7 @@ function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: st
 
         const filteredChildren = currentChildren.filter(c => c.path !== newPath);
         const newChildren = [...filteredChildren, draggedNode!].sort((a, b) => {
-          if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+          if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
           return a.is_dir ? -1 : 1;
         });
         return { ...node, children: newChildren };
@@ -117,10 +122,33 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   dashboardFilterPath: null,
   isLoading: false,
   isPathInvalid: false,
+  cachedImages: null,
+  isScanning: false,
+
+  scanImages: async () => {
+    const { rootPath, cachedImages } = get();
+    if (!rootPath || cachedImages !== null) return;
+
+    set({ isScanning: true });
+    try {
+      const { scanWorkspaceImages } = await import('@/tauri-bridge');
+      const images = await scanWorkspaceImages(rootPath);
+      set({ cachedImages: images });
+    } catch (error) {
+      console.error('Erro ao escanear imagens:', error);
+      set({ cachedImages: [] });
+    } finally {
+      set({ isScanning: false });
+    }
+  },
+
+  invalidateImageCache: () => {
+    set({ cachedImages: null });
+  },
 
   setRootPath: async (path: string) => {
     localStorage.setItem(STORAGE_KEY, path);
-    set({ rootPath: path, isLoading: true, dashboardFilterPath: null, isPathInvalid: false });
+    set({ rootPath: path, isLoading: true, dashboardFilterPath: null, isPathInvalid: false, cachedImages: null });
     try {
       const { createDirectory, listDirectory, exists } = await import('@/tauri-bridge');
 
@@ -143,7 +171,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         !HIDDEN_ITEMS.includes(node.name.toLowerCase())
       );
       const sortedFiles = filteredFiles.sort((a, b) => {
-        if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+        if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
         return a.is_dir ? -1 : 1;
       });
 
@@ -194,7 +222,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
           }
           return newNode;
         }).sort((a, b) => {
-          if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+          if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
           return a.is_dir ? -1 : 1;
         });
       };
@@ -216,7 +244,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         !n.name.startsWith('.') &&
         !HIDDEN_ITEMS.includes(n.name.toLowerCase())
       ).sort((a, b) => {
-        if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name);
+        if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
         return a.is_dir ? -1 : 1;
       });
 

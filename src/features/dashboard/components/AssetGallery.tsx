@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useGalleryStore, GalleryCollection } from '../store/galleryStore';
-import { resolveAssetPath, ImageAsset, copyImageToAssets, scanWorkspaceImages } from '@/tauri-bridge/fs';
+import { resolveAssetPath, ImageAsset, copyImageToAssets } from '@/tauri-bridge/fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import ImageViewer from '@/features/editor/components/ImageViewer';
@@ -23,7 +23,7 @@ interface DropTarget {
 }
 
 export default function AssetGallery() {
-  const { rootPath } = useWorkspaceStore();
+  const { rootPath, cachedImages, isScanning, scanImages, invalidateImageCache } = useWorkspaceStore();
   const { addNotification } = useUIStore();
   const {
     collections,
@@ -34,8 +34,6 @@ export default function AssetGallery() {
     addToCollection
   } = useGalleryStore();
 
-  const [images, setImages] = useState<ImageAsset[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeCollection, setActiveCollection] = useState<GalleryCollection | null>(null);
   const [filter, setFilter] = useState('');
@@ -58,23 +56,11 @@ export default function AssetGallery() {
   const processingDrop = useRef(false);
   const lastDetectionTime = useRef(0);
 
-  const loadAssets = async () => {
-    if (!rootPath) return;
-    setIsLoading(true);
-    try {
-      const scannedImages = await scanWorkspaceImages(rootPath);
-      setImages(scannedImages);
-    } catch (err) {
-      console.error('Erro ao escanear imagens:', err);
-      addNotification('Erro ao carregar galeria', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadAssets();
-    loadCollections();
+    if (rootPath) {
+      scanImages();
+      loadCollections();
+    }
   }, [rootPath]);
 
   const handleUpload = async () => {
@@ -85,20 +71,20 @@ export default function AssetGallery() {
         filters: [{ name: 'Imagens', extensions: IMAGE_EXTENSIONS.map(ext => ext.replace('.', '')) }]
       });
       if (selected && Array.isArray(selected)) {
-        setIsLoading(true);
         const newPaths: string[] = [];
         for (const path of selected) {
           const relativePath = await copyImageToAssets(path, rootPath);
           newPaths.push(relativePath);
         }
-        await loadAssets();
+        invalidateImageCache();
+        await scanImages();
         if (activeCollection) await addToCollection(activeCollection.id, newPaths);
         addNotification(`${selected.length} imagem(ns) importada(s)`, 'success');
       }
     } catch (err) {
       console.error(err);
       addNotification('Erro ao importar imagens', 'error');
-    } finally { setIsLoading(false); }
+    }
   };
 
   useEffect(() => {
@@ -109,21 +95,20 @@ export default function AssetGallery() {
         if (event.payload.type === 'drop' && rootPath) {
           const imagePaths = event.payload.paths.filter(p => IMAGE_EXTENSIONS.some(ext => p.toLowerCase().endsWith(ext)));
           if (imagePaths.length > 0) {
-            setIsLoading(true);
             const importedRelativePaths: string[] = [];
             for (const path of imagePaths) {
               try {
                 importedRelativePaths.push(await copyImageToAssets(path, rootPath));
               } catch (err) { console.error(err); }
             }
-            await loadAssets();
+            invalidateImageCache();
+            await scanImages();
             const element = document.elementFromPoint(event.payload.position.x, event.payload.position.y);
             const folderId = element?.closest('[data-drag-type="folder"]')?.getAttribute('data-drag-id');
             if (folderId) await addToCollection(folderId, importedRelativePaths);
             else if (activeCollection) await addToCollection(activeCollection.id, importedRelativePaths);
 
             addNotification(`${imagePaths.length} imagem(ns) adicionada(s)`, 'success');
-            setIsLoading(false);
           }
         }
       });
@@ -216,6 +201,7 @@ export default function AssetGallery() {
   const filteredImages = useMemo(() => {
     const isSearching = filter.trim().length > 0;
     const allAssignedPaths = new Set(collections.flatMap(c => c.images));
+    const baseImages = cachedImages || [];
 
     let baseList: ImageAsset[] = [];
 
@@ -223,18 +209,18 @@ export default function AssetGallery() {
       const subCollections = collections.filter(c => c.parentId === activeCollection.id);
       const pathsInSubCollections = new Set(subCollections.flatMap(c => c.images));
 
-      baseList = images.filter(img =>
+      baseList = baseImages.filter(img =>
         activeCollection.images.includes(img.path) &&
         (isSearching || !pathsInSubCollections.has(img.path))
       );
     } else if (activeCollection && isPickingExisting) {
-      baseList = images.filter(img => !allAssignedPaths.has(img.path));
+      baseList = baseImages.filter(img => !allAssignedPaths.has(img.path));
     } else {
-      baseList = isSearching ? images : images.filter(img => !allAssignedPaths.has(img.path));
+      baseList = isSearching ? baseImages : baseImages.filter(img => !allAssignedPaths.has(img.path));
     }
 
     return baseList.filter(img => img.name.toLowerCase().includes(filter.toLowerCase()));
-  }, [images, filter, activeCollection, collections, isPickingExisting]);
+  }, [cachedImages, filter, activeCollection, collections, isPickingExisting]);
 
   const filteredCollections = useMemo(() => {
     if (isPickingExisting) return [];
@@ -298,7 +284,7 @@ export default function AssetGallery() {
     }
   };
 
-  if (activeImage) return <div className={styles.viewerWrapper}><ImageViewer path={activeImage} onBack={() => { setActiveImage(null); loadAssets(); }} /></div>;
+  if (activeImage) return <div className={styles.viewerWrapper}><ImageViewer path={activeImage} onBack={() => { setActiveImage(null); scanImages(); }} /></div>;
 
   return (
     <div className={styles.container}>
@@ -330,7 +316,7 @@ export default function AssetGallery() {
           </div>
           <div className={styles.search}><Search size={16} /><input type="text" placeholder="Buscar..." value={filter} onChange={(e) => setFilter(e.target.value)} /></div>
           <button className={`${styles.actionBtn} ${isSelectionMode ? styles['actionBtn--active'] : ''}`} onClick={() => { setIsSelectionMode(!isSelectionMode); setIsPickingExisting(false); setSelectedPaths([]); }}>{isSelectionMode ? <><div className={styles.pulseDot} /><CheckSquare size={18} /><span>Finalizar</span></> : <><CheckSquare size={18} /><span>Organizar</span></>}</button>
-          <button className={styles.refreshBtn} onClick={loadAssets} disabled={isLoading}><RefreshCw size={18} className={isLoading ? styles.spin : ''} /></button>
+          <button className={styles.refreshBtn} onClick={() => { invalidateImageCache(); scanImages(); }} disabled={isScanning}><RefreshCw size={18} className={isScanning ? styles.spin : ''} /></button>
         </div>
       </header>
 

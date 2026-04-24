@@ -105,6 +105,46 @@ export const WikiLink = Node.create<WikiLinkOptions>({
               state.pos += match[0].length;
               return true;
             });
+
+            // Regra para suportar ![alt](caminho com espaços) - Estilo Obsidian/Relaxado
+            // Inserida antes da regra de link padrão
+            markdownit.inline.ruler.before('link', 'loose_image', (state: any, silent: boolean) => {
+              const start = state.pos;
+              
+              // Verifica se começa com ![
+              if (
+                state.src.charCodeAt(start) !== 0x21 /* ! */ ||
+                state.src.charCodeAt(start + 1) !== 0x5B /* [ */
+              ) {
+                return false;
+              }
+
+              // Tenta capturar o padrão ![alt](src)
+              // Usamos uma regex que permite espaços no src, parando no primeiro ')'
+              const match = state.src.slice(start).match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+              if (!match) return false;
+
+              const alt = match[1];
+              const src = match[2].trim();
+
+              // Se o src tiver espaços e não estiver envolto em <>, nós processamos aqui.
+              // Se estiver correto (sem espaços ou com <>), deixamos o parser padrão do markdown-it lidar (retornando false).
+              if (src.includes(' ') && !src.startsWith('<')) {
+                if (!silent) {
+                  const token = state.push('image', 'img', 0);
+                  token.attrs = [
+                    ['src', src],
+                    ['alt', alt],
+                  ];
+                  token.children = [];
+                  token.content = '';
+                }
+                state.pos += match[0].length;
+                return true;
+              }
+
+              return false;
+            });
           },
         }
       }

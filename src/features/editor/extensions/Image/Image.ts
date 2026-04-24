@@ -34,7 +34,10 @@ export const CustomImage = Image.extend({
           if (node.attrs.width !== '300px' || node.attrs.layout !== 'inline') {
             state.write(`<img src="${node.attrs.src}" alt="${node.attrs.alt || ''}" width="${node.attrs.width}" data-layout="${node.attrs.layout}" />`);
           } else {
-            state.write(`![${node.attrs.alt || ''}](${node.attrs.src})`);
+            const src = node.attrs.src.includes(' ') && !node.attrs.src.startsWith('<') 
+              ? `<${node.attrs.src}>` 
+              : node.attrs.src;
+            state.write(`![${node.attrs.alt || ''}](${src})`);
           }
         },
         parse: {

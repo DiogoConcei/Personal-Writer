@@ -6,6 +6,7 @@ import BubbleMenu from '@tiptap/extension-bubble-menu';
 import tippy from 'tippy.js';
 import { WikiLink } from '../extensions/WikiLink/WikiLink';
 import { CustomImage } from '../extensions/Image/Image';
+import { CustomCodeBlock } from '../extensions/CodeBlock/CodeBlock';
 import { PdfLink } from '../extensions/PdfLink/PdfLink';
 import { FontSize } from '../extensions/FontSize';
 import { Spelling } from '../extensions/Spelling';
@@ -85,7 +86,10 @@ export default function Editor() {
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        codeBlock: false,
+      }),
+      CustomCodeBlock,
       Markdown.configure({
         html: true,
         tightLists: true,

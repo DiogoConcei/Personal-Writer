@@ -9,11 +9,12 @@ import {
   CheckCircle2, 
   Cpu, 
   Globe,
-  Puzzle
+  Puzzle,
+  RefreshCw
 } from 'lucide-react';
 
 export const PluginManager: React.FC = () => {
-  const { plugins, installPlugin, uninstallPlugin, togglePlugin } = usePluginStore();
+  const { plugins, installPlugin, uninstallPlugin, togglePlugin, resetPlugins } = usePluginStore();
 
   const handleInstall = async (id: string) => {
     // Aqui no futuro poderia ter um loading visual
@@ -91,12 +92,22 @@ export const PluginManager: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <header>
-        <h1>Plugin Manager</h1>
-        <p>
-          Personalize sua experiência adicionando funcionalidades modulares. 
-          Plugins instalados podem consumir recursos de memória e CPU.
-        </p>
+      <header className={styles.headerMain}>
+        <div className={styles.headerInfo}>
+          <h1>Plugin Manager</h1>
+          <p>
+            Personalize sua experiência adicionando funcionalidades modulares. 
+            Plugins instalados podem consumir recursos de memória e CPU.
+          </p>
+        </div>
+        <button 
+          className={styles.syncBtn} 
+          onClick={resetPlugins}
+          title="Sincronizar Plugins com a Definição do Sistema (Reset)"
+        >
+          <RefreshCw size={18} />
+          Sincronizar
+        </button>
       </header>
 
       <section className={styles.pluginGrid}>

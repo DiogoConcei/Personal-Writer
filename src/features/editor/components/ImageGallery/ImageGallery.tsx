@@ -1,12 +1,18 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useGalleryStore } from '@/features/dashboard/store/galleryStore';
-import { deleteItem, copyImageToAssets, resolveAssetPath, ImageAsset, createDirectory } from '@/tauri-bridge/fs';
-import { open } from '@tauri-apps/plugin-dialog';
+import { resolveAssetPath, ImageAsset } from '@/tauri-bridge/fs';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { useImageManager } from '@/shared/hooks/useImageManager';
+import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop';
 import DeleteModal from '@/features/workspace/components/DeleteModal';
 import InputModal from '@/shared/components/Modal/InputModal';
+import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
 import styles from './ImageGallery.module.scss';
+
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+
 import {
   Image as ImageIcon,
   X,
@@ -15,8 +21,9 @@ import {
   Upload,
   RefreshCw,
   Folder,
-  ChevronLeft,
   Plus,
+  ChevronRight,
+  CheckSquare,
   Layers
 } from 'lucide-react';
 
@@ -28,28 +35,72 @@ interface ImageGalleryProps {
 export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
   const { rootPath, cachedImages, isScanning, scanImages, invalidateImageCache } = useWorkspaceStore();
   const { addNotification } = useUIStore();
-  const { collections, createCollection, addToCollection, loadCollections } = useGalleryStore();
+  const { createCollection, addToCollection, loadCollections } = useGalleryStore();
+  const { 
+    isProcessing, 
+    uploadImages, 
+    deleteImage, 
+    deletePhysicalFolder, 
+    handleImageDrop,
+    activeTarget,
+    filter,
+    setFilter,
+    filteredImages,
+    filteredCollections,
+    filteredPhysicalFolders,
+    handleTargetClick,
+    getBreadcrumbs
+  } = useImageManager();
 
-  const [search, setSearch] = useState('');
-  const [currentFolder, setCurrentFolder] = useState<string>(''); // '' raiz, ou path físico, ou collection id
+  useEffect(() => {
+    console.log('%c[ImageGallery] Montado via SlashCommand / Botão', 'color: #1abc9c; font-weight: bold; border: 1px solid #1abc9c; padding: 2px 4px;');
+    return () => console.log('%c[ImageGallery] Desmontado', 'color: #e74c3c; font-weight: bold;');
+  }, []);
+
   const [itemToDelete, setItemToDelete] = useState<ImageAsset | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [emptyPhysicalFolders, setEmptyPhysicalFolders] = useState<string[]>([]);
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
 
-  // Estado para Modal de Criação
+  // Estado para Criação Virtual
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
-  const [inputModalMode, setInputModalMode] = useState<'physical' | 'virtual'>('physical');
-  const [pendingVirtualImages, setPendingVirtualImages] = useState<string[]>([]);
+  const [pendingCollectionImages, setPendingCollectionImages] = useState<string[]>([]);
 
-  // Estado para Drag & Drop (Virtual)
-  const draggedItemRef = useRef<ImageAsset | null>(null);
-  const isDraggingRef = useRef(false);
-  const [draggedItemState, setDraggedItemState] = useState<ImageAsset | null>(null);
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
-  const [isDraggingState, setIsDraggingState] = useState(false);
-  const [dropTarget, setDropTarget] = useState<{ type: 'image' | 'folder' | 'collection'; id: string } | null>(null);
-  const dragStartPos = useRef({ x: 0, y: 0 });
-  const processingDrop = useRef(false);
+  // Estado de Seleção Múltipla (Senior Style)
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+
+  // Configuração do Drag & Drop Desacoplado
+  const { 
+    handleMouseDown, 
+    draggedItem, 
+    dragPosition, 
+    isDragging, 
+    dropTarget, 
+    shouldIgnoreClick 
+  } = useDragAndDrop<ImageAsset>({
+    onDrop: async (item, targetType, targetId) => {
+      console.log(`%c[ImageGallery] Drop detectado via Hook -> Target: ${targetType} (${targetId})`, 'color: #3498db; font-weight: bold;');
+      
+      const success = await handleImageDrop(item, targetType, targetId, selectedPaths);
+      
+      if (success) {
+        if (isSelectionMode) { 
+          setSelectedPaths([]); 
+          setIsSelectionMode(false); 
+        }
+      } else if (targetType === 'image') {
+        // Agrupamento em Nova Pasta Virtual
+        const sourceItems = selectedPaths.includes(item.path) ? selectedPaths : [item.path];
+        setPendingCollectionImages([...sourceItems, targetId]);
+        setIsInputModalOpen(true);
+      }
+      
+      console.log('%c[ImageGallery] DND Finalizado via Hook', 'color: #9b59b6; font-weight: bold;');
+    },
+    isValidTarget: (item, type, id) => {
+      if (type === 'image' && (id === item.path || selectedPaths.includes(id))) return false;
+      return true;
+    }
+  });
 
   useEffect(() => {
     if (rootPath) {
@@ -58,40 +109,61 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
     }
   }, [rootPath]);
 
-  const handleUpload = async () => {
+  // Efeito para Drag & Drop Externo (Desktop -> App)
+  useEffect(() => {
     if (!rootPath) return;
 
-    try {
-      const selected = await open({
-        multiple: false,
-        filters: [{
-          name: 'Imagens',
-          extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']
-        }]
-      });
+    const appWindow = getCurrentWebviewWindow();
+    let unlistenFn: (() => void) | undefined;
 
-      if (selected && typeof selected === 'string') {
-        setIsUploading(true);
-        
-        // Se estivermos em uma pasta física, faz upload nela. Se estivermos em uma coleção ou raiz, vai para assets.
-        const isCollection = collections.some(c => c.id === currentFolder);
-        const subFolder = isCollection ? undefined : (currentFolder || undefined);
-        
-        const relativePath = await copyImageToAssets(selected, rootPath, subFolder);
-        
-        // Se for coleção, adiciona a imagem nela também
-        if (isCollection) {
-          await addToCollection(currentFolder, [relativePath]);
+    const setupDragDrop = async () => {
+      unlistenFn = await appWindow.onDragDropEvent(async (event) => {
+        if (event.payload.type === 'drop') {
+          const imagePaths = event.payload.paths.filter(p => 
+            IMAGE_EXTENSIONS.some(ext => p.toLowerCase().endsWith(ext))
+          );
+
+          if (imagePaths.length > 0) {
+            // Determina o destino baseado na posição do mouse
+            const element = document.elementFromPoint(event.payload.position.x, event.payload.position.y);
+            const folderTarget = element?.closest('[data-drag-type]');
+            const targetType = folderTarget?.getAttribute('data-drag-type');
+            const targetId = folderTarget?.getAttribute('data-drag-id');
+
+            const physicalFolder = targetType === 'folder' ? (targetId || '') : (activeTarget?.type === 'physical' ? activeTarget.path : '');
+            const importedPaths = await uploadImages(physicalFolder, imagePaths);
+
+            if (importedPaths) {
+              if (targetType === 'collection' && targetId) {
+                await addToCollection(targetId, importedPaths);
+              } else if (activeTarget?.type === 'virtual') {
+                await addToCollection(activeTarget.id, importedPaths);
+              }
+            }
+          }
         }
+      });
+    };
 
-        invalidateImageCache();
-        await scanImages();
-      }
-    } catch (error) {
-      console.error('Erro no upload:', error);
-    } finally {
-      setIsUploading(false);
+    setupDragDrop();
+    return () => { if (unlistenFn) unlistenFn(); };
+  }, [rootPath, activeTarget, uploadImages, addToCollection]);
+
+  const handleUpload = async () => {
+    const physicalFolder = activeTarget?.type === 'physical' ? activeTarget.path : '';
+    const importedPaths = await uploadImages(physicalFolder);
+    if (importedPaths && activeTarget?.type === 'virtual') {
+      await addToCollection(activeTarget.id, importedPaths);
     }
+  };
+
+  const handleCreateVirtualFolder = async (name: string) => {
+    const parentId = activeTarget?.type === 'virtual' ? activeTarget.id : undefined;
+    await createCollection(name.trim(), pendingCollectionImages, parentId);
+    setPendingCollectionImages([]);
+    setIsInputModalOpen(false);
+    if (isSelectionMode) { setSelectedPaths([]); setIsSelectionMode(false); }
+    addNotification('Pasta virtual criada', 'success');
   };
 
   const handleDelete = (e: React.MouseEvent, item: ImageAsset) => {
@@ -101,15 +173,8 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
-    try {
-      await deleteItem(itemToDelete.full_path);
-      invalidateImageCache();
-      await scanImages();
-    } catch (err) {
-      console.error('Erro ao deletar:', err);
-    } finally {
-      setItemToDelete(null);
-    }
+    await deleteImage(itemToDelete);
+    setItemToDelete(null);
   };
 
   const handleImageSelect = (item: ImageAsset) => {
@@ -117,261 +182,69 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
     onClose();
   };
 
-  const handleFolderClick = (folderPath: string) => {
-    setCurrentFolder(folderPath);
+  const handleDeleteFolder = (e: React.MouseEvent, folderPath: string) => {
+    e.stopPropagation();
+    setFolderToDelete(folderPath);
   };
 
-  const handleBackClick = () => {
-    if (currentFolder === '') return;
-    const isCollection = collections.some(c => c.id === currentFolder);
-    
-    if (isCollection) {
-      const col = collections.find(c => c.id === currentFolder);
-      setCurrentFolder(col?.parentId || '');
-    } else {
-      const parts = currentFolder.split('/');
-      parts.pop();
-      setCurrentFolder(parts.join('/'));
-    }
+  const confirmDeleteFolder = async () => {
+    if (!folderToDelete || !rootPath) return;
+    await deletePhysicalFolder(folderToDelete);
+    setFolderToDelete(null);
   };
-
-  const getFolderName = (fullPath: string) => {
-    const isCollection = collections.find(c => c.id === fullPath);
-    if (isCollection) return isCollection.name;
-    const parts = fullPath.split('/');
-    return parts[parts.length - 1];
-  };
-
-  const handleCreateFolderClick = () => {
-    const isCollection = collections.some(c => c.id === currentFolder);
-    if (isCollection) {
-      // Dentro de uma coleção, criamos sub-coleções (virtuais)
-      setInputModalMode('virtual');
-    } else {
-      // Na raiz ou pasta física, criamos pastas físicas
-      setInputModalMode('physical');
-    }
-    setIsInputModalOpen(true);
-  };
-
-  const handleInputConfirm = async (name: string) => {
-    if (!name || !name.trim()) return;
-
-    if (inputModalMode === 'physical') {
-      const separator = rootPath?.includes('\\') ? '\\' : '/';
-      const folderName = name.trim();
-      const relativePath = currentFolder ? `${currentFolder}/${folderName}` : folderName;
-      const fullPath = `${rootPath}${separator}${relativePath.replace(/\//g, separator)}`;
-
-      try {
-        await createDirectory(fullPath);
-        setEmptyPhysicalFolders(prev => [...prev, relativePath]);
-        addNotification('Pasta física criada', 'success');
-      } catch (err) {
-        console.error('Erro ao criar pasta física:', err);
-        addNotification('Erro ao criar pasta', 'error');
-      }
-    } else {
-      // Virtual (Coleção)
-      const parentId = collections.some(c => c.id === currentFolder) ? currentFolder : undefined;
-      await createCollection(name.trim(), pendingVirtualImages, parentId);
-      setPendingVirtualImages([]);
-      addNotification('Coleção criada', 'success');
-    }
-    setIsInputModalOpen(false);
-  };
-
-  // Lógica de Drag & Drop
-  const handleMouseDown = (e: React.MouseEvent, img: ImageAsset) => {
-    if (e.button !== 0 || processingDrop.current) return;
-    draggedItemRef.current = img;
-    setDraggedItemState(img);
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    const deltaX = Math.abs(e.clientX - dragStartPos.current.x);
-    const deltaY = Math.abs(e.clientY - dragStartPos.current.y);
-    if (!isDraggingRef.current && (deltaX > 8 || deltaY > 8)) {
-      isDraggingRef.current = true;
-      setIsDraggingState(true);
-    }
-    if (isDraggingRef.current) {
-      setDragPosition({ x: e.clientX, y: e.clientY });
-      const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
-      const targetCard = elementAtPoint?.closest('[data-drag-id]');
-      if (targetCard) {
-        const type = targetCard.getAttribute('data-drag-type') as any;
-        const id = targetCard.getAttribute('data-drag-id')!;
-        if (id !== draggedItemRef.current?.path) {
-          setDropTarget({ type, id });
-        } else {
-          setDropTarget(null);
-        }
-      } else {
-        setDropTarget(null);
-      }
-    }
-  };
-
-  const handleMouseUp = async () => {
-    window.removeEventListener('mousemove', handleMouseMove);
-    window.removeEventListener('mouseup', handleMouseUp);
-    const wasDragging = isDraggingRef.current;
-    const target = dropTarget;
-    const currentItem = draggedItemRef.current;
-
-    setDraggedItemState(null);
-    draggedItemRef.current = null;
-    setIsDraggingState(false);
-    isDraggingRef.current = false;
-    setDropTarget(null);
-
-    if (wasDragging && target && currentItem) {
-      processingDrop.current = true;
-      try {
-        if (target.type === 'collection') {
-          await addToCollection(target.id, [currentItem.path]);
-          addNotification('Imagem adicionada à coleção', 'success');
-        } else if (target.type === 'image') {
-          setPendingVirtualImages([currentItem.path, target.id]);
-          setInputModalMode('virtual');
-          setIsInputModalOpen(true);
-        }
-      } finally {
-        setTimeout(() => { processingDrop.current = false; }, 100);
-      }
-    }
-  };
-
-  const currentView = useMemo(() => {
-    const baseImages = cachedImages || [];
-    const term = search.toLowerCase();
-    
-    // Pesquisa global plana quando há termo de busca
-    if (term) {
-      const filtered = baseImages.filter(img =>
-        img.name.toLowerCase().includes(term) ||
-        img.path.toLowerCase().includes(term)
-      );
-      filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-      return { folders: [], collections: [], images: filtered, isSearching: true, totalCount: filtered.length };
-    }
-
-    const foldersSet = new Set<string>();
-    const imagesList: ImageAsset[] = [];
-    const activeColId = collections.some(c => c.id === currentFolder) ? currentFolder : null;
-
-    if (activeColId) {
-      // Visão de Coleção
-      const activeCol = collections.find(c => c.id === activeColId)!;
-      const colImages = baseImages.filter(img => activeCol.images.includes(img.path));
-      const subCols = collections.filter(c => c.parentId === activeColId);
-      
-      return {
-        folders: [],
-        collections: subCols,
-        images: colImages,
-        isSearching: false,
-        totalCount: subCols.length + colImages.length
-      };
-    }
-
-    // Visão de Pasta Física ou Raiz
-    baseImages.forEach(img => {
-      // Normaliza o path: remove './'
-      let relPath = img.path;
-      if (relPath.startsWith('./')) relPath = relPath.substring(2);
-      
-      // Achata virtualmente 'assets/' e 'moodboard/'
-      let virtualRelPath = relPath;
-      if (relPath.startsWith('assets/')) {
-        virtualRelPath = relPath.substring(7);
-      } else if (relPath === 'assets') {
-        return;
-      }
-
-      if (relPath.startsWith('moodboard/')) {
-        virtualRelPath = relPath.substring(10);
-      } else if (relPath === 'moodboard') {
-        return;
-      }
-
-      const parts = virtualRelPath.split('/');
-      parts.pop(); // remove o nome do arquivo para ter apenas o caminho da pasta
-      const imgFolder = parts.join('/');
-
-      if (currentFolder === '') {
-        // Estamos na raiz virtual
-        if (imgFolder === '') {
-          imagesList.push(img); // Imagem na raiz (ou vinda de assets/moodboard)
-        } else {
-          foldersSet.add(parts[0]); // Pasta de nível superior
-        }
-      } else {
-        // Estamos dentro de uma pasta virtual
-        if (imgFolder === currentFolder) {
-          imagesList.push(img); // Imagem direta nesta pasta
-        } else if (imgFolder.startsWith(currentFolder + '/')) {
-          // Imagem em uma subpasta
-          const remainingPath = imgFolder.substring(currentFolder.length + 1);
-          const nextFolder = remainingPath.split('/')[0];
-          foldersSet.add(`${currentFolder}/${nextFolder}`);
-        }
-      }
-    });
-
-    // Adiciona pastas vazias
-    emptyPhysicalFolders.forEach(folderPath => {
-      if (currentFolder === '') {
-        if (!folderPath.includes('/')) foldersSet.add(folderPath);
-      } else if (folderPath.startsWith(currentFolder + '/') && folderPath.split('/').length === currentFolder.split('/').length + 1) {
-        foldersSet.add(folderPath);
-      }
-    });
-
-    // Adiciona coleções na raiz
-    const rootCollections = currentFolder === '' ? collections.filter(c => !c.parentId) : [];
-
-    const sortedFolders = Array.from(foldersSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-    const sortedImages = imagesList.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-
-    return { 
-      folders: sortedFolders, 
-      collections: rootCollections,
-      images: sortedImages, 
-      isSearching: false,
-      totalCount: sortedFolders.length + rootCollections.length + sortedImages.length 
-    };
-  }, [cachedImages, search, currentFolder, collections, emptyPhysicalFolders]);
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
+    <div 
+      className={styles.overlay} 
+      onClick={onClose}
+      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    >
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <header className={styles.header}>
           <div className={styles.header__left}>
-            {currentFolder !== '' && !currentView.isSearching && (
-              <button className={styles.backBtn} onClick={handleBackClick} title="Voltar">
-                <ChevronLeft size={18} />
-              </button>
-            )}
-            <div className={styles.title}>
-              <h2>Galeria de Imagens</h2>
-              <span>{currentView.isSearching ? 'Resultados da Pesquisa' : (currentFolder === '' ? 'Raiz do Projeto' : currentFolder)}</span>
+            <div className={styles.breadcrumbs}>
+              {getBreadcrumbs().map((crumb, i) => (
+                <div key={i} className={styles.breadcrumbItem}>
+                  {i > 0 && <ChevronRight size={14} className={styles.breadcrumbSeparator} />}
+                  <button 
+                    className={`${styles.breadcrumbBtn} ${crumb.target === activeTarget ? styles['breadcrumbBtn--active'] : ''}`} 
+                    onClick={() => handleTargetClick(crumb.target, () => {
+                      setIsSelectionMode(false);
+                      setSelectedPaths([]);
+                    })}
+                  >
+                    {crumb.label}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
           <div className={styles.header__actions}>
+            <button 
+              className={styles.folderBtn} 
+              style={{ color: isSelectionMode ? 'var(--color-accent)' : 'inherit' }}
+              onClick={() => { 
+                setIsSelectionMode(!isSelectionMode); 
+                setSelectedPaths([]); 
+              }} 
+              title={isSelectionMode ? "Finalizar Organização" : "Organizar em Massa"}
+            >
+              <CheckSquare size={16} />
+            </button>
+            <button 
+              className={styles.folderBtn}
+              onClick={() => setIsInputModalOpen(true)}
+              title="Nova Pasta Virtual"
+            >
+              <Plus size={16} />
+            </button>
             <button className={styles.refreshBtn} onClick={() => { invalidateImageCache(); scanImages(); }} disabled={isScanning} title="Atualizar galeria">
               <RefreshCw size={16} className={isScanning ? styles.spin : ''} />
             </button>
-            <button className={styles.folderBtn} onClick={handleCreateFolderClick} title="Nova Pasta">
-              <Plus size={16} />
-            </button>
-            <button className={styles.uploadBtn} onClick={handleUpload} disabled={isUploading}>
+            <button className={styles.uploadBtn} onClick={handleUpload} disabled={isProcessing}>
               <Upload size={16} />
-              <span>{isUploading ? 'Enviando...' : 'Upload'}</span>
+              <span>{isProcessing ? 'Enviando...' : 'Upload'}</span>
             </button>
             <button className={styles.closeBtn} onClick={onClose}>
               <X size={20} />
@@ -384,11 +257,8 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
             <Search size={16} />
             <input
               placeholder="Buscar imagens ou pastas..."
-              value={search}
-              onChange={e => {
-                setSearch(e.target.value);
-                if (e.target.value) setCurrentFolder('');
-              }}
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
             />
           </div>
         </div>
@@ -396,11 +266,11 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
         <div className={styles.content}>
           {isScanning && !cachedImages ? (
             <div className={styles.empty}>Escaneando workspace...</div>
-          ) : currentView.totalCount === 0 ? (
+          ) : (filteredImages.length + filteredCollections.length + filteredPhysicalFolders.length) === 0 ? (
             <div className={styles.empty}>
               <ImageIcon size={48} />
-              <p>{currentView.isSearching ? 'Nenhum resultado encontrado.' : 'Nenhuma imagem nesta pasta.'}</p>
-              {currentFolder === '' && !currentView.isSearching && (
+              <p>{filter ? 'Nenhum resultado encontrado.' : 'Nenhuma imagem nesta pasta.'}</p>
+              {!activeTarget && !filter && (
                 <button className={styles.emptyUploadBtn} onClick={handleUpload}>
                   Fazer Upload da Primeira Imagem
                 </button>
@@ -409,46 +279,69 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
           ) : (
             <div className={styles.grid}>
               {/* Renderiza Coleções (Virtuais) */}
-              {currentView.collections.map(col => (
+              {filteredCollections.map(col => (
                 <div
                   key={col.id}
                   className={`${styles.folderItem} ${dropTarget?.id === col.id ? styles['folderItem--dragOver'] : ''}`}
                   data-drag-type="collection"
                   data-drag-id={col.id}
-                  onClick={() => handleFolderClick(col.id)}
-                  title={`Abrir Coleção ${col.name}`}
+                  onClick={() => handleTargetClick({ type: 'virtual', id: col.id })}
+                  title={`Abrir ${col.name}`}
                 >
-                  <div className={styles.folderIcon} style={{ color: 'var(--color-accent)' }}>
-                    <Layers size={40} />
+                  <button
+                    className={styles.deleteBtn}
+                    onClick={(e) => { e.stopPropagation(); useGalleryStore.getState().deleteCollection(col.id); }}
+                    title="Excluir Pasta Virtual"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <div className={styles.folderIcon}>
+                    <Folder size={40} />
                     <span>{col.name}</span>
                   </div>
                 </div>
               ))}
 
               {/* Renderiza Pastas Físicas */}
-              {currentView.folders.map(folderPath => (
+              {filteredPhysicalFolders.map(folderPath => (
                 <div
                   key={folderPath}
-                  className={styles.folderItem}
-                  onClick={() => handleFolderClick(folderPath)}
-                  title={`Abrir ${getFolderName(folderPath)}`}
+                  className={`${styles.folderItem} ${dropTarget?.id === folderPath ? styles['folderItem--dragOver'] : ''}`}
+                  data-drag-type="folder"
+                  data-drag-id={folderPath}
+                  onClick={() => handleTargetClick({ type: 'physical', path: folderPath })}
+                  title={`Abrir pasta física: ${folderPath.split('/').pop()}`}
                 >
-                  <div className={styles.folderIcon}>
+                  <button
+                    className={styles.deleteBtn}
+                    onClick={(e) => handleDeleteFolder(e, folderPath)}
+                    title="Excluir Pasta Física (Imagens serão movidas para a raiz)"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <div className={styles.folderIcon} style={{ color: 'var(--color-text-muted)' }}>
                     <Folder size={40} />
-                    <span>{getFolderName(folderPath)}</span>
+                    <span>{folderPath.split('/').pop()}</span>
                   </div>
                 </div>
               ))}
 
               {/* Renderiza Imagens */}
-              {currentView.images.map(item => (
+              {filteredImages.map(item => (
                 <div
                   key={item.full_path}
-                  className={`${styles.imageItem} ${dropTarget?.id === item.path ? styles['imageItem--dragOver'] : ''}`}
+                  className={`${styles.imageItem} ${selectedPaths.includes(item.path) ? styles['imageItem--selected'] : ''} ${dropTarget?.id === item.path ? styles['imageItem--dragOver'] : ''} ${draggedItem?.path === item.path ? styles['imageItem--dragging'] : ''}`}
                   data-drag-type="image"
                   data-drag-id={item.path}
                   onMouseDown={(e) => handleMouseDown(e, item)}
-                  onClick={() => handleImageSelect(item)}
+                  onClick={() => {
+                    if (shouldIgnoreClick()) return;
+                    if (isSelectionMode) {
+                      setSelectedPaths(prev => prev.includes(item.path) ? prev.filter(p => p !== item.path) : [...prev, item.path]);
+                    } else {
+                      handleImageSelect(item);
+                    }
+                  }}
                   title={item.path}
                 >
                   <button
@@ -466,6 +359,11 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
                       loading="lazy"
                       onDragStart={e => e.preventDefault()}
                     />
+                    {selectedPaths.includes(item.path) && (
+                      <div style={{ position: 'absolute', top: 5, left: 5, color: 'var(--color-accent)', background: 'var(--color-bg-surface)', borderRadius: '4px', display: 'flex', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                        <CheckSquare size={20} />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -473,7 +371,33 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
           )}
         </div>
 
-        {isDraggingState && draggedItemState && (
+        {/* Barra de Seleção na base do Modal */}
+        {isSelectionMode && selectedPaths.length > 0 && (
+          <div style={{
+            position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+            background: 'var(--color-bg-surface-elevated)', border: '1px solid var(--color-border)',
+            borderRadius: '8px', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '16px',
+            boxShadow: 'var(--shadow-lg)', zIndex: 100
+          }}>
+            <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{selectedPaths.length} itens selecionados</span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--color-border)', borderRadius: '4px', color: 'var(--color-text)', cursor: 'pointer' }} 
+                onClick={() => setSelectedPaths([])}
+              >
+                Limpar
+              </button>
+              <button 
+                style={{ padding: '6px 12px', background: 'var(--color-accent)', color: 'white', border: 'none', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} 
+                onClick={() => { setPendingCollectionImages(selectedPaths); setIsInputModalOpen(true); }}
+              >
+                <Folder size={16} /> Agrupar em Pasta
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isDragging && draggedItem && (
           <div 
             className={styles.dragGhost} 
             style={{ 
@@ -491,14 +415,25 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
               overflow: 'hidden',
               border: '2px solid var(--color-accent)',
               background: 'var(--color-bg-surface)',
-              boxShadow: 'var(--shadow-lg)'
+              boxShadow: 'var(--shadow-lg)',
+              position: 'relative'
             }}>
               <img 
-                src={resolveAssetPath(draggedItemState.path, rootPath)} 
+                src={resolveAssetPath(draggedItem.path, rootPath)} 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                 alt="" 
               />
+              {selectedPaths.length > 1 && (
+                <div style={{ position: 'absolute', bottom: 4, right: 4, background: 'var(--color-accent)', color: 'white', fontSize: '12px', fontWeight: 'bold', padding: '2px 4px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <Layers size={12} /> {selectedPaths.length}
+                </div>
+              )}
             </div>
+            {dropTarget && (
+              <div style={{ marginTop: '8px', background: 'var(--color-accent)', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', whiteSpace: 'nowrap', boxShadow: 'var(--shadow-md)' }}>
+                {dropTarget.type === 'folder' || dropTarget.type === 'collection' ? 'Mover para pasta' : 'Criar nova pasta virtual'}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -513,11 +448,21 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
 
       <InputModal
         isOpen={isInputModalOpen}
-        onClose={() => { setIsInputModalOpen(false); setPendingVirtualImages([]); }}
-        onConfirm={handleInputConfirm}
-        title={inputModalMode === 'physical' ? "Nova Pasta Física" : "Nova Pasta Virtual (Coleção)"}
+        onClose={() => { setIsInputModalOpen(false); setPendingCollectionImages([]); }}
+        onConfirm={handleCreateVirtualFolder}
+        title="Nova Pasta Virtual"
         placeholder="Dê um nome para a pasta..."
         confirmLabel="Criar"
+      />
+
+      <ConfirmModal
+        isOpen={!!folderToDelete}
+        onClose={() => setFolderToDelete(null)}
+        onConfirm={confirmDeleteFolder}
+        title="Excluir Pasta Física"
+        message="Deseja excluir esta pasta? As imagens originais não serão apagadas, elas serão movidas para a raiz da galeria."
+        variant="danger"
+        confirmLabel="Excluir e Resgatar Imagens"
       />
     </div>
   );

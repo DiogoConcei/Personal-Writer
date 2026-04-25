@@ -295,10 +295,21 @@
 
   &--dragOver {
     background-color: var(--color-accent-glow);
-    border-color: var(--color-accent);
+    border: 2px solid var(--color-accent);
     transform: scale(1.05);
     box-shadow: 0 0 15px var(--color-accent-glow);
+    z-index: 5;
   }
+
+  &--dragging {
+    opacity: 0.4;
+    filter: grayscale(1);
+    transform: scale(0.95);
+  }
+}
+
+.imageItem.imageItem--dragOver {
+  filter: grayscale(1);
 }
 
 .deleteBtn {

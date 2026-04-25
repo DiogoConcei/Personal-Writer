@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard' | 'assets' | 'documents' | 'drawing' | 'settings';
+export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard' | 'assets' | 'documents' | 'drawing' | 'settings' | 'canvas';
 
 export interface DragInfo {
   sourcePath: string | null;

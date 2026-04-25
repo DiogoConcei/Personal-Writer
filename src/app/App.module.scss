@@ -57,6 +57,22 @@
     border-bottom: 1px solid var(--color-border);
     background-color: var(--color-bg-base);
     z-index: 5;
+    transition: background-color var(--transition-normal), border-color var(--transition-normal), position var(--transition-normal);
+
+    &--transparent {
+      background-color: transparent;
+      border-bottom-color: transparent;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      pointer-events: none; // Permite clicar no canvas por baixo de áreas vazias
+
+      // Reativa eventos para os botões reais
+      button, nav, .app__actions {
+        pointer-events: auto;
+      }
+    }
   }
 
   &__headerLeft {

@@ -8,6 +8,7 @@ import MoodBoard from '@/features/dashboard/components/MoodBoard';
 import AssetGallery from '@/features/dashboard/components/AssetGallery';
 import DocumentGallery from '@/features/dashboard/components/DocumentGallery';
 import CharacterGallery from '@/features/dashboard/components/CharacterGallery';
+import InfiniteCanvas from '@/features/canvas/components/InfiniteCanvas';
 import { PluginManager } from '@/features/settings/components/PluginManager';
 import { PluginPlaceholder } from '@/features/settings/components/PluginPlaceholder';
 import StatusBar from '@/features/editor/components/StatusBar';
@@ -23,7 +24,7 @@ import { useUIStore } from '@/store/uiStore';
 import { usePluginStore } from '@/features/settings/store/pluginStore';
 import { ToastContainer } from '@/shared/components/Toast/ToastContainer';
 import { exportWorkspaceZip } from '@/tauri-bridge';
-import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon, Download, FileSearch, Images, Pencil, Settings } from 'lucide-react';
+import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon, Download, FileSearch, Images, Pencil, Settings, Maximize, Infinity, ArrowLeft } from 'lucide-react';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
@@ -55,7 +56,8 @@ function App() {
   } = useUIStore();
 
   const { plugins } = usePluginStore();
-  const isMoodBoardEnabled = plugins.find(p => p.id === 'infinite-canvas')?.status === 'enabled';
+  const isMoodBoardEnabled = plugins.find(p => p.id === 'mood-board')?.status === 'enabled';
+  const isInfiniteCanvasEnabled = plugins.find(p => p.id === 'infinite-canvas')?.status === 'enabled';
   const isDrawingEnabled = plugins.find(p => p.id === 'drawing-board')?.status === 'enabled';
   const isDashboardEnabled = plugins.find(p => p.id === 'universe-dashboard')?.status === 'enabled';
   const isGalleryEnabled = plugins.find(p => p.id === 'character-gallery')?.status === 'enabled';
@@ -269,13 +271,15 @@ function App() {
     );
   }
 
+  const isCanvasActive = activePanel === 'canvas';
+
   return (
     <div className={`
       ${styles.app}
-      ${!isSidebarVisible ? styles['app--sidebar-hidden'] : ''}
+      ${(!isSidebarVisible || isCanvasActive) ? styles['app--sidebar-hidden'] : ''}
       ${isZenMode ? styles['app--zen-mode'] : ''}
     `}>
-      {isSidebarVisible && !isZenMode && (
+      {isSidebarVisible && !isZenMode && !isCanvasActive && (
         <aside className={styles.app__sidebar}>
           <FileTree />
         </aside>
@@ -283,17 +287,27 @@ function App() {
 
       <main className={styles.app__main}>
         {!isZenMode && (
-          <header className={styles.app__header}>
+          <header className={`${styles.app__header} ${isCanvasActive ? styles['app__header--transparent'] : ''}`}>
             <div className={styles.app__headerLeft}>
-              <button
-                className={`${styles.app__iconBtn} ${!isSidebarVisible ? styles['app__iconBtn--active'] : ''}`}
-                onClick={toggleSidebar}
-                title="Alternar Sidebar"
-              >
-                <PanelLeft size={18} />
-              </button>
+              {isCanvasActive ? (
+                <button
+                  className={styles.app__iconBtn}
+                  onClick={() => setActivePanel('editor')}
+                  title="Voltar para Notas"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+              ) : (
+                <button
+                  className={`${styles.app__iconBtn} ${!isSidebarVisible ? styles['app__iconBtn--active'] : ''}`}
+                  onClick={toggleSidebar}
+                  title="Alternar Sidebar"
+                >
+                  <PanelLeft size={18} />
+                </button>
+              )}
               <div className={styles.app__breadcrumb}>
-                {renderBreadcrumb()}
+                {!isCanvasActive && renderBreadcrumb()}
               </div>
             </div>
 
@@ -393,11 +407,19 @@ function App() {
                 </button>
                 <button
                   className={`${styles.app__iconBtn} ${activePanel === 'moodboard' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => isMoodBoardEnabled ? setActivePanel('moodboard') : addNotification('Plugin Infinite Canvas não ativado.', 'info')}
+                  onClick={() => isMoodBoardEnabled ? setActivePanel('moodboard') : addNotification('Plugin Mood Board não ativado.', 'info')}
                   title="Mood Board Espacial (Ctrl+M)"
                   style={{ opacity: isMoodBoardEnabled ? 1 : 0.4 }}
                 >
                   <ImageIcon size={18} />
+                </button>
+                <button
+                  className={`${styles.app__iconBtn} ${activePanel === 'canvas' ? styles['app__iconBtn--active'] : ''}`}
+                  onClick={() => isInfiniteCanvasEnabled ? setActivePanel('canvas') : addNotification('Plugin Infinite Canvas não ativado.', 'info')}
+                  title="Infinite Canvas (Beta)"
+                  style={{ opacity: isInfiniteCanvasEnabled ? 1 : 0.4 }}
+                >
+                  <Infinity size={18} />
                 </button>
               </nav>
 
@@ -418,13 +440,15 @@ function App() {
           ) : activePanel === 'gallery' ? (
             isGalleryEnabled ? <CharacterGallery /> : <PluginPlaceholder name="Galeria de Personagens" id="character-gallery" />
           ) : activePanel === 'moodboard' ? (
-            isMoodBoardEnabled ? <MoodBoard /> : <PluginPlaceholder name="Infinite Canvas" id="infinite-canvas" />
+            isMoodBoardEnabled ? <MoodBoard /> : <PluginPlaceholder name="Mood Board" id="mood-board" />
           ) : activePanel === 'assets' ? (
             <AssetGallery />
           ) : activePanel === 'documents' ? (
             <DocumentGallery />
           ) : activePanel === 'drawing' ? (
             isDrawingEnabled ? <DrawingBoard /> : <PluginPlaceholder name="Desenho" id="drawing-board" />
+          ) : activePanel === 'canvas' ? (
+            isInfiniteCanvasEnabled ? <InfiniteCanvas /> : <PluginPlaceholder name="Infinite Canvas" id="infinite-canvas" />
           ) : activePanel === 'settings' ? (
             <PluginManager />
           ) : activeFile ? (

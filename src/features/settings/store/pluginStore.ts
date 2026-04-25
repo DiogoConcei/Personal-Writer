@@ -22,6 +22,7 @@ interface PluginState {
   uninstallPlugin: (id: string) => Promise<void>;
   togglePlugin: (id: string) => Promise<void>;
   getPlugin: (id: string) => PluginMetadata | undefined;
+  resetPlugins: () => void;
 }
 
 // Mock inicial baseado no PRD_UNIFICADO_PLUGINS.md
@@ -57,9 +58,18 @@ const INITIAL_PLUGINS: PluginMetadata[] = [
     hasBackend: true,
   },
   {
+    id: 'mood-board',
+    title: 'Mood Board',
+    description: 'Mural de referências visuais para colagem de imagens e inspiração.',
+    version: '1.0.0',
+    category: 'Design',
+    level: 2,
+    status: 'not-installed',
+  },
+  {
     id: 'infinite-canvas',
-    title: 'Infinite Canvas / Mood Board',
-    description: 'Quadro branco espacial integrado (estilo Miro/Obsidian Canvas).',
+    title: 'Infinite Canvas',
+    description: 'Quadro branco espacial infinito que integra notas .md e conexões.',
     version: '1.0.0',
     category: 'Design',
     level: 3,
@@ -81,7 +91,7 @@ const INITIAL_PLUGINS: PluginMetadata[] = [
     version: '1.0.0',
     category: 'Writer',
     level: 2,
-    status: 'enabled', // Mantido ativado por padrão para não quebrar a experiência inicial
+    status: 'not-installed',
   },
   {
     id: 'character-gallery',
@@ -90,7 +100,7 @@ const INITIAL_PLUGINS: PluginMetadata[] = [
     version: '1.0.0',
     category: 'Writer',
     level: 2,
-    status: 'enabled',
+    status: 'not-installed',
   }
 ];
 
@@ -138,6 +148,10 @@ export const usePluginStore = create<PluginState>()(
             p.id === id ? { ...p, status: newStatus } : p
           )
         }));
+      },
+
+      resetPlugins: () => {
+        set({ plugins: INITIAL_PLUGINS });
       },
     }),
     {

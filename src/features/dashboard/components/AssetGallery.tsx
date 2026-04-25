@@ -1,10 +1,11 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
-import { useGalleryStore, GalleryCollection } from '../store/galleryStore';
-import { resolveAssetPath, ImageAsset, copyImageToAssets } from '@/tauri-bridge/fs';
-import { open } from '@tauri-apps/plugin-dialog';
+import { useGalleryStore } from '../store/galleryStore';
+import { resolveAssetPath, ImageAsset } from '@/tauri-bridge/fs';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { useImageManager } from '@/shared/hooks/useImageManager';
+import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop';
 import ImageViewer from '@/features/editor/components/ImageViewer';
 import InputModal from '@/shared/components/Modal/InputModal';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
@@ -17,13 +18,8 @@ import {
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
-interface DropTarget {
-  type: 'image' | 'folder';
-  id: string;
-}
-
 export default function AssetGallery() {
-  const { rootPath, cachedImages, isScanning, scanImages, invalidateImageCache } = useWorkspaceStore();
+  const { rootPath, isScanning, scanImages, invalidateImageCache } = useWorkspaceStore();
   const { addNotification } = useUIStore();
   const {
     collections,
@@ -33,14 +29,24 @@ export default function AssetGallery() {
     deleteCollection,
     addToCollection
   } = useGalleryStore();
+  const { 
+    uploadImages, 
+    handleImageDrop,
+    activeTarget,
+    filter,
+    setFilter,
+    isPickingExisting,
+    setIsPickingExisting,
+    filteredImages,
+    filteredCollections,
+    handleTargetClick,
+    getBreadcrumbs
+  } = useImageManager();
 
   const [activeImage, setActiveImage] = useState<string | null>(null);
-  const [activeCollection, setActiveCollection] = useState<GalleryCollection | null>(null);
-  const [filter, setFilter] = useState('');
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
-  const [isPickingExisting, setIsPickingExisting] = useState(false);
 
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
   const [inputModalMode, setInputModalOpen] = useState<'create' | 'rename'>('create');
@@ -48,13 +54,39 @@ export default function AssetGallery() {
   const [collectionToRename, setCollectionToRename] = useState<string | null>(null);
   const [collectionToDelete, setCollectionToDelete] = useState<string | null>(null);
 
-  const draggedItemRef = useRef<ImageAsset | null>(null);
-  const isDraggingRef = useRef(false);
-  const dropTargetRef = useRef<DropTarget | null>(null);
-  const dragStartPos = useRef({ x: 0, y: 0 });
-  const dragStartTime = useRef(0);
-  const processingDrop = useRef(false);
-  const lastDetectionTime = useRef(0);
+  // Configuração do Drag & Drop Desacoplado
+  const { 
+    handleMouseDown, 
+    draggedItem, 
+    dragPosition, 
+    isDragging, 
+    dropTarget, 
+    shouldIgnoreClick 
+  } = useDragAndDrop<ImageAsset>({
+    onDrop: async (item, targetType, targetId) => {
+      // Tenta usar o processador central do ImageManager
+      const handled = await handleImageDrop(item, targetType, targetId, selectedPaths);
+      
+      if (handled) {
+        if (isSelectionMode) { 
+          setSelectedPaths([]); 
+          setIsSelectionMode(false); 
+        }
+      } else if (targetType === 'image') {
+        // Fallback específico do AssetGallery: Criar coleção virtual ao soltar imagem sobre imagem
+        const sourceItems = selectedPaths.includes(item.path) ? selectedPaths : [item.path];
+        setPendingCollectionImages([...sourceItems, targetId]);
+        setInputModalOpen('create');
+        setIsInputModalOpen(true);
+      }
+    },
+    isValidTarget: (item, type, id) => {
+      if (type === 'image' && (id === item.path || selectedPaths.includes(id))) {
+        return false;
+      }
+      return true;
+    }
+  });
 
   useEffect(() => {
     if (rootPath) {
@@ -64,26 +96,9 @@ export default function AssetGallery() {
   }, [rootPath]);
 
   const handleUpload = async () => {
-    if (!rootPath) return;
-    try {
-      const selected = await open({
-        multiple: true,
-        filters: [{ name: 'Imagens', extensions: IMAGE_EXTENSIONS.map(ext => ext.replace('.', '')) }]
-      });
-      if (selected && Array.isArray(selected)) {
-        const newPaths: string[] = [];
-        for (const path of selected) {
-          const relativePath = await copyImageToAssets(path, rootPath);
-          newPaths.push(relativePath);
-        }
-        invalidateImageCache();
-        await scanImages();
-        if (activeCollection) await addToCollection(activeCollection.id, newPaths);
-        addNotification(`${selected.length} imagem(ns) importada(s)`, 'success');
-      }
-    } catch (err) {
-      console.error(err);
-      addNotification('Erro ao importar imagens', 'error');
+    const importedPaths = await uploadImages();
+    if (importedPaths && activeTarget?.type === 'virtual') {
+      await addToCollection(activeTarget.id, importedPaths);
     }
   };
 
@@ -95,164 +110,29 @@ export default function AssetGallery() {
         if (event.payload.type === 'drop' && rootPath) {
           const imagePaths = event.payload.paths.filter(p => IMAGE_EXTENSIONS.some(ext => p.toLowerCase().endsWith(ext)));
           if (imagePaths.length > 0) {
-            const importedRelativePaths: string[] = [];
-            for (const path of imagePaths) {
-              try {
-                importedRelativePaths.push(await copyImageToAssets(path, rootPath));
-              } catch (err) { console.error(err); }
-            }
-            invalidateImageCache();
-            await scanImages();
             const element = document.elementFromPoint(event.payload.position.x, event.payload.position.y);
             const folderId = element?.closest('[data-drag-type="folder"]')?.getAttribute('data-drag-id');
-            if (folderId) await addToCollection(folderId, importedRelativePaths);
-            else if (activeCollection) await addToCollection(activeCollection.id, importedRelativePaths);
-
-            addNotification(`${imagePaths.length} imagem(ns) adicionada(s)`, 'success');
+            
+            const importedPaths = await uploadImages('', imagePaths);
+            
+            if (importedPaths) {
+              if (folderId) await addToCollection(folderId, importedPaths);
+              else if (activeTarget?.type === 'virtual') await addToCollection(activeTarget.id, importedPaths);
+            }
           }
         }
       });
     };
     setupDragDrop();
     return () => { if (unlistenFn) unlistenFn(); };
-  }, [rootPath, activeCollection]);
-
-  const [draggedItemState, setDraggedItemState] = useState<ImageAsset | null>(null);
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
-  const [isDraggingState, setIsDraggingState] = useState(false);
-  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
-
-  const handleMouseDown = (e: React.MouseEvent, img: ImageAsset) => {
-    if (e.button !== 0 || processingDrop.current) return;
-    e.preventDefault();
-    draggedItemRef.current = img;
-    setDraggedItemState(img);
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
-    dragStartTime.current = Date.now();
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    document.body.classList.add('is-dragging');
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    const deltaX = Math.abs(e.clientX - dragStartPos.current.x);
-    const deltaY = Math.abs(e.clientY - dragStartPos.current.y);
-    if (!isDraggingRef.current && (deltaX > 8 || deltaY > 8)) {
-      isDraggingRef.current = true;
-      setIsDraggingState(true);
-    }
-    if (isDraggingRef.current) {
-      setDragPosition({ x: e.clientX, y: e.clientY });
-      const now = Date.now();
-      if (now - lastDetectionTime.current > 50) {
-        lastDetectionTime.current = now;
-        const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
-        const targetCard = elementAtPoint?.closest('[data-drag-id]');
-        if (targetCard) {
-          const type = targetCard.getAttribute('data-drag-type') as 'image' | 'folder';
-          const id = targetCard.getAttribute('data-drag-id')!;
-          if (type === 'image' && (id === draggedItemRef.current?.path || selectedPaths.includes(id))) {
-            setDropTarget(null);
-            dropTargetRef.current = null;
-          } else {
-            const newTarget: DropTarget = { type, id };
-            setDropTarget(newTarget);
-            dropTargetRef.current = newTarget;
-          }
-        } else {
-          setDropTarget(null);
-          dropTargetRef.current = null;
-        }
-      }
-    }
-  };
-
-  const handleMouseUp = async () => {
-    window.removeEventListener('mousemove', handleMouseMove);
-    window.removeEventListener('mouseup', handleMouseUp);
-    document.body.classList.remove('is-dragging');
-    if (processingDrop.current) return;
-    const wasDragging = isDraggingRef.current;
-    const target = dropTargetRef.current;
-    const currentItem = draggedItemRef.current;
-    setDraggedItemState(null);
-    draggedItemRef.current = null;
-    setIsDraggingState(false);
-    isDraggingRef.current = false;
-    setDropTarget(null);
-    dropTargetRef.current = null;
-    if (wasDragging && target && currentItem) {
-      processingDrop.current = true;
-      const sourceItems = selectedPaths.includes(currentItem.path) ? selectedPaths : [currentItem.path];
-      try {
-        if (target.type === 'folder') {
-          await addToCollection(target.id, sourceItems);
-          addNotification(`${sourceItems.length} imagem(ns) movida(s)`, 'success');
-          if (isSelectionMode) { setSelectedPaths([]); setIsSelectionMode(false); }
-        } else if (target.type === 'image') {
-          setPendingCollectionImages([...sourceItems, target.id]);
-          setInputModalOpen('create');
-          setIsInputModalOpen(true);
-        }
-      } finally { setTimeout(() => { processingDrop.current = false; }, 100); }
-    }
-  };
-
-  const filteredImages = useMemo(() => {
-    const isSearching = filter.trim().length > 0;
-    const allAssignedPaths = new Set(collections.flatMap(c => c.images));
-    const baseImages = cachedImages || [];
-
-    let baseList: ImageAsset[] = [];
-
-    if (activeCollection && !isPickingExisting) {
-      const subCollections = collections.filter(c => c.parentId === activeCollection.id);
-      const pathsInSubCollections = new Set(subCollections.flatMap(c => c.images));
-
-      baseList = baseImages.filter(img =>
-        activeCollection.images.includes(img.path) &&
-        (isSearching || !pathsInSubCollections.has(img.path))
-      );
-    } else if (activeCollection && isPickingExisting) {
-      baseList = baseImages.filter(img => !allAssignedPaths.has(img.path));
-    } else {
-      baseList = isSearching ? baseImages : baseImages.filter(img => !allAssignedPaths.has(img.path));
-    }
-
-    return baseList.filter(img => img.name.toLowerCase().includes(filter.toLowerCase()));
-  }, [cachedImages, filter, activeCollection, collections, isPickingExisting]);
-
-  const filteredCollections = useMemo(() => {
-    if (isPickingExisting) return [];
-    return collections.filter(c => c.parentId === activeCollection?.id && c.name.toLowerCase().includes(filter.toLowerCase()));
-  }, [collections, filter, activeCollection, isPickingExisting]);
+  }, [rootPath, activeTarget, uploadImages, addToCollection]);
 
   const dynamicCols = Math.max(1, Math.min(filteredImages.length + filteredCollections.length, 4));
 
-  const handleBreadcrumbClick = (col: GalleryCollection | null) => {
-    setActiveCollection(col);
-    setIsPickingExisting(false);
-    setIsSelectionMode(false);
-    setSelectedPaths([]);
-  };
-
-  const getBreadcrumbs = () => {
-    const crumbs: (GalleryCollection | null)[] = [null];
-    if (!activeCollection) return crumbs;
-    const buildPath = (id: string) => {
-      const col = collections.find(c => c.id === id);
-      if (col) {
-        if (col.parentId) buildPath(col.parentId);
-        crumbs.push(col);
-      }
-    };
-    buildPath(activeCollection.id);
-    return crumbs;
-  };
-
   const handleInputConfirm = async (name: string) => {
     if (inputModalMode === 'create') {
-      await createCollection(name, pendingCollectionImages, activeCollection?.id);
+      const parentId = activeTarget?.type === 'virtual' ? activeTarget.id : undefined;
+      await createCollection(name, pendingCollectionImages, parentId);
       addNotification('Pasta criada com sucesso', 'success');
       setPendingCollectionImages([]);
     } else {
@@ -277,7 +157,9 @@ export default function AssetGallery() {
     try {
       await deleteCollection(id);
       addNotification('Pasta excluída', 'success');
-      if (activeCollection?.id === id) setActiveCollection(null);
+      if (activeTarget?.type === 'virtual' && activeTarget.id === id) {
+        handleTargetClick(null);
+      }
       setCollectionToDelete(null);
     } catch (err) {
       addNotification('Erro ao excluir pasta', 'error');
@@ -292,9 +174,17 @@ export default function AssetGallery() {
         <div className={styles.header__title}>
           <div className={styles.breadcrumbs}>
             {getBreadcrumbs().map((crumb, i) => (
-              <div key={i === 0 ? 'root' : crumb?.id} className={styles.breadcrumbItem}>
+              <div key={i} className={styles.breadcrumbItem}>
                 {i > 0 && <ChevronRight size={14} className={styles.breadcrumbSeparator} />}
-                <button className={`${styles.breadcrumbBtn} ${crumb?.id === activeCollection?.id ? styles['breadcrumbBtn--active'] : ''}`} onClick={() => handleBreadcrumbClick(crumb)}>{crumb ? crumb.name : 'Galeria'}</button>
+                <button 
+                  className={`${styles.breadcrumbBtn} ${crumb.target === activeTarget ? styles['breadcrumbBtn--active'] : ''}`} 
+                  onClick={() => handleTargetClick(crumb.target, () => {
+                    setIsSelectionMode(false);
+                    setSelectedPaths([]);
+                  })}
+                >
+                  {crumb.label}
+                </button>
               </div>
             ))}
             {isPickingExisting && <><ChevronRight size={14} className={styles.breadcrumbSeparator} /><span className={styles.breadcrumbPicking}>Adicionando imagens</span></>}
@@ -304,12 +194,12 @@ export default function AssetGallery() {
 
         <div className={styles.actions}>
           <div className={styles.collectionActions}>
-            <button className={styles.actionBtn} title="Upload" onClick={handleUpload}><Upload size={18} />{activeCollection && <span>Upload</span>}</button>
-            {activeCollection && !isPickingExisting && <button className={styles.actionBtn} title="Adicionar" onClick={() => { setIsPickingExisting(true); setIsSelectionMode(true); }}><ImagePlus size={18} /><span>Adicionar</span></button>}
-            {activeCollection && !isPickingExisting && (
+            <button className={styles.actionBtn} title="Upload" onClick={handleUpload}><Upload size={18} />{activeTarget && <span>Upload</span>}</button>
+            {activeTarget?.type === 'virtual' && !isPickingExisting && <button className={styles.actionBtn} title="Adicionar" onClick={() => { setIsPickingExisting(true); setIsSelectionMode(true); }}><ImagePlus size={18} /><span>Adicionar</span></button>}
+            {activeTarget?.type === 'virtual' && !isPickingExisting && (
               <>
-                <button className={styles.actionBtn} title="Renomear Pasta" onClick={() => handleOpenRename(activeCollection.id)}><Edit2 size={18} /></button>
-                <button className={`${styles.actionBtn} ${styles['actionBtn--danger']}`} title="Excluir Pasta" onClick={() => setCollectionToDelete(activeCollection.id)}><Trash2 size={18} /></button>
+                <button className={styles.actionBtn} title="Renomear Pasta" onClick={() => handleOpenRename(activeTarget.id)}><Edit2 size={18} /></button>
+                <button className={`${styles.actionBtn} ${styles['actionBtn--danger']}`} title="Excluir Pasta" onClick={() => setCollectionToDelete(activeTarget.id)}><Trash2 size={18} /></button>
               </>
             )}
             <div className={styles.divider} />
@@ -323,7 +213,7 @@ export default function AssetGallery() {
       <div className={styles.content}>
         <div className={styles.grid} style={{ '--cols': dynamicCols } as any}>
           {filteredCollections.map(col => (
-            <div key={col.id} className={`${styles.folderCard} ${dropTarget?.id === col.id ? styles['folderCard--dragOver'] : ''}`} data-drag-type="folder" data-drag-id={col.id} onClick={() => setActiveCollection(col)} onDragStart={(e) => e.preventDefault()}>
+            <div key={col.id} className={`${styles.folderCard} ${dropTarget?.id === col.id ? styles['folderCard--dragOver'] : ''}`} data-drag-type="folder" data-drag-id={col.id} onClick={() => handleTargetClick({ type: 'virtual', id: col.id })} onDragStart={(e) => e.preventDefault()}>
               <button className={styles.folderCard__delete} onClick={(e) => { e.stopPropagation(); setCollectionToDelete(col.id); }}><Trash2 size={14} /></button>
               <div className={styles.folderCard__previews}>
                 {col.images.length > 0 ? (
@@ -346,16 +236,16 @@ export default function AssetGallery() {
             </div>
           ))}
           {filteredImages.map((img, i) => (
-            <div key={img.full_path} data-drag-type="image" data-drag-id={img.path} onMouseDown={(e) => handleMouseDown(e, img)} onDragStart={(e) => e.preventDefault()} className={`${styles.card} ${selectedPaths.includes(img.path) ? styles['card--selected'] : ''} ${draggedItemState?.path === img.path ? styles['card--dragging'] : ''} ${dropTarget?.id === img.path ? styles['card--dragOver'] : ''}`} style={{ '--delay': `${i * 0.02}s` } as any} onClick={() => { if (isDraggingRef.current || processingDrop.current) return; if (isSelectionMode) { setSelectedPaths(prev => prev.includes(img.path) ? prev.filter(p => p !== img.path) : [...prev, img.path]); } else { setActiveImage(img.full_path); } }}>
+            <div key={img.full_path} data-drag-type="image" data-drag-id={img.path} onMouseDown={(e) => handleMouseDown(e, img)} onDragStart={(e) => e.preventDefault()} className={`${styles.card} ${selectedPaths.includes(img.path) ? styles['card--selected'] : ''} ${draggedItem?.path === img.path ? styles['card--dragging'] : ''} ${dropTarget?.id === img.path ? styles['card--dragOver'] : ''}`} style={{ '--delay': `${i * 0.02}s` } as any} onClick={() => { if (shouldIgnoreClick()) return; if (isSelectionMode) { setSelectedPaths(prev => prev.includes(img.path) ? prev.filter(p => p !== img.path) : [...prev, img.path]); } else { setActiveImage(img.full_path); } }}>
               <div className={styles.card__preview}><img src={resolveAssetPath(img.path, rootPath) || undefined} alt={img.name} loading="lazy" onDragStart={(e) => e.preventDefault()} /></div>
               <div className={styles.card__overlay}><span className={styles.card__name}>{img.name}</span></div>
             </div>
           ))}
         </div>
-        {isDraggingState && draggedItemState && <div className={styles.dragGhost} style={{ left: dragPosition.x, top: dragPosition.y }}><div className={styles.dragGhost__stack}><img src={resolveAssetPath(draggedItemState.path, rootPath) || undefined} alt="" />{selectedPaths.length > 1 && <div className={styles.dragGhost__count}><Layers size={14} /> {selectedPaths.length}</div>}</div>{dropTarget && <div className={styles.dragGhost__label}>{dropTarget.type === 'folder' ? 'Adicionar à pasta' : 'Criar nova pasta'}</div>}</div>}
+        {isDragging && draggedItem && <div className={styles.dragGhost} style={{ left: dragPosition.x, top: dragPosition.y }}><div className={styles.dragGhost__stack}><img src={resolveAssetPath(draggedItem.path, rootPath) || undefined} alt="" />{selectedPaths.length > 1 && <div className={styles.dragGhost__count}><Layers size={14} /> {selectedPaths.length}</div>}</div>{dropTarget && <div className={styles.dragGhost__label}>{dropTarget.type === 'folder' ? 'Adicionar à pasta' : 'Criar nova pasta'}</div>}</div>}
       </div>
 
-      {isSelectionMode && selectedPaths.length > 0 && <div className={styles.selectionBar}><span>{selectedPaths.length} itens selecionados</span><div className={styles.actions}><button className={styles.btn} onClick={() => { setSelectedPaths([]); if (isPickingExisting) setIsPickingExisting(false); }}>Cancelar</button>{isPickingExisting && activeCollection ? <button className={`${styles.btn} ${styles['btn--primary']}`} onClick={async () => { await addToCollection(activeCollection.id, selectedPaths); setIsPickingExisting(false); setIsSelectionMode(false); setSelectedPaths([]); }}>Confirmar Adição</button> : <button className={`${styles.btn} ${styles['btn--primary']}`} onClick={() => { setPendingCollectionImages(selectedPaths); setInputModalOpen('create'); setIsInputModalOpen(true); }}><FolderPlus size={16} /> Criar Pasta</button>}</div></div>}
+      {isSelectionMode && selectedPaths.length > 0 && <div className={styles.selectionBar}><span>{selectedPaths.length} itens selecionados</span><div className={styles.actions}><button className={styles.btn} onClick={() => { setSelectedPaths([]); if (isPickingExisting) setIsPickingExisting(false); }}>Cancelar</button>{isPickingExisting && activeTarget?.type === 'virtual' ? <button className={`${styles.btn} ${styles['btn--primary']}`} onClick={async () => { await addToCollection(activeTarget.id, selectedPaths); setIsPickingExisting(false); setIsSelectionMode(false); setSelectedPaths([]); }}>Confirmar Adição</button> : <button className={`${styles.btn} ${styles['btn--primary']}`} onClick={() => { setPendingCollectionImages(selectedPaths); setInputModalOpen('create'); setIsInputModalOpen(true); }}><FolderPlus size={16} /> Criar Pasta</button>}</div></div>}
 
       <InputModal
         isOpen={isInputModalOpen}
@@ -364,7 +254,7 @@ export default function AssetGallery() {
         title={inputModalMode === 'create' ? "Nova Pasta" : "Renomear Pasta"}
         placeholder="Dê um nome para sua coleção..."
         confirmLabel={inputModalMode === 'create' ? "Criar Pasta" : "Renomear"}
-        defaultValue={inputModalMode === 'rename' ? (collections.find(c => c.id === collectionToRename || c.id === activeCollection?.id)?.name || "") : ""}
+        defaultValue={inputModalMode === 'rename' ? (collections.find(c => c.id === collectionToRename || (activeTarget?.type === 'virtual' && c.id === activeTarget.id))?.name || "") : ""}
       />
       <ConfirmModal isOpen={!!collectionToDelete} onClose={() => setCollectionToDelete(null)} onConfirm={() => collectionToDelete && handleDeleteCollection(collectionToDelete)} title="Excluir Pasta" message="Tem certeza que deseja excluir esta pasta? As imagens originais não serão apagadas." variant="danger" confirmLabel="Excluir" />
     </div>

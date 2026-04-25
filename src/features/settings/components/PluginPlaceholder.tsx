@@ -1,6 +1,6 @@
 import React from 'react';
 import { useUIStore } from '@/store/uiStore';
-import { Settings, Puzzle } from 'lucide-react';
+import { Settings as SettingsIcon, Puzzle } from 'lucide-react';
 
 interface PluginPlaceholderProps {
   name: string;
@@ -52,7 +52,7 @@ export const PluginPlaceholder: React.FC<PluginPlaceholderProps> = ({ name }) =>
             fontWeight: 500
           }}
         >
-          <Settings size={18} /> Ir para Plugin Manager
+          <SettingsIcon size={18} /> Ir para Plugin Manager
         </button>
       </div>
     </div>

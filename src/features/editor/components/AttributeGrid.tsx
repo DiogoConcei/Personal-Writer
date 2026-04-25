@@ -1,6 +1,6 @@
 import styles from './AttributeGrid.module.scss';
 import { useState } from 'react';
-import { Plus, Trash2, Settings } from 'lucide-react';
+import { Plus, Trash2, Settings as SettingsIcon } from 'lucide-react';
 import { Metadata } from '@/features/editor/store/metadataParser';
 import Modal from '@/shared/components/Modal/Modal';
 
@@ -81,7 +81,7 @@ export function AttributeGrid({ metadata, onUpdate, readOnly }: AttributeGridPro
                     <button onClick={() => setEditingField({ 
                       isNew: false, oldName: key, name: key, 
                       type: type as any, options: config?.options?.join(', ') || '' 
-                    })}><Settings size={12} /></button>
+                    })}><SettingsIcon size={12} /></button>
                     <button onClick={() => removeField(key)}><Trash2 size={12} /></button>
                   </div>
                 )}

@@ -9,7 +9,7 @@ import AssetGallery from '@/features/dashboard/components/AssetGallery';
 import DocumentGallery from '@/features/dashboard/components/DocumentGallery';
 import CharacterGallery from '@/features/dashboard/components/CharacterGallery';
 import InfiniteCanvas from '@/features/canvas/components/InfiniteCanvas';
-import { PluginManager } from '@/features/settings/components/PluginManager';
+import { SettingsPage } from '@/features/settings/components/Settings';
 import { PluginPlaceholder } from '@/features/settings/components/PluginPlaceholder';
 import StatusBar from '@/features/editor/components/StatusBar';
 import ReferenceSidebar from '@/features/references/components/ReferenceSidebar';
@@ -24,7 +24,7 @@ import { useUIStore } from '@/store/uiStore';
 import { usePluginStore } from '@/features/settings/store/pluginStore';
 import { ToastContainer } from '@/shared/components/Toast/ToastContainer';
 import { exportWorkspaceZip } from '@/tauri-bridge';
-import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon, Download, FileSearch, Images, Pencil, Settings, Infinity, ArrowLeft } from 'lucide-react';
+import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon, Download, FileSearch, Images, Pencil, Settings as SettingsIcon, Infinity, ArrowLeft } from 'lucide-react';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
@@ -204,7 +204,7 @@ function App() {
       if (activePanel === 'assets') prefix = 'Galeria';
       if (activePanel === 'documents') prefix = 'Documentos';
       if (activePanel === 'drawing') prefix = 'Desenho';
-      if (activePanel === 'settings') prefix = 'Plugin Manager';
+      if (activePanel === 'settings') prefix = 'Ajustes';
 
       if (!dashboardFilterPath || !rootPath || activePanel === 'moodboard' || activePanel === 'assets' || activePanel === 'documents' || activePanel === 'drawing' || activePanel === 'settings') return <span>{prefix}</span>;
 
@@ -369,7 +369,7 @@ function App() {
                   onClick={() => setActivePanel('settings')}
                   title="Configurações e Plugins (Ctrl+,)"
                 >
-                  <Settings size={18} />
+                  <SettingsIcon size={18} />
                 </button>
               </div>
 
@@ -450,7 +450,7 @@ function App() {
           ) : activePanel === 'canvas' ? (
             isInfiniteCanvasEnabled ? <InfiniteCanvas /> : <PluginPlaceholder name="Infinite Canvas" id="infinite-canvas" />
           ) : activePanel === 'settings' ? (
-            <PluginManager />
+            <SettingsPage />
           ) : activeFile ? (
             isImage ? <ImageViewer path={activeFile} /> : <Editor />
           ) : (

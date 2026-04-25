@@ -3,7 +3,7 @@ import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { FileNode } from '@/tauri-bridge';
-import { Search, FileText, FileImage, Type, LayoutGrid, PanelLeft, FolderOpen, Settings } from 'lucide-react';
+import { Search, FileText, FileImage, Type, LayoutGrid, PanelLeft, FolderOpen, Settings as SettingsIcon } from 'lucide-react';
 import styles from './CommandPalette.module.scss';
 
 type ResultItem =
@@ -64,7 +64,7 @@ export default function CommandPalette() {
     { type: 'action', id: 'toggle-sidebar', name: 'Alternar Sidebar', icon: <PanelLeft size={16} />, action: toggleSidebar },
     { type: 'action', id: 'toggle-dashboard', name: 'Alternar Dashboard', icon: <LayoutGrid size={16} />, action: () => setActivePanel(activePanel === 'editor' ? 'dashboard' : 'editor') },
     { type: 'action', id: 'toggle-typography', name: 'Mudar Fonte (Sans/Serif)', icon: <Type size={16} />, action: () => setTypography(typography === 'sans' ? 'serif' : 'sans') },
-    { type: 'action', id: 'open-settings', name: 'Abrir Configurações / Plugins', icon: <Settings size={16} />, action: () => setActivePanel('settings') },
+    { type: 'action', id: 'open-settings', name: 'Abrir Configurações / Plugins', icon: <SettingsIcon size={16} />, action: () => setActivePanel('settings') },
     { type: 'action', id: 'change-workspace', name: 'Trocar Workspace', icon: <FolderOpen size={16} />, action: selectWorkspace },
   ];
 

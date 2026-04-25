@@ -3,7 +3,7 @@
  * Permite extensibilidade total e personalizações dinâmicas.
  */
 
-export interface CanvasEntity<T = any> {
+export interface CanvasEntity<T = unknown> {
   id: string;
   type: string; // Ex: 'pdf', 'image', 'note', 'postit'
   
@@ -52,4 +52,4 @@ export interface PostItData {
   color: string;
 }
 
-export type AnyCanvasEntity = CanvasEntity<any>;
+export type AnyCanvasEntity = CanvasEntity<PdfData | ImageData | NoteData | PostItData | unknown>;

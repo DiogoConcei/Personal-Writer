@@ -5,13 +5,16 @@ Um editor de notas Desktop moderno, local-first e extensível, construído com *
 ## ✨ Recursos Principais
 
 - 🖋️ **Editor Rich-Text**: Experiência TipTap polida com suporte a Markdown.
+- ♾️ **Infinite Canvas**: Quadro branco espacial infinito para organizar notas, imagens e PDFs com rotação Z e panning fluido.
+- ⚙️ **Configurações Centralizadas**: Painel completo para personalização do editor, plugins e preferências globais.
 - 📖 **Dicionário e Sinônimos**: Corretor ortográfico nativo (PT-BR) e dicionário de sinônimos offline integrados via Rust.
-- 📂 **Organização Fluida**: Árvore de arquivos com Drag-and-Drop ultra-rápido e atualizações otimistas.
+- 📁 **Organização Fluida**: Árvore de arquivos com Drag-and-Drop ultra-rápido e atualizações otimistas. 
 - 🖼️ **Gestão de Imagens**: Galeria integrada com upload local e suporte a layouts flexíveis (float/wrap).
 - 🔗 **WikiLinks**: Navegação rápida estilo Obsidian com autocomplete.
-- 🕒 **Histórico de Versões**: snapshots automáticos com funcionalidade de congelar (marcos).
-- 📊 **Dashboard Visual**: Visualize suas notas como cards organizados.
+- 📜 **Histórico de Versões**: Snapshots automáticos com funcionalidade de congelar (marcos).
+- 📊 **Dashboard Visual**: Visualize suas notas como cards organizados e acompanhe o progresso do projeto.
 - 🎨 **UI Premium**: Paleta Amethyst + Gunmetal com design simétrico e focado em escrita.
+
 
 ## 🚀 Tecnologias
 

@@ -6,9 +6,11 @@ import {
   copyImageToAssets, 
   deleteItem, 
   renameItem, 
-  ImageAsset 
+  ImageAsset,
+  scanWorkspaceImages
 } from '@/tauri-bridge/fs';
 import { open } from '@tauri-apps/plugin-dialog';
+import { convertFileSrc } from '@tauri-apps/api/core';
 
 export type GalleryNavTarget = 
   | { type: 'virtual'; id: string } 
@@ -18,6 +20,45 @@ export type GalleryNavTarget =
 export interface GalleryBreadcrumb {
   label: string;
   target: GalleryNavTarget;
+}
+
+/**
+ * Função utilitária global para resolver caminhos de imagem (HTTP, Relativo, Absoluto ou Obsidian)
+ */
+export async function resolveImageUrl(src: string, rootPath: string | null): Promise<string | undefined> {
+  if (!src) return undefined;
+
+  // 1. Caminho Externo (http)
+  if (src.startsWith('http')) return src;
+
+  // 2. Caminho Relativo Padrão (./)
+  if (src.startsWith('./') && rootPath) {
+    const relativePart = src.replace('./', '');
+    const separator = rootPath.includes('\\') ? '\\' : '/';
+    const fullPath = `${rootPath}${separator}${relativePart.replace(/[\\/]/g, separator)}`;
+    return convertFileSrc(fullPath);
+  }
+
+  // 3. Caminho Absoluto
+  const isAbsolute = /^[a-zA-Z]:[\\/]/.test(src) || src.startsWith('/');
+  if (isAbsolute) return convertFileSrc(src);
+
+  // 4. Nome de Arquivo Solto (Padrão Obsidian ![[imagem.png]])
+  if (rootPath) {
+    try {
+      const allImages = await scanWorkspaceImages(rootPath);
+      const found = allImages.find(img => 
+        img.name === src || 
+        img.path.endsWith('/' + src) || 
+        img.path.endsWith('\\' + src)
+      );
+      if (found) return convertFileSrc(found.full_path);
+    } catch (err) {
+      console.error('[resolveImageUrl] Erro ao resolver imagem Obsidian:', err);
+    }
+  }
+
+  return undefined;
 }
 
 export function useImageManager() {

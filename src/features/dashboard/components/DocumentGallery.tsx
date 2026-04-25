@@ -1,109 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useReferenceStore } from '@/features/references/store/referenceStore';
 import { useUIStore } from '@/store/uiStore';
-import { listDirectory, PdfAsset, resolveAssetPath, copyFileToWorkspace } from '@/tauri-bridge/fs';
-import { open } from '@tauri-apps/plugin-dialog';
+import { PdfAsset, resolveAssetPath } from '@/tauri-bridge/fs';
+import { useDocumentManager } from '@/shared/hooks/useDocumentManager';
 import styles from './DocumentGallery.module.scss';
 import { FileText, Search, RefreshCw, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { PdfThumbnail } from './PdfThumbnail';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
 
 export default function DocumentGallery() {
-  const { rootPath, deleteItem } = useWorkspaceStore();
+  const { rootPath } = useWorkspaceStore();
   const { setActivePdf } = useReferenceStore();
-  const { toggleRightSidebar, isRightSidebarVisible, addNotification } = useUIStore();
-
-  const [pdfs, setPdfs] = useState<PdfAsset[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [filter, setFilter] = useState('');
+  const { toggleRightSidebar, isRightSidebarVisible } = useUIStore();
   
-  // Estado para exclusão
+  const { 
+    pdfs, 
+    isLoading, 
+    loadDocuments, 
+    handleUpload, 
+    handleDelete 
+  } = useDocumentManager();
+
+  const [filter, setFilter] = useState('');
   const [pdfToDelete, setPdfToDelete] = useState<PdfAsset | null>(null);
-
-  const loadDocuments = async () => {
-    if (!rootPath) return;
-    setIsLoading(true);
-    try {
-      const scanFolder = async (path: string): Promise<PdfAsset[]> => {
-        const entries = await listDirectory(path);
-        let results: PdfAsset[] = [];
-
-        for (const entry of entries) {
-          if (entry.is_dir) {
-            if (entry.name.startsWith('.')) continue;
-            // Ignorar pastas de sistema conhecidas se necessário, ou varrer tudo
-            const subResults = await scanFolder(entry.path);
-            results = [...results, ...subResults];
-          } else {
-            if (entry.name.toLowerCase().endsWith('.pdf')) {
-              results.push({
-                name: entry.name,
-                path: entry.path,
-                full_path: entry.path,
-                modified_at: entry.modified_at
-              });
-            }
-          }
-        }
-        return results;
-      };
-
-      const allPdfs = await scanFolder(rootPath);
-      setPdfs(allPdfs);
-    } catch (err) {
-      console.error('Erro ao carregar PDFs:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadDocuments();
-  }, [rootPath]);
 
   const handleOpenPdf = (path: string) => {
     setActivePdf(path);
     if (!isRightSidebarVisible) toggleRightSidebar();
   };
 
-  const handleUpload = async () => {
-    if (!rootPath) return;
-    try {
-      const selected = await open({
-        multiple: true,
-        filters: [{ name: 'Documentos PDF', extensions: ['pdf'] }]
-      });
-
-      if (selected && Array.isArray(selected)) {
-        setIsLoading(true);
-        for (const path of selected) {
-          // Copia para a pasta 'docs' do workspace
-          await copyFileToWorkspace(path, rootPath, 'docs');
-        }
-        addNotification(`${selected.length} documento(s) importado(s)`, 'success');
-        await loadDocuments();
-      }
-    } catch (err) {
-      console.error('Erro ao importar PDFs:', err);
-      addNotification('Erro ao importar documentos', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleDeleteConfirm = async () => {
     if (!pdfToDelete) return;
-    try {
-      await deleteItem(pdfToDelete.path);
-      addNotification('Documento excluído com sucesso', 'success');
-      await loadDocuments();
-    } catch (err) {
-      console.error('Erro ao excluir PDF:', err);
-      addNotification('Erro ao excluir documento', 'error');
-    } finally {
-      setPdfToDelete(null);
-    }
+    await handleDelete(pdfToDelete);
+    setPdfToDelete(null);
   };
 
   const filteredPdfs = pdfs.filter(pdf =>
@@ -131,7 +61,7 @@ export default function DocumentGallery() {
           
           <button 
             className={styles.addBtn}
-            onClick={handleUpload}
+            onClick={() => handleUpload()}
             title="Adicionar Documento"
           >
             <Plus size={18} />
@@ -160,7 +90,7 @@ export default function DocumentGallery() {
             <FileText size={64} />
             <p>{filter ? 'Nenhum documento corresponde à busca.' : 'Nenhum PDF encontrado no workspace.'}</p>
             {!filter && (
-              <button className={styles.emptyAddBtn} onClick={handleUpload}>
+              <button className={styles.emptyAddBtn} onClick={() => handleUpload()}>
                 Importar Primeiro PDF
               </button>
             )}

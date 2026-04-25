@@ -7,13 +7,17 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 
 interface Props {
   fileUrl: string;
+  width?: number;
+  pageNumber?: number;
+  onLoadSuccess?: (data: { numPages: number }) => void;
 }
 
-export const PdfThumbnail: React.FC<Props> = ({ fileUrl }) => {
+export const PdfThumbnail: React.FC<Props> = ({ fileUrl, width = 200, pageNumber = 1, onLoadSuccess }) => {
   return (
     <div className={styles.thumbnailContainer}>
       <Document
         file={fileUrl}
+        onLoadSuccess={onLoadSuccess}
         loading={
           <div className={styles.thumbnailLoading}>
             <Loader2 className={styles.spin} size={20} />
@@ -26,10 +30,11 @@ export const PdfThumbnail: React.FC<Props> = ({ fileUrl }) => {
         }
       >
         <Page
-          pageNumber={1}
-          width={200}
+          pageNumber={pageNumber}
+          width={width}
           renderTextLayer={false}
           renderAnnotationLayer={false}
+          canvasBackground="transparent"
           className={styles.pdfPage}
         />
       </Document>

@@ -24,7 +24,7 @@ import { useUIStore } from '@/store/uiStore';
 import { usePluginStore } from '@/features/settings/store/pluginStore';
 import { ToastContainer } from '@/shared/components/Toast/ToastContainer';
 import { exportWorkspaceZip } from '@/tauri-bridge';
-import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon, Download, FileSearch, Images, Pencil, Settings, Maximize, Infinity, ArrowLeft } from 'lucide-react';
+import { Type, LayoutGrid, FileEdit, PanelRight, PanelLeft, FolderOpen, Search, Users, Image as ImageIcon, Download, FileSearch, Images, Pencil, Settings, Infinity, ArrowLeft } from 'lucide-react';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 

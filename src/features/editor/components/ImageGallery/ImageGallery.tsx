@@ -30,9 +30,16 @@ import {
 interface ImageGalleryProps {
   onSelect: (src: string) => void;
   onClose: () => void;
+  disableOrganization?: boolean;
+  largeModal?: boolean;
 }
 
-export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
+export default function ImageGallery({ 
+  onSelect, 
+  onClose, 
+  disableOrganization = false,
+  largeModal = false 
+}: ImageGalleryProps) {
   const { rootPath, cachedImages, isScanning, scanImages, invalidateImageCache } = useWorkspaceStore();
   const { addNotification } = useUIStore();
   const { createCollection, addToCollection, loadCollections } = useGalleryStore();
@@ -53,7 +60,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
   } = useImageManager();
 
   useEffect(() => {
-    console.log('%c[ImageGallery] Montado via SlashCommand / Botão', 'color: #1abc9c; font-weight: bold; border: 1px solid #1abc9c; padding: 2px 4px;');
+    console.log('%c[ImageGallery] Montado', 'color: #1abc9c; font-weight: bold; border: 1px solid #1abc9c; padding: 2px 4px;');
     return () => console.log('%c[ImageGallery] Desmontado', 'color: #e74c3c; font-weight: bold;');
   }, []);
 
@@ -78,6 +85,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
     shouldIgnoreClick 
   } = useDragAndDrop<ImageAsset>({
     onDrop: async (item, targetType, targetId) => {
+      if (disableOrganization) return;
       console.log(`%c[ImageGallery] Drop detectado via Hook -> Target: ${targetType} (${targetId})`, 'color: #3498db; font-weight: bold;');
       
       const success = await handleImageDrop(item, targetType, targetId, selectedPaths);
@@ -97,6 +105,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
       console.log('%c[ImageGallery] DND Finalizado via Hook', 'color: #9b59b6; font-weight: bold;');
     },
     isValidTarget: (item, type, id) => {
+      if (disableOrganization) return false;
       if (type === 'image' && (id === item.path || selectedPaths.includes(id))) return false;
       return true;
     }
@@ -200,7 +209,7 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
       onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
+      <div className={`${styles.modal} ${largeModal ? styles['modal--large'] : ''}`} onClick={e => e.stopPropagation()}>
         <header className={styles.header}>
           <div className={styles.header__left}>
             <div className={styles.breadcrumbs}>
@@ -221,24 +230,28 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
             </div>
           </div>
           <div className={styles.header__actions}>
-            <button 
-              className={styles.folderBtn} 
-              style={{ color: isSelectionMode ? 'var(--color-accent)' : 'inherit' }}
-              onClick={() => { 
-                setIsSelectionMode(!isSelectionMode); 
-                setSelectedPaths([]); 
-              }} 
-              title={isSelectionMode ? "Finalizar Organização" : "Organizar em Massa"}
-            >
-              <CheckSquare size={16} />
-            </button>
-            <button 
-              className={styles.folderBtn}
-              onClick={() => setIsInputModalOpen(true)}
-              title="Nova Pasta Virtual"
-            >
-              <Plus size={16} />
-            </button>
+            {!disableOrganization && (
+              <>
+                <button 
+                  className={styles.folderBtn} 
+                  style={{ color: isSelectionMode ? 'var(--color-accent)' : 'inherit' }}
+                  onClick={() => { 
+                    setIsSelectionMode(!isSelectionMode); 
+                    setSelectedPaths([]); 
+                  }} 
+                  title={isSelectionMode ? "Finalizar Organização" : "Organizar em Massa"}
+                >
+                  <CheckSquare size={16} />
+                </button>
+                <button 
+                  className={styles.folderBtn}
+                  onClick={() => setIsInputModalOpen(true)}
+                  title="Nova Pasta Virtual"
+                >
+                  <Plus size={16} />
+                </button>
+              </>
+            )}
             <button className={styles.refreshBtn} onClick={() => { invalidateImageCache(); scanImages(); }} disabled={isScanning} title="Atualizar galeria">
               <RefreshCw size={16} className={isScanning ? styles.spin : ''} />
             </button>
@@ -288,13 +301,15 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
                   onClick={() => handleTargetClick({ type: 'virtual', id: col.id })}
                   title={`Abrir ${col.name}`}
                 >
-                  <button
-                    className={styles.deleteBtn}
-                    onClick={(e) => { e.stopPropagation(); useGalleryStore.getState().deleteCollection(col.id); }}
-                    title="Excluir Pasta Virtual"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {!disableOrganization && (
+                    <button
+                      className={styles.deleteBtn}
+                      onClick={(e) => { e.stopPropagation(); useGalleryStore.getState().deleteCollection(col.id); }}
+                      title="Excluir Pasta Virtual"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                   <div className={styles.folderIcon}>
                     <Folder size={40} />
                     <span>{col.name}</span>
@@ -312,13 +327,15 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
                   onClick={() => handleTargetClick({ type: 'physical', path: folderPath })}
                   title={`Abrir pasta física: ${folderPath.split('/').pop()}`}
                 >
-                  <button
-                    className={styles.deleteBtn}
-                    onClick={(e) => handleDeleteFolder(e, folderPath)}
-                    title="Excluir Pasta Física (Imagens serão movidas para a raiz)"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {!disableOrganization && (
+                    <button
+                      className={styles.deleteBtn}
+                      onClick={(e) => handleDeleteFolder(e, folderPath)}
+                      title="Excluir Pasta Física (Imagens serão movidas para a raiz)"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                   <div className={styles.folderIcon} style={{ color: 'var(--color-text-muted)' }}>
                     <Folder size={40} />
                     <span>{folderPath.split('/').pop()}</span>
@@ -344,13 +361,15 @@ export default function ImageGallery({ onSelect, onClose }: ImageGalleryProps) {
                   }}
                   title={item.path}
                 >
-                  <button
-                    className={styles.deleteBtn}
-                    onClick={(e) => handleDelete(e, item)}
-                    title="Excluir"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {!disableOrganization && (
+                    <button
+                      className={styles.deleteBtn}
+                      onClick={(e) => handleDelete(e, item)}
+                      title="Excluir"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
 
                   <div className={styles.imageWrapper}>
                     <img

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 interface DragAndDropOptions<TItem> {
   onDrop: (sourceItem: TItem, targetType: string, targetId: string) => Promise<void> | void;
@@ -6,11 +6,15 @@ interface DragAndDropOptions<TItem> {
   dragThreshold?: number; // KI-023: Evita arrastes acidentais
 }
 
+/**
+ * Hook para Drag & Drop entre elementos (ex: mover arquivo para pasta)
+ */
 export function useDragAndDrop<TItem>({ 
   onDrop, 
   isValidTarget, 
   dragThreshold = 8 
 }: DragAndDropOptions<TItem>) {
+  // ... (código existente mantido)
   const draggedItemRef = useRef<TItem | null>(null);
   const isDraggingRef = useRef(false);
   const processingDrop = useRef(false);
@@ -114,4 +118,90 @@ export function useDragAndDrop<TItem>({
     dropTarget,
     shouldIgnoreClick,
   };
+}
+
+interface TransformOptions {
+  x: number;
+  y: number;
+  width?: number;
+  minWidth?: number;
+  onUpdate: (updates: { x?: number; y?: number; width?: number }) => void;
+  onSelect?: () => void;
+  ignoreSelectors?: string[];
+}
+
+/**
+ * Hook para Transformação Livre (Move e Resize)
+ * Utilizado no Canvas, MoodBoard e Editor.
+ */
+export function useTransformable({
+  x,
+  y,
+  width = 300,
+  minWidth = 50,
+  onUpdate,
+  onSelect,
+  ignoreSelectors = ['button', '.handle']
+}: TransformOptions) {
+  
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSelect) onSelect();
+
+    const target = e.target as HTMLElement;
+    const shouldIgnore = ignoreSelectors.some(selector => {
+      if (selector.startsWith('.')) {
+        return target.className.includes?.(selector.substring(1));
+      }
+      return target.closest(selector);
+    });
+
+    if (shouldIgnore) return;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initialX = x;
+    const initialY = y;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      onUpdate({ x: initialX + dx, y: initialY + dy });
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [x, y, onUpdate, onSelect, ignoreSelectors]);
+
+  const handleResizeStart = useCallback((direction: 'tl' | 'bl' | 'br', e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (onSelect) onSelect();
+
+    const startX = e.clientX;
+    const startWidth = width;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const currentX = moveEvent.clientX;
+      const diff = direction === 'br' ? currentX - startX : startX - currentX;
+      const newWidth = Math.max(minWidth, startWidth + diff);
+      onUpdate({ width: newWidth });
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [width, minWidth, onUpdate, onSelect]);
+
+  return { handleMouseDown, handleResizeStart };
 }

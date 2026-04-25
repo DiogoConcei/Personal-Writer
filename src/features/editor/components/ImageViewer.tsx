@@ -18,6 +18,7 @@ import {
   X,
   ArrowLeft
 } from 'lucide-react';
+import { useZoom } from '@/shared/hooks/useZoom';
 import { useState, useRef, useEffect } from 'react';
 
 interface ImageViewerProps {
@@ -28,7 +29,7 @@ interface ImageViewerProps {
 export default function ImageViewer({ path, onBack }: ImageViewerProps) {
   const { setActiveFile, refreshFiles } = useWorkspaceStore();
   const { addNotification } = useUIStore();
-  const [zoom, setZoom] = useState(1);
+  const { zoom, setZoom, zoomIn: handleZoomIn, zoomOut: handleZoomOut } = useZoom();
   const [rotation, setRotation] = useState(0);
   const [isFitToScreen, setIsFitToScreen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -60,8 +61,6 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
     }
   }, [isEditingName]);
 
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.2, 5));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.2, 0.1));
   const handleRotate = () => setRotation(prev => (prev + 90) % 360);
 
   const toggleFit = () => {

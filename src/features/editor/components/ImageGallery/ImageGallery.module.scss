@@ -27,6 +27,13 @@
   flex-direction: column;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
+
+  &--large {
+    width: 1200px;
+    height: 850px;
+    max-width: 95vw;
+    max-height: 95vh;
+  }
 }
 
 .header {

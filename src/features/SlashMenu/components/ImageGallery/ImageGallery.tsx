@@ -3,9 +3,9 @@ import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useGalleryStore } from '@/features/image-manager/store/galleryStore';
 import { resolveAssetPath, ImageAsset } from '@/tauri-bridge/fs';
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { useImageManager } from '@/shared/hooks/useImageManager/useImageManager';
 import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop/useDragAndDrop';
+import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
 import DeleteModal from '@/features/workspace/components/DeleteModal/DeleteModal';
 import InputModal from '@/shared/components/Modal/InputModal/InputModal';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
@@ -119,44 +119,28 @@ export default function ImageGallery({
   }, [rootPath]);
 
   // Efeito para Drag & Drop Externo (Desktop -> App)
-  useEffect(() => {
-    if (!rootPath) return;
+  useNativeDragDrop({
+    onDrop: async (imagePaths, position) => {
+      // Determina o destino baseado na posição do mouse
+      const element = document.elementFromPoint(position.x, position.y);
+      const folderTarget = element?.closest('[data-drag-type]');
+      const targetType = folderTarget?.getAttribute('data-drag-type');
+      const targetId = folderTarget?.getAttribute('data-drag-id');
 
-    const appWindow = getCurrentWebviewWindow();
-    let unlistenFn: (() => void) | undefined;
+      const physicalFolder = targetType === 'folder' ? (targetId || '') : (activeTarget?.type === 'physical' ? activeTarget.path : '');
+      const importedPaths = await uploadImages(physicalFolder, imagePaths);
 
-    const setupDragDrop = async () => {
-      unlistenFn = await appWindow.onDragDropEvent(async (event) => {
-        if (event.payload.type === 'drop') {
-          const imagePaths = event.payload.paths.filter(p => 
-            IMAGE_EXTENSIONS.some(ext => p.toLowerCase().endsWith(ext))
-          );
-
-          if (imagePaths.length > 0) {
-            // Determina o destino baseado na posição do mouse
-            const element = document.elementFromPoint(event.payload.position.x, event.payload.position.y);
-            const folderTarget = element?.closest('[data-drag-type]');
-            const targetType = folderTarget?.getAttribute('data-drag-type');
-            const targetId = folderTarget?.getAttribute('data-drag-id');
-
-            const physicalFolder = targetType === 'folder' ? (targetId || '') : (activeTarget?.type === 'physical' ? activeTarget.path : '');
-            const importedPaths = await uploadImages(physicalFolder, imagePaths);
-
-            if (importedPaths) {
-              if (targetType === 'collection' && targetId) {
-                await addToCollection(targetId, importedPaths);
-              } else if (activeTarget?.type === 'virtual') {
-                await addToCollection(activeTarget.id, importedPaths);
-              }
-            }
-          }
+      if (importedPaths) {
+        if (targetType === 'collection' && targetId) {
+          await addToCollection(targetId, importedPaths);
+        } else if (activeTarget?.type === 'virtual') {
+          await addToCollection(activeTarget.id, importedPaths);
         }
-      });
-    };
-
-    setupDragDrop();
-    return () => { if (unlistenFn) unlistenFn(); };
-  }, [rootPath, activeTarget, uploadImages, addToCollection]);
+      }
+    },
+    filters: IMAGE_EXTENSIONS,
+    disabled: !rootPath
+  });
 
   const handleUpload = async () => {
     const physicalFolder = activeTarget?.type === 'physical' ? activeTarget.path : '';

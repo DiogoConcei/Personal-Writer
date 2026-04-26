@@ -3,9 +3,9 @@ import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useGalleryStore } from '../../store/galleryStore';
 import { resolveAssetPath, ImageAsset } from '@/tauri-bridge/fs';
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { useImageManager } from '@/shared/hooks/useImageManager/useImageManager';
 import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop/useDragAndDrop';
+import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
 import ImageViewer from '../ImageViewer/ImageViewer';
 import InputModal from '@/shared/components/Modal/InputModal/InputModal';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
@@ -102,30 +102,22 @@ export default function AssetGallery() {
     }
   };
 
-  useEffect(() => {
-    const appWindow = getCurrentWebviewWindow();
-    let unlistenFn: (() => void) | undefined;
-    const setupDragDrop = async () => {
-      unlistenFn = await appWindow.onDragDropEvent(async (event) => {
-        if (event.payload.type === 'drop' && rootPath) {
-          const imagePaths = event.payload.paths.filter(p => IMAGE_EXTENSIONS.some(ext => p.toLowerCase().endsWith(ext)));
-          if (imagePaths.length > 0) {
-            const element = document.elementFromPoint(event.payload.position.x, event.payload.position.y);
-            const folderId = element?.closest('[data-drag-type="folder"]')?.getAttribute('data-drag-id');
-            
-            const importedPaths = await uploadImages('', imagePaths);
-            
-            if (importedPaths) {
-              if (folderId) await addToCollection(folderId, importedPaths);
-              else if (activeTarget?.type === 'virtual') await addToCollection(activeTarget.id, importedPaths);
-            }
-          }
-        }
-      });
-    };
-    setupDragDrop();
-    return () => { if (unlistenFn) unlistenFn(); };
-  }, [rootPath, activeTarget, uploadImages, addToCollection]);
+  // Efeito para Drag & Drop Externo (Desktop -> App)
+  useNativeDragDrop({
+    onDrop: async (imagePaths, position) => {
+      const element = document.elementFromPoint(position.x, position.y);
+      const folderId = element?.closest('[data-drag-type="folder"]')?.getAttribute('data-drag-id');
+      
+      const importedPaths = await uploadImages('', imagePaths);
+      
+      if (importedPaths) {
+        if (folderId) await addToCollection(folderId, importedPaths);
+        else if (activeTarget?.type === 'virtual') await addToCollection(activeTarget.id, importedPaths);
+      }
+    },
+    filters: IMAGE_EXTENSIONS,
+    disabled: !rootPath
+  });
 
   const dynamicCols = Math.max(1, Math.min(filteredImages.length + filteredCollections.length, 4));
 

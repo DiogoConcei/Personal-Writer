@@ -3,7 +3,7 @@ import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useMoodBoardStore } from '../../store/moodBoardStore';
 import { MoodBoardItem } from './MoodBoardItem';
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
 import { copyFileToWorkspace } from '@/tauri-bridge/fs';
 import styles from './MoodBoard.module.scss';
 import { Image as ImageIcon, MousePointer2, Plus } from 'lucide-react';
@@ -59,69 +59,52 @@ export default function MoodBoard() {
     return () => window.removeEventListener('mouseup', handleMouseUp);
   }, [rootPath, addItem, saveBoard]);
 
-  useEffect(() => {
-    if (!rootPath) return;
+  // Efeito para Drag & Drop Externo
+  useNativeDragDrop({
+    onDrop: async (paths, position) => {
+      if (!containerRef.current || !rootPath) return;
 
-    const appWindow = getCurrentWebviewWindow();
-    let unlistenFn: (() => void) | undefined;
+      const rect = containerRef.current.getBoundingClientRect();
+      const dropX = position.x - rect.left;
+      const dropY = position.y - rect.top;
 
-    const setupDragDrop = async () => {
-      const unlisten = await appWindow.onDragDropEvent(async (event) => {
-        if (event.payload.type === 'drop') {
-          const paths = event.payload.paths;
-          if (!paths || paths.length === 0 || !containerRef.current) return;
+      for (const path of paths) {
+        try {
+          const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
+          const normalizedRoot = rootPath.replace(/\\/g, '/').toLowerCase();
+          const isInsideWorkspace = normalizedPath.startsWith(normalizedRoot);
 
-          const rect = containerRef.current.getBoundingClientRect();
-          const dropX = event.payload.position.x - rect.left;
-          const dropY = event.payload.position.y - rect.top;
+          let relativePath: string;
 
-          for (const path of paths) {
-            const isImage = IMAGE_EXTENSIONS.some(ext => path.toLowerCase().endsWith(ext));
-            if (isImage) {
-              try {
-
-                const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
-                const normalizedRoot = rootPath.replace(/\\/g, '/').toLowerCase();
-                const isInsideWorkspace = normalizedPath.startsWith(normalizedRoot);
-
-                let relativePath: string;
-
-                if (isInsideWorkspace) {
-
-                  relativePath = path
-                    .replace(rootPath, '')
-                    .replace(/^[\\/]/, './')
-                    .replace(/\\/g, '/');
-                } else {
-
-                  relativePath = await copyFileToWorkspace(path, rootPath, 'assets/moodboard');
-                }
-
-                const isDuplicate = items.some(i => i.path === relativePath && Math.abs(i.x - dropX) < 5 && Math.abs(i.y - dropY) < 5);
-                if (isDuplicate) continue;
-
-                addItem({
-                  path: relativePath,
-                  x: dropX,
-                  y: dropY,
-                  scale: 1,
-                  rotation: 0
-                });
-
-                saveBoard(rootPath);
-              } catch (err) {
-                console.error('Erro ao adicionar imagem ao moodboard:', err);
-              }
-            }
+          if (isInsideWorkspace) {
+            relativePath = path
+              .replace(rootPath, '')
+              .replace(/^[\\/]/, './')
+              .replace(/\\/g, '/');
+          } else {
+            relativePath = await copyFileToWorkspace(path, rootPath, 'assets/moodboard');
           }
-        }
-      });
-      unlistenFn = unlisten;
-    };
 
-    setupDragDrop();
-    return () => { if (unlistenFn) unlistenFn(); };
-  }, [rootPath, addItem, saveBoard]);
+          const isDuplicate = items.some(i => i.path === relativePath && Math.abs(i.x - dropX) < 5 && Math.abs(i.y - dropY) < 5);
+          if (isDuplicate) continue;
+
+          addItem({
+            path: relativePath,
+            x: dropX,
+            y: dropY,
+            scale: 1,
+            rotation: 0
+          });
+
+          saveBoard(rootPath);
+        } catch (err) {
+          console.error('Erro ao adicionar imagem ao moodboard:', err);
+        }
+      }
+    },
+    filters: IMAGE_EXTENSIONS,
+    disabled: !rootPath
+  });
 
   return (
     <div className={styles.container}>

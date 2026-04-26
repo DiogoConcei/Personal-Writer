@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoodBoardItem as IMoodBoardItem, useMoodBoardStore } from '../../store/moodBoardStore';
+import { useMoodBoardStore } from '../../store/moodBoardStore';
+import { MoodBoardItem as IMoodBoardItem } from '@/shared/types';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { X, Maximize2, RotateCw } from 'lucide-react';

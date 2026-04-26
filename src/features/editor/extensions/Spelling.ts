@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { checkSpellingBatch, SpellError } from '@/tauri-bridge';
+import { SpellingOptions, SpellingStorage, SpellingPluginState } from '@/shared/types';
 
 const encoder = new TextEncoder();
 
@@ -22,19 +23,6 @@ function buildByteToCharMap(text: string): Uint32Array {
   }
   map[byteIndex] = charIndex;
   return map;
-}
-
-export interface SpellingOptions {
-  debounce: number;
-}
-
-export interface SpellingStorage {
-  pluginKey: PluginKey<SpellingPluginState> | null;
-}
-
-export interface SpellingPluginState {
-  decorations: DecorationSet;
-  forceCheck: boolean;
 }
 
 declare module '@tiptap/core' {

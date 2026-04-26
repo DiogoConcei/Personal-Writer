@@ -2,19 +2,19 @@ import { useState, useEffect, useRef } from 'react';
 import styles from './CharacterHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
-import { Metadata } from '@/features/editor/store/metadataParser';
+import { EditorMetadata } from '@/shared/types';
 import {
   User, Edit3, Sparkles, ChevronRight, Info
 } from 'lucide-react';
 import ImageGallery from "@/features/SlashMenu/components/ImageGallery/ImageGallery";
-import Modal from '@/shared/components/Modal/Modal';
+import Modal from '@/shared/components/Modal/Modal/Modal';
 import { AttributeGrid } from '../../Metadata/AttributeGrid/AttributeGrid';
 import { resolveAssetPath } from '@/tauri-bridge';
 import { Backlinks } from '../../Insights/Backlinks/Backlinks';
 import { SummaryEditor } from '../../Metadata/SummaryEditor/SummaryEditor';
 
 interface CharacterHeaderProps {
-  metadata?: Metadata;
+  metadata?: EditorMetadata;
   readOnly?: boolean;
 }
 
@@ -66,7 +66,7 @@ export function CharacterHeader({ metadata: propMetadata, readOnly }: CharacterH
     }
   };
 
-  const updateMetadata = (newData: Metadata) => {
+  const updateMetadata = (newData: EditorMetadata) => {
     if (readOnly) return;
     setMetadata(newData);
 

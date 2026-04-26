@@ -31,3 +31,16 @@ export interface EntityFilters {
   type?: string;
   activeFilters?: Record<string, string>;
 }
+
+/**
+ * Item individual de um Mood Board (mural visual).
+ */
+export interface MoodBoardItem {
+  id: string;
+  path: string;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  zIndex: number;
+}

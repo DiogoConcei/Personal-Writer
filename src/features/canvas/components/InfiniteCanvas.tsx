@@ -3,7 +3,7 @@ import styles from "./InfiniteCanvas.module.scss";
 import { useUIStore } from "../../../store/uiStore";
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
 import ImageGallery from "@/features/SlashMenu/components/ImageGallery/ImageGallery";
-import { PdfGallery } from "../../references/components/PdfGallery";
+import { PdfGallery } from "../../references/components/PdfGallery/PdfGallery";
 import {
   ZoomIn,
   ZoomOut,
@@ -12,8 +12,8 @@ import {
   Scissors,
   RotateCcw,
 } from "lucide-react";
-import { useTransformable } from "@/shared/hooks/useDragAndDrop";
-import { useZoom } from "@/shared/hooks/useZoom";
+import { useTransformable } from "@/shared/hooks/useTransformable/useTransformable";
+import { useZoom } from "@/shared/hooks/useZoom/useZoom";
 import { useCanvasEntities } from "../hooks/useCanvasEntities";
 import { SplitModal } from "./SplitModal/SplitModal";
 import { AnyCanvasEntity, PdfData } from "@/shared/types";

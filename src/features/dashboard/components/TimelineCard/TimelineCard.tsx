@@ -1,12 +1,8 @@
 import React from 'react';
 import { User } from 'lucide-react';
-import { TimelineCardProps } from '@/shared/types';
-import { useEntityIcon } from '@/shared/hooks/useEntityIcon';
+import { ExtendedTimelineCardProps } from '@/shared/types';
+import { useEntityIcon } from '@/shared/hooks/useEntityIcon/useEntityIcon';
 import styles from './TimelineCard.module.scss';
-
-export interface ExtendedTimelineCardProps extends TimelineCardProps {
-  isEven: boolean;
-}
 
 export const TimelineCard: React.FC<ExtendedTimelineCardProps> = ({
   char,

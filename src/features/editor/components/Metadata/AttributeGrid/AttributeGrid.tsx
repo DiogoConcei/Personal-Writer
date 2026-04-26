@@ -1,12 +1,12 @@
 import styles from './AttributeGrid.module.scss';
 import { useState } from 'react';
 import { Plus, Trash2, Settings as SettingsIcon } from 'lucide-react';
-import { Metadata } from '@/features/editor/store/metadataParser';
-import Modal from '@/shared/components/Modal/Modal';
+import { EditorMetadata } from '@/shared/types';
+import Modal from '@/shared/components/Modal/Modal/Modal';
 
 interface AttributeGridProps {
-  metadata: Metadata;
-  onUpdate: (newData: Metadata) => void;
+  metadata: EditorMetadata;
+  onUpdate: (newData: EditorMetadata) => void;
   readOnly?: boolean;
 }
 

@@ -1,31 +1,5 @@
 import { create } from 'zustand';
-
-export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard' | 'assets' | 'documents' | 'drawing' | 'settings' | 'canvas';
-
-export interface DragInfo {
-  sourcePath: string | null;
-  sourceName: string | null;
-  sourceNodePos: number | null;
-  currentX: number;
-  currentY: number;
-  targetPath: string | null;
-
-  startX: number;
-  startY: number;
-  startTime: number;
-  isDragging: boolean;
-}
-
-export interface PreviewState {
-  entityPath: string | null;
-  position: { x: number; y: number } | null;
-}
-
-export interface ToastNotification {
-  id: string;
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
+import { ActivePanel, DragInfo, PreviewState, ToastNotification } from '@/shared/types';
 
 interface UIState {
   activePanel: ActivePanel;

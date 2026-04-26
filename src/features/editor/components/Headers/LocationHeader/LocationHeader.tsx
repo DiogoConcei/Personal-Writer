@@ -2,13 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import styles from './LocationHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
-import { Metadata, parseMarkdownMetadata } from '@/features/editor/store/metadataParser';
+import { parseMarkdownMetadata } from '@/features/editor/store/metadataParser';
+import { EditorMetadata } from '@/shared/types';
 import {
   MapPin, Music, Play, Pause, Plus,
   ChevronRight, Info, User, X
 } from 'lucide-react';
 import ImageGallery from "@/features/SlashMenu/components/ImageGallery/ImageGallery";
-import Modal from '@/shared/components/Modal/Modal';
+import Modal from '@/shared/components/Modal/Modal/Modal';
 import { AttributeGrid } from "../../Metadata/AttributeGrid/AttributeGrid";
 import { readFile, listDirectory, resolveAssetPath } from '@/tauri-bridge';
 
@@ -21,7 +22,7 @@ interface CharacterLink {
 import { Backlinks } from "../../Insights/Backlinks/Backlinks";
 
 interface LocationHeaderProps {
-  metadata?: Metadata;
+  metadata?: EditorMetadata;
   readOnly?: boolean;
 }
 
@@ -89,7 +90,7 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
     }
   };
 
-  const updateMetadata = (newData: Metadata) => {
+  const updateMetadata = (newData: EditorMetadata) => {
     if (readOnly) return;
     setMetadata(newData);
 
@@ -182,11 +183,10 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
 
   return (
     <div className={`${styles.locationHeader} ${readOnly ? styles['locationHeader--readonly'] : ''}`}>
-      {}
       {(metadata.images && metadata.images.length > 0) || (showImagePicker && !readOnly) ? (
         <div className={styles.gallery}>
           <div className={styles.galleryScroll}>
-            {metadata.images?.map((img, idx) => (
+            {metadata.images?.map((img: string, idx: number) => (
               <div key={idx} className={styles.galleryItem}>
                 <img src={resolveAssetPath(img, rootPath) || undefined} alt={`Location ${idx}`} />
                 {!readOnly && <button className={styles.removeImg} onClick={() => removeImage(img)}><X size={14} /></button>}
@@ -241,7 +241,6 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
             )}
           </div>
 
-          {}
           {metadata.music && (
             <div className={styles.audioPlayer}>
               <audio
@@ -270,14 +269,13 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
           )}
         </div>
 
-        {}
         <div className={styles.linkedSection}>
           <div className={styles.sectionHeader}>
             <User size={14} />
             <span>Personagens Presentes</span>
           </div>
           <div className={styles.tagsGrid}>
-            {metadata.linked_characters?.map(path => {
+            {metadata.linked_characters?.map((path: string) => {
               const charName = path.split(/[\\/]/).pop()?.replace('.md', '');
               return (
                 <div key={path} className={styles.charTag}>

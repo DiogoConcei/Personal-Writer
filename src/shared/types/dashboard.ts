@@ -36,3 +36,10 @@ export interface TimelineDragState {
   dragOverPath: string | null;
   isDragging: boolean;
 }
+
+/**
+ * Props estendidas para o TimelineCard com lógica de layout.
+ */
+export interface ExtendedTimelineCardProps extends TimelineCardProps {
+  isEven: boolean;
+}

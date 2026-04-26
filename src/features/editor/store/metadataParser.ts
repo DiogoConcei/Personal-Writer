@@ -1,28 +1,12 @@
-export interface FieldConfig {
-  type: 'text' | 'number' | 'select';
-  options?: string[];
-}
-
-export interface Metadata {
-  type?: string;
-  icon?: string;
-  images?: string[];
-  documents?: string[];
-  music?: string;
-  linked_characters?: string[];
-  wordGoal?: number;
-  sessionGoal?: number;
-  config?: Record<string, FieldConfig>;
-  fields?: Record<string, any>;
-}
+import { EditorMetadata } from '@/shared/types';
 
 export const parseMarkdownMetadata = (content: string) => {
   const yamlMatch = content.match(/^---\r?\n([\s\S]*?)(?:\r?\n)?---(?:\r?\n|$)/);
-  if (!yamlMatch) return { metadata: {}, markdown: content };
+  if (!yamlMatch) return { metadata: {} as EditorMetadata, markdown: content };
 
   const yamlStr = yamlMatch[1];
   const markdown = content.replace(yamlMatch[0], '').trim();
-  const data: Metadata = { fields: {} };
+  const data: EditorMetadata = { fields: {} };
 
   const typeMatch = yamlStr.match(/type:\s*["']?([^"'\r\n]+)["']?/i);
   const iconMatch = yamlStr.match(/icon:\s*["']?([^"'\r\n]+)["']?/i);
@@ -80,7 +64,7 @@ export const parseMarkdownMetadata = (content: string) => {
   return { metadata: data, markdown };
 };
 
-export const stringifyYAML = (metadata: Metadata) => {
+export const stringifyYAML = (metadata: EditorMetadata) => {
   if (!metadata || Object.keys(metadata).length === 0) return '';
 
   const normalize = (path: string) => path.replace(/\\/g, '/');

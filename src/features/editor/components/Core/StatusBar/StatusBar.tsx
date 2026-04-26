@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useEditorStore } from '../../../store/editorStore';
 import styles from './StatusBar.module.scss';
 import { Cloud, CloudOff, Loader2, Target, Zap } from 'lucide-react';
-import InputModal from '@/shared/components/Modal/InputModal';
+import InputModal from '@/shared/components/Modal/InputModal/InputModal';
 
 export default function StatusBar() {
   const { 

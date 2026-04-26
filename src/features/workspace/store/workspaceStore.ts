@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { FileNode } from '@/tauri-bridge';
 import type { ImageAsset } from '@/tauri-bridge';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
+import { normalizePath, getSeparator, getParentPath } from '@/shared/utils/path';
 
 interface WorkspaceState {
   rootPath: string | null;
@@ -35,7 +36,7 @@ const STORAGE_KEY = 'hybrid-editor-root-path';
 const HIDDEN_ITEMS = ['assets', 'docs', 'moodboard.json'];
 
 function updatePathsRecursively(node: FileNode, newPath: string): FileNode {
-  const separator = newPath.includes('\\') ? '\\' : '/';
+  const separator = getSeparator(newPath);
   const updatedNode = { ...node, path: newPath };
 
   if (updatedNode.children) {
@@ -73,9 +74,8 @@ function moveNodeInTree(nodes: FileNode[], sourcePath: string, targetDirPath: st
 
   const insertNode = (list: FileNode[]): FileNode[] => {
     const { rootPath } = useWorkspaceStore.getState();
-    const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
 
-    if (normalize(targetDirPath) === normalize(rootPath || '')) {
+    if (normalizePath(targetDirPath) === normalizePath(rootPath || '')) {
       return [...list, draggedNode!].sort((a, b) => {
         if (a.is_dir === b.is_dir) return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
         return a.is_dir ? -1 : 1;
@@ -158,7 +158,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         return;
       }
 
-      const separator = path.includes('\\') ? '\\' : '/';
+      const separator = getSeparator(path);
       const assetsPath = `${path}${separator}assets`;
 
       try {
@@ -257,9 +257,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   syncNode: async (path: string) => {
     const { rootPath } = get();
-    const normalize = (p: string) => p.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
 
-    if (normalize(path) === normalize(rootPath || '')) {
+    if (normalizePath(path) === normalizePath(rootPath || '')) {
       await get().refreshFiles();
     } else {
       await get().fetchChildren(path);
@@ -290,7 +289,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (!base) return;
 
     const fileName = name.endsWith('.md') ? name : `${name}.md`;
-    const separator = base.includes('\\') ? '\\' : '/';
+    const separator = getSeparator(base);
     const filePath = `${base}${separator}${fileName}`;
 
     try {
@@ -308,7 +307,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const base = parentPath || rootPath;
     if (!base) return;
 
-    const separator = base.includes('\\') ? '\\' : '/';
+    const separator = getSeparator(base);
     const dirPath = `${base}${separator}${name}`;
 
     try {
@@ -323,8 +322,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   deleteItem: async (path: string) => {
     const { rootPath, syncNode, activeFile, setActiveFile } = get();
     try {
-      const separator = path.includes('\\') ? '\\' : '/';
-      const parentPath = path.substring(0, path.lastIndexOf(separator)) || rootPath;
+      const parentPath = getParentPath(path, rootPath);
 
       const { deleteItem } = await import('@/tauri-bridge');
       await deleteItem(path);
@@ -340,11 +338,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   renameItem: async (oldPath: string, newName: string) => {
     const { rootPath, syncNode, activeFile, setActiveFile } = get();
     try {
-      const separator = oldPath.includes('\\') ? '\\' : '/';
-      const parentPath = oldPath.substring(0, oldPath.lastIndexOf(separator)) || rootPath;
+      const parentPath = getParentPath(oldPath, rootPath);
 
       const { renameItem } = await import('@/tauri-bridge');
       let finalName = newName.endsWith('.md') || !oldPath.endsWith('.md') ? newName : `${newName}.md`;
+      const separator = getSeparator(oldPath);
       const newPath = `${parentPath}${separator}${finalName}`;
 
       await renameItem(oldPath, newPath);
@@ -362,13 +360,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const previousFiles = JSON.parse(JSON.stringify(files));
 
     try {
-      const separator = sourcePath.includes('\\') ? '\\' : '/';
+      const separator = getSeparator(sourcePath);
       const fileName = sourcePath.substring(sourcePath.lastIndexOf(separator) + 1);
       const newPath = `${targetDirPath}${separator}${fileName}`;
 
       if (sourcePath === newPath) return;
 
-      const sourceParentPath = sourcePath.substring(0, sourcePath.lastIndexOf(separator)) || rootPath;
+      const sourceParentPath = getParentPath(sourcePath, rootPath);
 
       const updatedFiles = moveNodeInTree(files, sourcePath, targetDirPath, newPath);
       set({ files: updatedFiles });

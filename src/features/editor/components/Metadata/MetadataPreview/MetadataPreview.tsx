@@ -1,10 +1,10 @@
 import styles from './MetadataPreview.module.scss';
-import { Metadata } from '@/features/editor/store/metadataParser';
+import { EditorMetadata } from '@/shared/types';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { User, ChevronRight, Info } from 'lucide-react';
 
 interface MetadataPreviewProps {
-  metadata: Metadata;
+  metadata: EditorMetadata;
   rootPath: string | null;
   noteName: string;
 }

@@ -1,9 +1,4 @@
-export interface Template {
-  id: string;
-  name: string;
-  description: string;
-  content: string;
-}
+import { Template } from '@/shared/types';
 
 export const DEFAULT_TEMPLATES: Template[] = [
   {

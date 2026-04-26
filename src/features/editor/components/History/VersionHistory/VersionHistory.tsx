@@ -16,9 +16,10 @@ import {
   deleteSnapshot,
   toggleSnapshotLock
 } from '@/tauri-bridge';
-import { parseMarkdownMetadata, stringifyYAML, Metadata } from "../../../store/metadataParser";
+import { parseMarkdownMetadata, stringifyYAML } from "../../../store/metadataParser";
+import { EditorMetadata } from '@/shared/types';
 import { MetadataHeader } from "../../Headers/MetadataHeader/MetadataHeader";
-import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
+import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
 import styles from './VersionHistory.module.scss';
 import editorStyles from "../../Core/Editor/Editor.module.scss";
 import {
@@ -45,7 +46,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
 
   const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
   const [selectedSnapshot, setSelectedSnapshot] = useState<SnapshotInfo | null>(null);
-  const [previewMetadata, setPreviewMetadata] = useState<Metadata | null>(null);
+  const [previewMetadata, setPreviewMetadata] = useState<EditorMetadata | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 

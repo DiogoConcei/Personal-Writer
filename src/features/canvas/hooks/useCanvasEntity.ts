@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useTransformable } from '@/shared/hooks/useDragAndDrop';
+import { useTransformable } from '@/shared/hooks/useTransformable/useTransformable';
 import { AnyCanvasEntity } from '@/shared/types';
 
 interface UseCanvasEntityOptions {

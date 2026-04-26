@@ -3,14 +3,9 @@ import { ReactNodeViewRenderer, ReactRenderer } from '@tiptap/react';
 import Suggestion from '@tiptap/suggestion';
 import { PluginKey } from '@tiptap/pm/state';
 import tippy, { Instance } from 'tippy.js';
+import { WikiLinkOptions } from '@/shared/types';
 import WikiLinkNode from './WikiLinkNode';
 import WikiLinkList from './WikiLinkList';
-
-export interface WikiLinkOptions {
-  HTMLAttributes: Record<string, any>;
-  onLinkClick?: (noteName: string) => void;
-  suggestion: any;
-}
 
 export const WikiLinkSuggestionKey = new PluginKey('wikiLinkSuggestion');
 

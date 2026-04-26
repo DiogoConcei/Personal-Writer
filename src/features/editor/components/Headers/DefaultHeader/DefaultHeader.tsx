@@ -3,11 +3,10 @@ import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { FileText } from 'lucide-react';
 import { AttributeGrid } from "../../Metadata/AttributeGrid/AttributeGrid";
-
-import { Metadata } from '@/features/editor/store/metadataParser';
+import { EditorMetadata } from '@/shared/types';
 
 interface DefaultHeaderProps {
-  metadata?: Metadata;
+  metadata?: EditorMetadata;
   readOnly?: boolean;
 }
 

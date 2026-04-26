@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
-import { useGalleryStore } from '@/features/imageview/store/galleryStore';
+import { useGalleryStore } from '@/features/image-manager/store/galleryStore';
 import { resolveAssetPath, ImageAsset } from '@/tauri-bridge/fs';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { useImageManager } from '@/shared/hooks/useImageManager';
-import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop';
-import DeleteModal from '@/features/workspace/components/DeleteModal';
-import InputModal from '@/shared/components/Modal/InputModal';
-import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
+import { useImageManager } from '@/shared/hooks/useImageManager/useImageManager';
+import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop/useDragAndDrop';
+import DeleteModal from '@/features/workspace/components/DeleteModal/DeleteModal';
+import InputModal from '@/shared/components/Modal/InputModal/InputModal';
+import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
 import styles from './ImageGallery.module.scss';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];

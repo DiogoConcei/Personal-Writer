@@ -4,7 +4,7 @@ import styles from './ImageNode.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { Maximize2, AlignLeft, AlignRight, AlignCenter, StretchVertical, ImageOff } from 'lucide-react';
-import { resolveImageUrl } from '@/shared/hooks/useImageManager';
+import { resolveImageUrl } from '@/shared/hooks/useImageManager/useImageManager';
 
 export default function ImageNode({ node, updateAttributes, selected, getPos, editor }: NodeViewProps) {
   const { rootPath } = useWorkspaceStore();

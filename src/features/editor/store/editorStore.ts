@@ -1,13 +1,11 @@
 import { create } from 'zustand';
 import { readFile, writeFile, createSnapshot } from '@/tauri-bridge';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
-import { Metadata, parseMarkdownMetadata, stringifyYAML } from './metadataParser';
-
-export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
-export type Typography = 'sans' | 'serif';
+import { EditorMetadata, SaveStatus, Typography } from '@/shared/types';
+import { parseMarkdownMetadata, stringifyYAML } from './metadataParser';
 
 interface EditorState {
-  metadata: Metadata;
+  metadata: EditorMetadata;
   markdownContent: string;
   saveStatus: SaveStatus;
   lastSavedAt: Date | null;
@@ -20,7 +18,7 @@ interface EditorState {
 
   loadContent: (path: string) => Promise<void>;
   setMarkdownContent: (content: string) => void;
-  setMetadata: (metadata: Metadata) => void;
+  setMetadata: (metadata: EditorMetadata) => void;
   save: (path: string, workspaceRoot?: string) => Promise<boolean>;
   setTypography: (typography: Typography) => void;
   setWordCount: (count: number) => void;
@@ -71,7 +69,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ markdownContent });
   },
 
-  setMetadata: (metadata: Metadata) => {
+  setMetadata: (metadata: EditorMetadata) => {
     set({ metadata });
   },
 

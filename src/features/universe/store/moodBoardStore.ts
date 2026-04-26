@@ -1,15 +1,6 @@
 import { create } from 'zustand';
 import { readFile, writeFile, exists } from '@/tauri-bridge/fs';
-
-export interface MoodBoardItem {
-  id: string;
-  path: string;
-  x: number;
-  y: number;
-  scale: number;
-  rotation: number;
-  zIndex: number;
-}
+import { MoodBoardItem } from '@/shared/types';
 
 interface MoodBoardState {
   items: MoodBoardItem[];

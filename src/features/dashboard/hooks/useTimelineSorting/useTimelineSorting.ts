@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { Entity } from '@/shared/types';
-import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop';
+import { useDragAndDrop } from '@/shared/hooks/useDragAndDrop/useDragAndDrop';
 
 /**
  * Hook para gerenciar a ordenação dos personagens na linha do tempo.

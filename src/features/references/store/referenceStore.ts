@@ -20,7 +20,7 @@ interface ReferenceState {
 
   fetchPdfs: (workspaceRoot: string) => Promise<void>;
   setActivePdf: (path: string | null) => void;
-  handleUpload: (externalPaths?: string[]) => Promise<boolean>;
+  handleUpload: (externalPaths?: string[]) => Promise<string[]>;
   handleDelete: (pdf: PdfAsset) => Promise<boolean>;
 }
 
@@ -64,7 +64,7 @@ export const useReferenceStore = create<ReferenceState>((set, get) => ({
     const rootPath = useWorkspaceStore.getState().rootPath;
     const addNotification = useUIStore.getState().addNotification;
     
-    if (!rootPath) return false;
+    if (!rootPath) return [];
     
     try {
       let pathsToImport: string[] = [];
@@ -81,21 +81,23 @@ export const useReferenceStore = create<ReferenceState>((set, get) => ({
         }
       }
 
-      if (pathsToImport.length === 0) return false;
+      if (pathsToImport.length === 0) return [];
 
       set({ isLoadingPdfs: true });
+      const importedPaths: string[] = [];
       for (const path of pathsToImport) {
-        await copyFileToWorkspace(path, rootPath, 'docs');
+        const relPath = await copyFileToWorkspace(path, rootPath, 'docs');
+        importedPaths.push(relPath);
       }
       
       addNotification(`${pathsToImport.length} documento(s) importado(s)`, 'success');
       await get().fetchPdfs(rootPath);
-      return true;
+      return importedPaths;
     } catch (err) {
       console.error('[referenceStore] Erro no upload:', err);
       addNotification('Erro ao importar documentos', 'error');
       set({ isLoadingPdfs: false });
-      return false;
+      return [];
     }
   },
 

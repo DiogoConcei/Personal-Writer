@@ -21,10 +21,12 @@ import { getMathExtension } from "../../../extensions/MathExtension";
 import { parseMarkdownMetadata } from "../../../store/metadataParser";
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
 import { useUIStore } from "@/store/uiStore";
-import { copyFileToWorkspace, saveImageFromBytes } from "@/tauri-bridge";
-import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
+import { saveImageFromBytes } from "@/tauri-bridge";
+import { useNativeDragDrop } from "@/shared/hooks/useNativeDragDrop/useNativeDragDrop";
+import { useImageManager } from "@/shared/hooks/useImageManager/useImageManager";
+import { useDocumentManager } from "@/shared/hooks/useDocumentManager/useDocumentManager";
 
-const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"];
 
 const PDF_EXTENSIONS = [".pdf"];
 import VersionHistory from "../../History/VersionHistory/VersionHistory";
@@ -285,59 +287,54 @@ export default function Editor() {
   }, []);
 
   // Drag & Drop Nativo (Desktop -> Editor)
+  const { uploadImages } = useImageManager();
+  const { handleUpload: uploadPdfs } = useDocumentManager();
+
   useNativeDragDrop({
     onDrop: async (paths) => {
       if (!editor || !rootPath) return;
 
-      for (const path of paths) {
-        const isImage = IMAGE_EXTENSIONS.some((ext) => path.toLowerCase().endsWith(ext));
-        const isPdf = PDF_EXTENSIONS.some((ext) => path.toLowerCase().endsWith(ext));
+      const imagePaths = paths.filter((p) =>
+        IMAGE_EXTENSIONS.some((ext) => p.toLowerCase().endsWith(ext)),
+      );
+      const pdfPaths = paths.filter((p) =>
+        PDF_EXTENSIONS.some((ext) => p.toLowerCase().endsWith(ext)),
+      );
 
-        if (isImage || isPdf) {
-          // Obtém posição atual do cursor ou insere no final se não houver seleção
-          const pos = editor.state.selection.from;
+      if (imagePaths.length > 0) {
+        const pos = editor.state.selection.from;
+        const importedImages = await uploadImages("", imagePaths);
 
-          const normalizedPath = path.replace(/\\/g, "/").toLowerCase();
-          const normalizedRoot = rootPath.replace(/\\/g, "/").toLowerCase();
-          const isInsideWorkspace = normalizedPath.startsWith(normalizedRoot);
-
-          let relativePath: string;
-
-          if (isInsideWorkspace) {
-            relativePath = path
-              .replace(rootPath, "")
-              .replace(/^[\\/]/, "./")
-              .replace(/\\/g, "/");
-          } else {
-            const folderName = isImage ? "assets" : "docs";
-            const subFolder = getRelativeSubfolder();
-            try {
-              relativePath = await copyFileToWorkspace(path, rootPath, folderName, subFolder);
-            } catch (err) {
-              console.error(`Erro ao copiar ${folderName}:`, err);
-              continue;
-            }
-          }
-
-          if (isImage) {
-            editor.chain().focus().insertContentAt(pos, {
+        if (importedImages && importedImages.length > 0) {
+          let chain = editor.chain().focus();
+          importedImages.forEach((src) => {
+            chain = chain.insertContentAt(pos, {
               type: "image",
-              attrs: { src: relativePath },
-            }).run();
-            useWorkspaceStore.getState().scanWorkspace();
-          } else if (isPdf) {
-            const currentMetadata = useEditorStore.getState().metadata;
-            const currentDocs = currentMetadata.documents || [];
-            if (!currentDocs.includes(relativePath)) {
-              setMetadata({ ...currentMetadata, documents: [...currentDocs, relativePath] });
-              if (activeFile) save(activeFile, rootPath || undefined);
-            }
-          }
+              attrs: { src },
+            });
+          });
+          chain.run();
+        }
+      }
+
+      if (pdfPaths.length > 0) {
+        const importedPdfs = await uploadPdfs(pdfPaths);
+        if (importedPdfs && importedPdfs.length > 0) {
+          const currentMetadata = useEditorStore.getState().metadata;
+          const currentDocs = currentMetadata.documents || [];
+          const newDocs = [...currentDocs];
+
+          importedPdfs.forEach((src) => {
+            if (!newDocs.includes(src)) newDocs.push(src);
+          });
+
+          setMetadata({ ...currentMetadata, documents: newDocs });
+          if (activeFile) save(activeFile, rootPath || undefined);
         }
       }
     },
     filters: [...IMAGE_EXTENSIONS, ...PDF_EXTENSIONS],
-    disabled: !rootPath || !editor
+    disabled: !rootPath || !editor,
   });
 
   useEffect(() => {

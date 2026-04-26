@@ -1,0 +1,44 @@
+.canvasImage {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: visible;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--transition-fast);
+  cursor: pointer;
+
+  &:hover, &.selected {
+    border-color: var(--color-accent);
+  }
+
+  &.selected {
+    box-shadow: 0 0 0 2px var(--color-accent-glow);
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: var(--color-accent);
+  border: 1px solid var(--color-bg-base);
+  border-radius: 50%;
+  z-index: 10;
+
+  &--tl { top: -5px; left: -5px; cursor: nwse-resize; }
+  &--tr { top: -5px; right: -5px; cursor: nesw-resize; }
+  &--bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+  &--br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+}

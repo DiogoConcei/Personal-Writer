@@ -3,7 +3,7 @@ import { FileText, X, Search, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-re
 import { PdfAsset, resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useDocumentManager } from '@/shared/hooks/useDocumentManager';
-import { PdfThumbnail } from '@/features/dashboard/components/PdfThumbnail';
+import { PdfThumbnail } from '@/features/docsview/components/PdfThumbnail/PdfThumbnail';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal';
 import styles from './PdfGallery.module.scss';
 

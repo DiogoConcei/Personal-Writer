@@ -1,0 +1,30 @@
+import { PdfData, ImageData } from './assets';
+import { NoteData, PostItData } from './editor';
+
+/**
+ * Arquitetura de Entidades Genéricas para o Infinite Canvas.
+ */
+export interface CanvasEntity<T = unknown> {
+  id: string;
+  type: string; // Ex: 'pdf', 'image', 'note', 'postit'
+  
+  // Transformações Universais
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  rotation?: number; // Graus (0-360)
+  zIndex?: number;   // Ordem de sobreposição
+  
+  // Sistemas de Relacionamento e Estrutura
+  groupId?: string;       // ID do grupo ao qual pertence
+  connections?: string[]; // IDs de outras entidades vinculadas (linhas)
+  
+  // Estilo Dinâmico (CSS Injection)
+  style?: Record<string, string | number>;
+  
+  // Payload de Dados Específicos
+  data: T;
+}
+
+export type AnyCanvasEntity = CanvasEntity<PdfData | ImageData | NoteData | PostItData | unknown>;

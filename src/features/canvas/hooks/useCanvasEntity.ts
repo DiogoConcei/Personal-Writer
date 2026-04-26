@@ -1,0 +1,50 @@
+import { useCallback } from 'react';
+import { useTransformable } from '@/shared/hooks/useDragAndDrop';
+import { AnyCanvasEntity } from '@/shared/types';
+
+interface UseCanvasEntityOptions {
+  entity: AnyCanvasEntity;
+  onSelect?: () => void;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onRemove: (id: string) => void;
+  minWidth?: number;
+}
+
+/**
+ * Hook centralizado para gerenciar a lógica de uma entidade no Canvas.
+ * Encapsula transformações (mover, redimensionar, rotacionar) e ações comuns.
+ */
+export function useCanvasEntity({
+  entity,
+  onSelect,
+  onUpdate,
+  onRemove,
+  minWidth = 150,
+}: UseCanvasEntityOptions) {
+  
+  const handleUpdate = useCallback((updates: Partial<AnyCanvasEntity>) => {
+    onUpdate(entity.id, updates);
+  }, [entity.id, onUpdate]);
+
+  const handleRemove = useCallback(() => {
+    onRemove(entity.id);
+  }, [entity.id, onRemove]);
+
+  // Integração com o hook de transformações base
+  const { handleMouseDown, handleResizeStart, handleRotateStart } = useTransformable({
+    x: entity.x,
+    y: entity.y,
+    width: entity.width || 200,
+    minWidth,
+    onSelect,
+    onUpdate: handleUpdate,
+  });
+
+  return {
+    handleMouseDown,
+    handleResizeStart,
+    handleRotateStart,
+    handleRemove,
+    handleUpdate,
+  };
+}

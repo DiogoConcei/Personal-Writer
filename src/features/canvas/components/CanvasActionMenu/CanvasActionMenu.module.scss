@@ -1,0 +1,52 @@
+.actionMenu {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  user-select: none;
+}
+
+.actionButton {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+
+  &:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-accent);
+  }
+
+  &.delete {
+    color: var(--color-danger-dim);
+    &:hover {
+      background-color: var(--color-danger-dim);
+      color: white;
+    }
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.actionSeparator {
+  width: 1px;
+  height: 16px;
+  background-color: var(--color-border);
+  margin: 0 2px;
+}

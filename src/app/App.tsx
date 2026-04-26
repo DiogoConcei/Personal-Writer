@@ -1,20 +1,20 @@
 import React, { useEffect } from 'react';
 import styles from './App.module.scss';
 import FileTree from '@/features/workspace/components/FileTree';
-import Editor from '@/features/editor/components/Editor';
-import ImageViewer from '@/features/editor/components/ImageViewer';
-import Dashboard from '@/features/dashboard/components/Dashboard';
-import MoodBoard from '@/features/dashboard/components/MoodBoard';
-import AssetGallery from '@/features/dashboard/components/AssetGallery';
-import DocumentGallery from '@/features/dashboard/components/DocumentGallery';
-import CharacterGallery from '@/features/dashboard/components/CharacterGallery';
+import Editor from '@/features/editor/components/Core/Editor/Editor';
+import ImageViewer from '@/features/editor/components/Media/ImageViewer/ImageViewer';
+import Dashboard from '@/features/dashboard/components/Dashboard/Dashboard';
+import MoodBoard from '@/features/universe/components/MoodBoard/MoodBoard';
+import AssetGallery from '@/features/imageview/components/AssetGallery/AssetGallery';
+import DocumentGallery from '@/features/docsview/components/DocumentGallery/DocumentGallery';
+import CharacterGallery from '@/features/universe/components/CharacterGallery/CharacterGallery';
 import InfiniteCanvas from '@/features/canvas/components/InfiniteCanvas';
 import { SettingsPage } from '@/features/settings/components/Settings';
 import { PluginPlaceholder } from '@/features/settings/components/PluginPlaceholder';
-import StatusBar from '@/features/editor/components/StatusBar';
+import StatusBar from '@/features/editor/components/Core/StatusBar/StatusBar';
 import ReferenceSidebar from '@/features/references/components/ReferenceSidebar';
 import CommandPalette from '@/features/search/components/CommandPalette';
-import { EntityPreview } from '@/features/editor/components/EntityPreview';
+import { EntityPreview } from '@/features/editor/components/Insights/EntityPreview/EntityPreview';
 const DrawingBoard = React.lazy(() => import('@/features/drawing/components/DrawingBoard'));
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
@@ -99,6 +99,11 @@ function App() {
 
   useEffect(() => {
     setPreview({ entityPath: null, position: null });
+    
+    // Fecha a sidebar automaticamente ao mudar para painéis de visualização (foco total)
+    if (activePanel !== 'editor' && isSidebarVisible) {
+      toggleSidebar();
+    }
   }, [activePanel, activeFile, setPreview]);
 
   useEffect(() => {
@@ -487,3 +492,4 @@ function App() {
 }
 
 export default App;
+;

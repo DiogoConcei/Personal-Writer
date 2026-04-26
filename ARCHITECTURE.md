@@ -1,96 +1,70 @@
 # ARCHITECTURE.md — Editor Híbrido
 
-**Versão:** 1.2  
+**Versão:** 1.5 (Refatoração Modular)
 **Stack:** Tauri 2 · React 19 · TypeScript · TipTap 3 · Zustand · SCSS Modules · Rust
 
 ---
 
-### 1. Estrutura de Pastas (Novas Features)
+### 1. Estrutura de Pastas (Domínios de Feature)
+
+O projeto adota uma arquitetura modular baseada em domínios funcionais para garantir baixo acoplamento e alta escalabilidade.
 
 ```
-├── src/
-│   ├── features/
-│   │   ├── search/
-│   │   │   ├── components/
-│   │   │   │   ├── CommandPalette.tsx      # Modal de busca fuzzy e ações
-│   │   │   │   └── CommandPalette.module.scss
-│   │   ├── editor/
-│   │   │   ├── components/
-│   │   │   │   ├── EditorBubbleMenu.tsx    # Menu flutuante de formatação
-│   │   │   │   └── EditorBubbleMenu.module.scss
-│   │   │   ├── extensions/
-│   │   │   │   ├── FontSize.ts             # Extensão customizada para tamanho de fonte
-│   │   │   │   └── WikiLink/
+src/
+├── features/
+│   ├── canvas/         # Motor de Infinite Canvas e orquestração espacial
+│   ├── docsview/       # Visualização e gestão de documentos PDF
+│   ├── imageview/      # Galeria de ativos e gerenciamento de imagens
+│   ├── universe/       # Dados do mundo (Personagens, Mural, Timeline)
+│   ├── editor/         # Núcleo do processador de texto (TipTap)
+│   ├── SlashMenu/      # Orquestrador de comandos barra (/) e modais
+│   └── dashboard/      # Resumo e visão geral do projeto
+├── shared/
+│   ├── types/          # Sistema de tipagem centralizado por domínio
+│   ├── hooks/          # Lógicas compartilhadas (DND, Icons, Zoom)
+│   └── components/     # UI Kit comum (Modais, Toasts)
 ```
 
 ---
 
-## Mapa de Features Estáveis — Não Toque Sem Motivo
+## Mapa de Saúde Arquitetural
 
-| Feature | Arquivos Críticos | Status |
+| Feature | Responsabilidade | Status |
 | :--- | :--- | :--- |
-| **Ecossistema de Imagem** | `ImageGallery.tsx`, `resolveAssetPath.ts` | ✅ Estável (Fase 3 Concluída) |
-| **Dicionário e Sinônimos**| `dictionary.rs`, `Spelling.ts` | ✅ Estável — ADR-011/012 (Refatorado v2) |
-| **Sistema de Toasts**    | `uiStore.ts`, `ToastContainer.tsx` | ✅ Estável |
-| **Persistência de YAML** | `editorStore.ts`, `metadataParser.ts` | ✅ Estável |
-| **Drag-and-Drop** | `FileTree.tsx`, `FileTreeItem.tsx` | ✅ Estável — ADR-009 |
+| **Canvas** | Orquestração de entidades no espaço infinito | ✅ Modularizado |
+| **Editor** | Processamento de texto e metadados YAML | ✅ Categorizado (Core/Headers/Insights) |
+| **SlashMenu** | Interface de comandos e inserção de mídia | ✅ Desacoplado |
+| **Gallery Systems** | Visualização de Imagens e PDFs | ✅ Dividido (imageview / docsview) |
+| **Type System** | Interfaces globais em `src/shared/types/` | ✅ Centralizado |
 
 ---
 
-## 2. Decisões Arquiteturais (ADRs)
+## 2. Decisões Arquiteturais Recentes (ADRs)
 
+### ADR-017 — Centralização de Tipos (Domain Driven Types)
+**Decisão:** Mover todas as interfaces de props e modelos de dados para `src/shared/types/`, divididos por arquivos de domínio (`assets.ts`, `universe.ts`, etc).
+**Motivo:** Evitar dependências circulares entre componentes e fornecer uma "Single Source of Truth" para a estrutura de dados do projeto, facilitando a manutenção de contratos entre Backend (Rust) e Frontend.
 
-### ADR-009 — Drag-and-Drop via Mouse Events
-**Decisão:** Abandono da HTML5 Drag and Drop API em favor de uma implementação manual usando MouseDown, MouseMove e MouseUp.
-**Motivo:** A WebView2 (Windows) apresenta bugs inconsistentes de bloqueio de eventos `dragover` em elementos com `user-select: none`. A implementação manual garante 100% de confiabilidade e permite feedback visual (ghost element) mais fluido em ambientes Desktop.
+### ADR-018 — Modularização de God Components
+**Decisão:** Componentes com mais de 300 linhas devem ser subdivididos em sub-componentes atômicos e hooks de lógica.
+**Motivo:** O `InfiniteCanvas` e o `Editor` atingiram níveis críticos de complexidade. A extração para pastas como `Core/`, `Headers/` e `hooks/` especializados reduziu a carga cognitiva e melhorou a performance de renderização.
 
-### ADR-010 — Persistência de Lock de Snapshots
-**Decisão:** Utilizar sufixos de arquivo para armazenar o estado de "trancado" de uma versão do histórico.
-**Motivo:** Simplicidade local-first. Ao trancar uma versão `123.txt`, ela é renomeada para `123.locked.txt`. Isso evita a necessidade de um banco de dados de metadados extra, mantendo a portabilidade do histórico apenas via sistema de arquivos.
-
-### ADR-011 — Motor de Ortografia 100% Rust (Spellbook)
-**Decisão:** Substituição da crate `hunspell` (binding C++) pela crate `spellbook` (100% Rust).
-**Motivo:** Garantir a portabilidade do projeto e facilidade de compilação em ambientes Windows (MSVC) sem a necessidade de instalar bibliotecas externas `.lib` ou configurar caminhos de linker complexos.
-
-### ADR-012 — Mapeamento de Offsets Unicode via Node-Based Iteration
-**Decisão:** O corretor ortográfico itera individualmente sobre cada nó de texto (`text node`) do ProseMirror, em vez do documento inteiro.
-**Motivo:** O Rust processa strings em UTF-8 (offsets de bytes), enquanto o ProseMirror usa UTF-16 (offsets de caracteres). Ao tratar cada nó isoladamente, garantimos que o cálculo de `byteToCharIndex` seja 100% preciso, evitando que decorações fora dos limites causem travamentos (KI-027).
-
-### ADR-013 — Dicionário Pessoal Global via AppData
-**Decisão:** Armazenar palavras ignoradas pelo usuário em uma pasta global do sistema (`%AppData%`).
-**Motivo:** Proporcionar consistência onde nomes de personagens criados pelo usuário sejam reconhecidos em todos os workspaces na mesma máquina.
-
-### ADR-014 — Notificações Toasts Manuais
-**Decisão:** Implementar Toasts para feedback de ações críticas (como Ctrl+S) sem poluir a interface com salvamentos automáticos.
-**Motivo:** Manter a sensação de controle do usuário ("Eu salvei e o sistema confirmou") sem o ruído visual do auto-save de 10 em 10 minutos.
-
-### ADR-015 — Arquitetura de Entidades Universais para Canvas
-**Decisão:** Utilizar uma interface genérica `CanvasEntity<T>` para todos os elementos do Canvas (Notas, Imagens, PDFs).
-**Motivo:** Extensibilidade total. As transformações (X, Y, Rotação, Resize) são universais, enquanto o payload de dados é isolado por tipo. Isso permite virtualização agressiva e simplifica o sistema de grupos e conexões futuras.
-
-### ADR-016 — Configurações e Plugins Desacoplados
-**Decisão:** Armazenar configurações de visualização (ex: zoom, grid) e estado de plugins em stores dedicadas (`uiStore`, `pluginStore`) separadas do conteúdo das notas.
-**Motivo:** Persistência de preferências de interface sem modificar os arquivos `.md` originais, mantendo a integridade do sistema de arquivos do usuário.
+### ADR-019 — Semântica de Visualização (Gallery vs Docs)
+**Decisão:** Separar o gerenciamento de mídias em `imageview` e `docsview`.
+**Motivo:** Embora ambos lidem com arquivos, o comportamento de interação (Thumbnails de PDF vs Galeria de Imagens) é distinto. A separação permite otimizações específicas (como PDF.js) sem inflar a lógica de imagens.
 
 ---
 
-## 3. Padrões de Dados
+## 3. Padrões de Componentização
 
-### Metadados (YAML Frontmatter)
-As notas seguem o padrão abaixo para suportar campos dinâmicos:
-
-```yaml
----
-type: character
-icon: "🛡️"
-config: '{"Atributo":{"type":"select","options":["Força","Agilidade"]}}'
-fields:
-  Atributo: "Força"
----
-```
+Todo novo componente deve seguir o padrão:
+1.  **Pasta Própria:** `components/NomeComponente/`
+2.  **Arquivos Atômicos:** `NomeComponente.tsx` e `NomeComponente.module.scss`.
+3.  **Tipagem:** Props importadas de `@/shared/types`.
+4.  **Lógica:** Extraída para hooks caso envolva cálculos complexos ou estado global.
 
 ---
 
 ## 4. UI Global e UX
-- **Atualizações Otimistas:** Operações de sistema de arquivos (mover, renomear) atualizam o estado do Zustand imediatamente, disparando a atualização do disco em background para uma sensação de performance instantânea.
-- **::selection Customizado:** A cor de seleção de texto é padronizada para a cor de acento (Amethyst) para reforçar a identidade visual.
+- **Foco Total:** Ao entrar em painéis de visualização (Canvas, Galerias, Dashboard), a sidebar esquerda é fechada automaticamente para maximizar o espaço útil.
+- **Identidade Visual:** Uso consistente da cor de acento (Amethyst) e tipografia serifada para leitura confortável.

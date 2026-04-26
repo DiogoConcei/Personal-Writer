@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
-import { useGalleryStore } from '@/features/dashboard/store/galleryStore';
+import { useGalleryStore } from '@/features/imageview/store/galleryStore';
 import { 
   copyImageToAssets, 
   deleteItem, 
@@ -340,7 +340,7 @@ export function useImageManager() {
     const sourceItems = selectedPaths.includes(sourceItem.path) ? selectedPaths : [sourceItem.path];
 
     if (targetType === 'collection') {
-      const { useGalleryStore } = await import('@/features/dashboard/store/galleryStore');
+      const { useGalleryStore } = await import('@/features/imageview/store/galleryStore');
       await useGalleryStore.getState().addToCollection(targetId, sourceItems);
       addNotification(`${sourceItems.length} imagem(ns) adicionada(s) à coleção`, 'success');
       return true;

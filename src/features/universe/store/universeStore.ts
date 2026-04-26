@@ -1,16 +1,8 @@
 import { create } from 'zustand';
 import { readFile, writeFile, FileNode, exists } from '@/tauri-bridge';
-import { Metadata, parseMarkdownMetadata, stringifyYAML } from '@/features/editor/store/metadataParser';
+import { parseMarkdownMetadata, stringifyYAML } from '@/features/editor/store/metadataParser';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-
-export interface Entity extends Metadata {
-  path: string;
-  name: string;
-  lastModified: number;
-  excerpt: string;
-  links: string[];
-  previewImage?: string;
-}
+import { Entity } from '@/shared/types';
 
 interface UniverseSettings {
   galleryTitle?: string;

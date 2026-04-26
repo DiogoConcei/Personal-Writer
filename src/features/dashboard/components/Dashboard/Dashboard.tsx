@@ -1,0 +1,121 @@
+import { useMemo, useState } from 'react';
+import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
+import { useUniverseStore } from '@/features/universe/store/universeStore';
+import { Entity, CategorizedEntities } from '@/shared/types';
+import NoteCard from '../NoteCard/NoteCard';
+import TimelineView from '../TimelineView/TimelineView';
+import styles from './Dashboard.module.scss';
+import { LayoutGrid, User, MapPin, FileText, Clock } from 'lucide-react';
+
+export default function Dashboard() {
+  const { dashboardFilterPath, rootPath, setDashboardFilterPath } = useWorkspaceStore();
+  const { entities, isIndexing } = useUniverseStore();
+  const [activeTab, setActiveTab] = useState<'gallery' | 'timeline'>('gallery');
+
+  const categorized = useMemo<CategorizedEntities>(() => {
+    const chars: Entity[] = [];
+    const locs: Entity[] = [];
+    const rest: Entity[] = [];
+
+    Object.values(entities).forEach((entity) => {
+      if (dashboardFilterPath && !entity.path.startsWith(dashboardFilterPath)) {
+        return;
+      }
+
+      if (entity.type === 'character') chars.push(entity);
+      else if (entity.type === 'location') locs.push(entity);
+      else rest.push(entity);
+    });
+
+    const sortByDate = (a: Entity, b: Entity) => b.lastModified - a.lastModified;
+
+    return {
+      characters: chars.sort(sortByDate),
+      locations: locs.sort(sortByDate),
+      others: rest.sort(sortByDate),
+      total: chars.length + locs.length + rest.length
+    };
+  }, [entities, dashboardFilterPath]);
+
+  const getTitle = () => {
+    if (!dashboardFilterPath || !rootPath) return 'Dashboard';
+    const folderName = dashboardFilterPath.split(/[\\/]/).pop();
+    return `Pasta: ${folderName}`;
+  };
+
+  if (categorized.total === 0 && !isIndexing) {
+    return (
+      <div className={styles.empty}>
+        <LayoutGrid size={48} />
+        <p>Nenhuma nota encontrada {dashboardFilterPath ? 'nesta pasta' : 'no workspace'}.</p>
+        {dashboardFilterPath && (
+          <button className={styles.clearFilter} onClick={() => setDashboardFilterPath(null)}>
+            Ver todas as notas
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const renderSection = (title: string, icon: any, notes: Entity[]) => {
+    if (notes.length === 0) return null;
+    return (
+      <section className={styles.section}>
+        <div className={styles.section__header}>
+          {icon}
+          <h3 className={styles.section__title}>{title} <span>({notes.length})</span></h3>
+        </div>
+        <div className={styles.grid}>
+          {notes.map((entity) => (
+            <NoteCard key={entity.path} entity={entity} />
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  return (
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <div className={styles.header__left}>
+          <h2 className={styles.title}>{getTitle()}</h2>
+          <div className={styles.tabs}>
+            <button
+              className={`${styles.tab} ${activeTab === 'gallery' ? styles.active : ''}`}
+              onClick={() => setActiveTab('gallery')}
+            >
+              <LayoutGrid size={16} />
+              Galeria
+            </button>
+            <button
+              className={`${styles.tab} ${activeTab === 'timeline' ? styles.active : ''}`}
+              onClick={() => setActiveTab('timeline')}
+            >
+              <Clock size={16} />
+              Linha do Tempo
+            </button>
+          </div>
+          {dashboardFilterPath && (
+            <button className={styles.clearFilter} onClick={() => setDashboardFilterPath(null)}>
+              Limpar Filtro
+            </button>
+          )}
+        </div>
+        {isIndexing && <div className={styles.indexingBadge}>Indexando universo...</div>}
+      </header>
+
+      <div className={styles.content}>
+        {activeTab === 'gallery' ? (
+          <>
+            {renderSection('Personagens', <User size={20} color="#a78bfa" />, categorized.characters)}
+            {renderSection('Localização', <MapPin size={20} color="#fbbf24" />, categorized.locations)}
+            {renderSection('Notas Gerais', <FileText size={20} color="#94a3b8" />, categorized.others)}
+          </>
+        ) : (
+          <TimelineView />
+        )}
+      </div>
+    </div>
+  );
+}
+

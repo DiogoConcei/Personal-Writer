@@ -150,12 +150,13 @@
   flex-wrap: wrap;
 
   button {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    border: 2px solid transparent;
+    border: 1px solid rgba(0, 0, 0, 0.3); // Borda escura suave
     cursor: pointer;
-    transition: transform var(--transition-fast);
+    transition: transform var(--transition-fast), border-color var(--transition-fast);
+    padding: 0;
     position: relative;
 
     &:hover {
@@ -163,7 +164,9 @@
     }
 
     &.active {
-      border-color: var(--color-accent);
+      border: 2px solid var(--color-accent);
+      box-shadow: 0 0 0 1px var(--color-bg-elevated); // Gap visual entre borda e cor
+      
       &::after {
         content: '';
         position: absolute;

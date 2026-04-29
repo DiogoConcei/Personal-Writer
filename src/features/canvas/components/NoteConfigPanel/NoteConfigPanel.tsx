@@ -48,7 +48,7 @@ export function NoteConfigPanel({
         <div className={styles.toggleGroup}>
           <button
             className={
-              selectedNoteEntity.style?.width === 420 ? styles.active : ""
+              selectedNoteEntity.width === 420 ? styles.active : ""
             }
             onClick={() => updateSelectedNoteStyle({ width: 420, height: 594 })}
           >
@@ -56,8 +56,8 @@ export function NoteConfigPanel({
           </button>
           <button
             className={
-              selectedNoteEntity.style?.width === 300 &&
-              selectedNoteEntity.style?.height === 420
+              selectedNoteEntity.width === 300 &&
+              selectedNoteEntity.height === 420
                 ? styles.active
                 : ""
             }
@@ -67,8 +67,8 @@ export function NoteConfigPanel({
           </button>
           <button
             className={
-              selectedNoteEntity.style?.width === 400 &&
-              selectedNoteEntity.style?.height === 400
+              selectedNoteEntity.width === 400 &&
+              selectedNoteEntity.height === 400
                 ? styles.active
                 : ""
             }
@@ -115,14 +115,17 @@ export function NoteConfigPanel({
       <div className={styles.configSection}>
         <label>Cor do Texto</label>
         <div className={styles.colorPicker}>
-          {["#ffffff", "#a1a1aa", "#ec4899", "#8b5cf6", "#3b82f6"].map(
-            (color) => (
+          {[
+            { color: "var(--color-text-primary)", hex: "#e8eaf0", label: "Principal" },
+            { color: "var(--color-text-secondary)", hex: "#9da3b8", label: "Secundário" }
+          ].map(
+            ({ color, hex }) => (
               <button
                 key={color}
-                style={{ backgroundColor: color }}
+                style={{ backgroundColor: hex }}
                 className={
                   selectedNoteEntity.style?.color === color ||
-                  (!selectedNoteEntity.style?.color && color === "#ffffff")
+                  (!selectedNoteEntity.style?.color && color === "var(--color-text-primary)")
                     ? styles.active
                     : ""
                 }
@@ -136,15 +139,19 @@ export function NoteConfigPanel({
       <div className={styles.configSection}>
         <label>Cor de Fundo</label>
         <div className={styles.colorPicker}>
-          {["#1a1a1a", "#27272a", "#4c1d95", "#1e3a8a", "#064e3b"].map(
-            (color) => (
+          {[
+            { color: "#000000", hex: "#000000", label: "Preto" },
+            { color: "var(--color-bg-base)", hex: "#1c1f26", label: "Base" },
+            { color: "var(--color-bg-elevated)", hex: "#2d3240", label: "Elevado" }
+          ].map(
+            ({ color, hex }) => (
               <button
                 key={color}
-                style={{ backgroundColor: color }}
+                style={{ backgroundColor: hex }}
                 className={
                   selectedNoteEntity.style?.backgroundColor === color ||
                   (!selectedNoteEntity.style?.backgroundColor &&
-                    color === "#1a1a1a")
+                    color === "var(--color-bg-elevated)")
                     ? styles.active
                     : ""
                 }

@@ -36,6 +36,7 @@ import { DictionaryContextMenu } from "../DictionaryContextMenu/DictionaryContex
 import { DocumentModal } from "@/features/SlashMenu/components/DocumentModal/DocumentModal";
 import { TemplateGallery } from "@/features/templates/components/TemplateGallery";
 import { PdfGallery } from "@/features/references/components/PdfGallery/PdfGallery";
+import { TableOfContents } from "../TableOfContents/TableOfContents";
 import ConfirmModal from "@/shared/components/Modal/ConfirmModal/ConfirmModal";
 import styles from "./Editor.module.scss";
 import {
@@ -43,10 +44,32 @@ import {
   LayoutTemplate,
   Image as ImageIcon,
   FileText,
+  List,
 } from "lucide-react";
 import { DEFAULT_TEMPLATES } from "@/features/templates/data/defaultTemplates";
 import { useReferenceStore } from "@/features/references/store/referenceStore";
 import { useUIStore as useGlobalUIStore } from "@/store/uiStore";
+
+import { Extension } from "@tiptap/core";
+
+/**
+ * Extensão customizada para permitir indentação com a tecla Tab
+ */
+const IndentExtension = Extension.create({
+  name: 'indentExtension',
+
+  addKeyboardShortcuts() {
+    return {
+      Tab: () => {
+        return this.editor.commands.insertContent("\t");
+      },
+      'Shift-Tab': () => {
+        // Opcional: Implementar remoção de tab se necessário
+        return true;
+      },
+    }
+  },
+});
 
 export default function Editor() {
   const { activeFile, rootPath } = useWorkspaceStore();
@@ -58,6 +81,7 @@ export default function Editor() {
   const [showGallery, setShowGallery] = useState(false);
   const [showDocuments, setShowDocuments] = useState(false);
   const [showDocumentList, setShowDocumentList] = useState(false);
+  const [showTOC, setShowTOC] = useState(false);
   const [templateToApply, setTemplateToApply] = useState<string | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{
@@ -114,6 +138,7 @@ export default function Editor() {
         StarterKit.configure({
           codeBlock: false,
         }),
+        IndentExtension,
         CustomCodeBlock,
         Markdown.configure({
           html: true,
@@ -608,6 +633,12 @@ export default function Editor() {
           </button>
           <button
             className={styles.historyBtn}
+            onClick={() => setShowTOC(!showTOC)}
+          >
+            <List size={14} /> Sumário
+          </button>
+          <button
+            className={styles.historyBtn}
             onClick={() => setShowHistory(true)}
           >
             <History size={14} /> Histórico
@@ -625,6 +656,7 @@ export default function Editor() {
         }}
       >
         <MetadataHeader />
+        {showTOC && <TableOfContents editor={editor} onClose={() => setShowTOC(false)} />}
         <EditorBubbleMenu editor={editor} />
         {editor && contextMenu && (
           <DictionaryContextMenu

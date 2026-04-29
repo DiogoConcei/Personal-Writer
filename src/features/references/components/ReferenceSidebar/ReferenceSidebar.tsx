@@ -1,38 +1,44 @@
-import { useState } from 'react';
 import { useReferenceStore } from '../../store/referenceStore';
 import { PdfLibrary } from '../PdfLibrary/PdfLibrary';
 import { PdfViewer } from '../PdfViewer/PdfViewer';
 import styles from './ReferenceSidebar.module.scss';
 import { X, User, Tag } from 'lucide-react';
+import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
+import { useUIStore } from '@/store/uiStore';
 
 export default function ReferenceSidebar() {
-  const { pinnedNotes, activePdfPath } = useReferenceStore();
-  
-  const [activeTab, setActiveTab] = useState<'backlinks' | 'metadata' | 'library'>('backlinks');
+  const { pinnedNotes, activePdfPath, referenceTab, setReferenceTab, unpinNote } = useReferenceStore();
+  const { setActiveFile } = useWorkspaceStore();
+  const { setActivePanel } = useUIStore();
 
   if (activePdfPath) {
     return <PdfViewer />;
   }
+
+  const handleOpenNote = (path: string) => {
+    setActiveFile(path);
+    setActivePanel('editor');
+  };
 
   return (
     <div className={styles.sidebar}>
       <header className={styles.header}>
         <div className={styles.tabs}>
           <button 
-            className={`${styles.tab} ${activeTab === 'backlinks' ? styles['tab--active'] : ''}`}
-            onClick={() => setActiveTab('backlinks')}
+            className={`${styles.tab} ${referenceTab === 'backlinks' ? styles['tab--active'] : ''}`}
+            onClick={() => setReferenceTab('backlinks')}
           >
             Conexões
           </button>
           <button 
-            className={`${styles.tab} ${activeTab === 'metadata' ? styles['tab--active'] : ''}`}
-            onClick={() => setActiveTab('metadata')}
+            className={`${styles.tab} ${referenceTab === 'metadata' ? styles['tab--active'] : ''}`}
+            onClick={() => setReferenceTab('metadata')}
           >
             Fixados
           </button>
           <button 
-            className={`${styles.tab} ${activeTab === 'library' ? styles['tab--active'] : ''}`}
-            onClick={() => setActiveTab('library')}
+            className={`${styles.tab} ${referenceTab === 'library' ? styles['tab--active'] : ''}`}
+            onClick={() => setReferenceTab('library')}
           >
             Acervo
           </button>
@@ -40,14 +46,14 @@ export default function ReferenceSidebar() {
       </header>
 
       <div className={styles.content}>
-        {activeTab === 'backlinks' && (
+        {referenceTab === 'backlinks' && (
           <div className={styles.empty}>
             <Tag size={32} />
             <p>Nenhuma retro-referência encontrada para esta nota.</p>
           </div>
         )}
 
-        {activeTab === 'metadata' && (
+        {referenceTab === 'metadata' && (
           <div className={styles.pinnedList}>
             {pinnedNotes.length === 0 ? (
               <div className={styles.empty}>
@@ -56,16 +62,24 @@ export default function ReferenceSidebar() {
               </div>
             ) : (
               pinnedNotes.map((notePath: string) => (
-                <div key={notePath} className={styles.pinnedItem}>
+                <div key={notePath} className={styles.pinnedItem} onClick={() => handleOpenNote(notePath)}>
                   <span>{notePath.split(/[\\/]/).pop()?.replace('.md', '')}</span>
-                  <button className={styles.btnUnpin}><X size={14} /></button>
+                  <button 
+                    className={styles.btnUnpin}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      unpinNote(notePath);
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
               ))
             )}
           </div>
         )}
 
-        {activeTab === 'library' && (
+        {referenceTab === 'library' && (
           <PdfLibrary />
         )}
       </div>

@@ -77,6 +77,13 @@
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--color-accent);
+    background-color: var(--color-bg-hover);
+  }
 
   span {
     white-space: nowrap;

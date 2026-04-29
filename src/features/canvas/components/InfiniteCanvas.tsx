@@ -16,7 +16,7 @@ import { useTransformable } from "@/shared/hooks/useTransformable/useTransformab
 import { useZoom } from "@/shared/hooks/useZoom/useZoom";
 import { useCanvasEntities } from "../hooks/useCanvasEntities";
 import { SplitModal } from "./SplitModal/SplitModal";
-import { AnyCanvasEntity, PdfData } from "@/shared/types";
+import { AnyCanvasEntity, NoteData, PdfData } from "@/shared/types";
 
 // Componentes Extraídos
 import { NoteSelectionModal } from "./NoteSelectionModal/NoteSelectionModal";
@@ -44,6 +44,7 @@ export default function InfiniteCanvas() {
     id: string;
     name: string;
     total: number;
+    initialPage?: number;
   } | null>(null);
 
   const { zoom, zoomIn, zoomOut, resetZoom } = useZoom({
@@ -70,6 +71,28 @@ export default function InfiniteCanvas() {
     rootPath,
   });
 
+  // Listener para teclas de exclusão (Backspace/Delete)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedItemId) return;
+
+      // Não excluir se o usuário estiver digitando em um input ou textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        handleRemoveEntity(selectedItemId);
+        setSelectedItemId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedItemId, handleRemoveEntity]);
+
   // Sincronizar painel lateral com seleção
   useEffect(() => {
     const selectedEntity = entities.find((e) => e.id === selectedItemId);
@@ -79,6 +102,13 @@ export default function InfiniteCanvas() {
       setSideMenuMode("main");
     }
   }, [selectedItemId, entities]);
+
+  const handleToggleSeparar = (active: boolean) => {
+    setIsSepararActive(active);
+    if (active) {
+      setSelectedItemId(null);
+    }
+  };
 
   const handleReset = () => {
     resetZoom();
@@ -132,9 +162,16 @@ export default function InfiniteCanvas() {
     if (!selectedItemId) return;
     const entity = entities.find((e) => e.id === selectedItemId);
     if (entity?.type === "note") {
-      handleUpdateEntity(selectedItemId, {
-        style: { ...entity.style, ...styleUpdates },
-      });
+      const { width, height, ...cleanStyleUpdates } = styleUpdates;
+      
+      const updates: Partial<AnyCanvasEntity> = {
+        style: { ...entity.style, ...cleanStyleUpdates },
+      };
+      
+      if (width !== undefined) updates.width = width as number;
+      if (height !== undefined) updates.height = height as number;
+
+      handleUpdateEntity(selectedItemId, updates);
     }
   };
 
@@ -156,65 +193,98 @@ export default function InfiniteCanvas() {
   const handleConfirmSplit = (data: any) => {
     if (!splittingItem) return;
     const original = entities.find((e) => e.id === splittingItem.id);
-    if (!original || original.type !== "pdf") return;
+    if (!original) return;
+    if (original.type !== "pdf" && original.type !== "note") return;
 
-    const pdfData = original.data as PdfData;
+    const originalData = original.data as any;
+    const blockStartPage = originalData.startPage || 1;
+    const blockEndPage = originalData.endPage || originalData.totalPages || 1;
+    
     let pagesToExtract: number[] = [];
 
+    // Mapeamento de páginas relativas para absolutas
     if (data.mode === "amount") {
-      const start = data.startPage || pdfData.startPage;
+      const relativeStart = data.startPage;
+      const absoluteStart = blockStartPage + (relativeStart - 1);
+      
       for (let i = 0; i < data.amount; i++) {
-        const page = start + i;
-        if (page <= pdfData.endPage) pagesToExtract.push(page);
+        const page = absoluteStart + i;
+        if (page <= blockEndPage) pagesToExtract.push(page);
       }
     } else if (data.mode === "single") {
-      pagesToExtract.push(data.singlePage);
+      const absolutePage = blockStartPage + (data.singlePage - 1);
+      if (absolutePage <= blockEndPage) {
+        pagesToExtract.push(absolutePage);
+      }
     } else if (data.mode === "range") {
-      for (let i = data.startPage; i <= data.endPage; i++) {
-        if (i >= pdfData.startPage && i <= pdfData.endPage)
+      const absoluteStart = blockStartPage + (data.startPage - 1);
+      const absoluteEnd = blockStartPage + (data.endPage - 1);
+      
+      for (let i = absoluteStart; i <= absoluteEnd; i++) {
+        if (i >= blockStartPage && i <= blockEndPage)
           pagesToExtract.push(i);
       }
     }
 
     if (pagesToExtract.length === 0) return;
 
-    const newItems: AnyCanvasEntity[] = pagesToExtract.map(
-      (pageNum, index) => ({
-        id: `pdf-page-${Math.random().toString(36).substring(2, 9)}`,
-        type: "pdf",
-        x: original.x + (index + 1) * 40,
-        y: original.y + (index + 1) * 40,
+    const minExtracted = Math.min(...pagesToExtract);
+    const maxExtracted = Math.max(...pagesToExtract);
+
+    const newEntities: AnyCanvasEntity[] = [];
+    let offsetCount = 1;
+
+    // 1. Bloco da Esquerda (Remanescente anterior)
+    if (minExtracted > blockStartPage) {
+      newEntities.push({
+        ...original,
+        id: `${original.type}-left-${Math.random().toString(36).substring(2, 9)}`,
+        data: {
+          ...originalData,
+          startPage: blockStartPage,
+          endPage: minExtracted - 1,
+        },
+      });
+    }
+
+    // 2. Páginas Extraídas (Individuais)
+    pagesToExtract.forEach((pageNum) => {
+      newEntities.push({
+        id: `${original.type}-page-${Math.random().toString(36).substring(2, 9)}`,
+        type: original.type,
+        x: original.x + offsetCount * 40,
+        y: original.y + offsetCount * 40,
         width: original.width,
         height: original.height,
         rotation: 0,
-        zIndex: entities.length + index + 1,
+        zIndex: entities.length + offsetCount,
         data: {
-          path: pdfData.path,
+          ...originalData,
           startPage: pageNum,
           endPage: pageNum,
-          totalPages: pdfData.totalPages,
-        } as PdfData,
-      }),
-    );
+        },
+      });
+      offsetCount++;
+    });
+
+    // 3. Bloco da Direita (Remanescente posterior)
+    if (maxExtracted < blockEndPage) {
+      newEntities.push({
+        ...original,
+        id: `${original.type}-right-${Math.random().toString(36).substring(2, 9)}`,
+        x: original.x + offsetCount * 40,
+        y: original.y + offsetCount * 40,
+        data: {
+          ...originalData,
+          startPage: maxExtracted + 1,
+          endPage: blockEndPage,
+        },
+      });
+    }
 
     setEntities((prev) => {
       const filtered = prev.filter((e) => e.id !== original.id);
-      const maxExtracted = Math.max(...pagesToExtract);
-
-      if (maxExtracted < pdfData.endPage) {
-        filtered.push({
-          ...original,
-          id: `pdf-remainder-${Math.random().toString(36).substring(2, 9)}`,
-          x: original.x + (pagesToExtract.length + 1) * 40,
-          y: original.y + (pagesToExtract.length + 1) * 40,
-          data: {
-            ...pdfData,
-            startPage: maxExtracted + 1,
-          },
-        });
-      }
-
-      return [...filtered, ...newItems];
+      return [...filtered, ...newEntities];
     });
 
     setIsSplitModalOpen(false);
@@ -311,7 +381,7 @@ export default function InfiniteCanvas() {
         sideMenuMode={sideMenuMode}
         setSideMenuMode={setSideMenuMode}
         isSepararActive={isSepararActive}
-        setIsSepararActive={setIsSepararActive}
+        setIsSepararActive={handleToggleSeparar}
         setIsNoteGalleryOpen={setIsNoteGalleryOpen}
         setIsPdfGalleryOpen={setIsPdfGalleryOpen}
         setIsImageGalleryOpen={setIsImageGalleryOpen}
@@ -349,9 +419,20 @@ export default function InfiniteCanvas() {
                   <CanvasNoteItem
                     entity={entity}
                     isSelected={isSelected}
+                    isSepararActive={isSepararActive}
                     onSelect={() => setSelectedItemId(entity.id)}
                     onUpdate={handleUpdateEntity}
                     onRemove={handleRemoveEntity}
+                    onSplit={(viewingPage) => {
+                      const data = entity.data as NoteData;
+                      setSplittingItem({
+                        id: entity.id,
+                        name: data.title || "Nota",
+                        total: (data.endPage || 1) - (data.startPage || 1) + 1,
+                        initialPage: viewingPage ? viewingPage - (data.startPage || 1) + 1 : 1
+                      });
+                      setIsSplitModalOpen(true);
+                    }}
                   />
                 )}
                 {entity.type === "image" && (
@@ -378,6 +459,7 @@ export default function InfiniteCanvas() {
                         id: entity.id,
                         name: data.path.split(/[\\/]/).pop() || "PDF",
                         total: data.endPage - data.startPage + 1,
+                        initialPage: 1
                       });
                       setIsSplitModalOpen(true);
                     }}
@@ -411,6 +493,7 @@ export default function InfiniteCanvas() {
         onConfirm={handleConfirmSplit}
         totalItems={splittingItem?.total || 0}
         itemName={splittingItem?.name || ""}
+        initialPage={splittingItem?.initialPage}
       />
 
       {isImageGalleryOpen && (

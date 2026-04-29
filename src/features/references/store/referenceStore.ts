@@ -12,11 +12,13 @@ interface ReferenceState {
   pdfs: PdfAsset[];
   activePdfPath: string | null;
   isLoadingPdfs: boolean;
+  referenceTab: 'backlinks' | 'metadata' | 'library';
 
   pinNote: (path: string) => void;
   unpinNote: (path: string) => void;
   updateMetadata: (path: string, data: ReferenceMetadata) => void;
   clearPins: () => void;
+  setReferenceTab: (tab: 'backlinks' | 'metadata' | 'library') => void;
 
   fetchPdfs: (workspaceRoot: string) => Promise<void>;
   setActivePdf: (path: string | null) => void;
@@ -30,6 +32,7 @@ export const useReferenceStore = create<ReferenceState>((set, get) => ({
   pdfs: [],
   activePdfPath: null,
   isLoadingPdfs: false,
+  referenceTab: 'backlinks',
 
   pinNote: (path) => set((state) => ({
     pinnedNotes: state.pinnedNotes.includes(path)
@@ -46,6 +49,8 @@ export const useReferenceStore = create<ReferenceState>((set, get) => ({
   })),
 
   clearPins: () => set({ pinnedNotes: [] }),
+
+  setReferenceTab: (tab) => set({ referenceTab: tab }),
 
   fetchPdfs: async (workspaceRoot) => {
     set({ isLoadingPdfs: true });

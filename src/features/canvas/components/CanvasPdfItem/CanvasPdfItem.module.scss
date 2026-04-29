@@ -24,21 +24,64 @@
     overflow: hidden;
     border-radius: var(--radius-sm);
     pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative; // Necessário para o footer absoluto
+  }
+}
+
+.pdfFooter {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  z-index: 2;
+  pointer-events: auto; // Habilita cliques nos botões flutuantes
+
+  .navBtn {
+    background: rgba(0, 0, 0, 0.6); // Fundo escuro semi-transparente
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+
+    &:hover:not(:disabled) {
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      transform: scale(1.1);
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
   }
 }
 
 .pdfBadge {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background-color: var(--color-accent);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   color: white;
   font-size: 10px;
   font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  z-index: 2;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .canvasPdf.separarMode {

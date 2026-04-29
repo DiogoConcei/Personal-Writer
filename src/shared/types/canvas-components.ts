@@ -35,9 +35,11 @@ export interface CanvasPdfItemProps {
 export interface CanvasNoteItemProps {
   entity: AnyCanvasEntity;
   isSelected: boolean;
+  isSepararActive: boolean;
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
+  onSplit: () => void;
 }
 
 export interface CanvasImageItemProps {

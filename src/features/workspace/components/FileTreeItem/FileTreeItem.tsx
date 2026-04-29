@@ -58,7 +58,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
   const [virtualImagesPath, setVirtualImagesPath] = useState<string | null>(node.virtualImagesPath || null);
 
   const isPinned = useReferenceStore(s => s.pinnedNotes.includes(node.path));
-  const { pinNote, unpinNote, setActivePdf } = useReferenceStore();
+  const { pinNote, unpinNote, setActivePdf, setReferenceTab } = useReferenceStore();
 
   const { setActivePanel, toggleRightSidebar, isRightSidebarVisible } = useUIStore();
 
@@ -175,6 +175,7 @@ export default function FileTreeItem({ node, depth }: FileTreeItemProps) {
           unpinNote(node.path);
         } else {
           pinNote(node.path);
+          setReferenceTab('metadata');
           if (!isRightSidebarVisible) toggleRightSidebar();
         }
         break;

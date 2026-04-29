@@ -5,6 +5,9 @@ export interface NoteData {
   noteId: string;
   title: string;
   contentSnippet?: string;
+  startPage?: number;
+  endPage?: number;
+  totalPages?: number;
 }
 
 export interface PostItData {

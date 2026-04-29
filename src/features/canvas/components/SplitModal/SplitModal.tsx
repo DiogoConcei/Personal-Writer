@@ -1,21 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './SplitModal.module.scss';
 import { Minus, Plus, X } from 'lucide-react';
 import { SplitMode, SplitModalProps } from '@/shared/types';
 
-export const SplitModal: React.FC<SplitModalProps> = ({
+export const SplitModal: React.FC<SplitModalProps & { initialPage?: number }> = ({
   isOpen,
   onClose,
   onConfirm,
-  totalItems
+  totalItems,
+  initialPage = 1
 }) => {
-  const [mode, setMode] = useState<SplitMode>('amount');
+  const [mode, setMode] = useState<SplitMode>('single');
   const [amount, setAmount] = useState(1);
-  const [startPage, setStartPage] = useState(1);
-  const [endPage, setEndPage] = useState(2);
-  const [singlePage, setSinglePage] = useState(1);
+  const [startPage, setStartPage] = useState(initialPage);
+  const [endPage, setEndPage] = useState(Math.min(initialPage + 1, totalItems));
+  const [singlePage, setSinglePage] = useState(initialPage);
 
   if (!isOpen) return null;
+
+  useEffect(() => {
+    if (isOpen) {
+      setSinglePage(initialPage);
+      setStartPage(initialPage);
+      setEndPage(Math.min(initialPage + 1, totalItems));
+    }
+  }, [isOpen, initialPage, totalItems]);
 
   const handleManualInput = (val: string, setter: (n: number) => void, max: number) => {
     const num = parseInt(val.replace(/\D/g, ''), 10);

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { PdfThumbnail } from '@/features/docs-manager/components/PdfThumbnail/PdfThumbnail';
 import { useCanvasEntity } from '../../hooks/useCanvasEntity';
@@ -18,15 +19,33 @@ export function CanvasPdfItem({
   rootPath 
 }: CanvasPdfItemProps) {
   const data = entity.data as PdfData;
+  const startPage = data.startPage || 1;
+  const endPage = data.endPage || data.totalPages || 1;
+  
+  // Estado interno para folhear o PDF dentro do bloco
+  const [currentPage, setCurrentPage] = useState(startPage);
+
+  // Sincroniza a página atual se os limites do bloco mudarem
+  useEffect(() => {
+    if (currentPage < startPage) setCurrentPage(startPage);
+    if (currentPage > endPage) setCurrentPage(endPage);
+  }, [startPage, endPage]);
+
   const { handleMouseDown, handleResizeStart } = useCanvasEntity({
     entity,
     minWidth: 150,
-    onSelect: isSepararActive ? onSplit : onSelect,
+    onSelect: isSepararActive ? () => onSplit(currentPage) : onSelect,
     onUpdate,
     onRemove
   });
 
-  const isSinglePage = data.startPage === data.endPage;
+  const isSinglePage = startPage === endPage;
+
+  const navigatePage = (e: React.MouseEvent, dir: 'prev' | 'next') => {
+    e.stopPropagation();
+    if (dir === 'prev' && currentPage > startPage) setCurrentPage(currentPage - 1);
+    if (dir === 'next' && currentPage < endPage) setCurrentPage(currentPage + 1);
+  };
 
   return (
     <div 
@@ -47,7 +66,7 @@ export function CanvasPdfItem({
         <PdfThumbnail 
           fileUrl={resolveAssetPath(data.path, rootPath)} 
           width={entity.width || 250}
-          pageNumber={data.startPage}
+          pageNumber={currentPage}
           onLoadSuccess={({ numPages }) => {
             if (data.totalPages === 0) {
               onUpdate(entity.id, { 
@@ -56,9 +75,26 @@ export function CanvasPdfItem({
             }
           }}
         />
-        {!isSinglePage && (
-          <div className={styles.pdfBadge} title="Este item contém múltiplas páginas">
-            {data.endPage - data.startPage + 1}
+
+        {data.totalPages && data.totalPages > 1 && (
+          <div className={styles.pdfFooter}>
+            <button 
+              className={styles.navBtn} 
+              onClick={(e) => navigatePage(e, 'prev')}
+              disabled={currentPage <= startPage}
+            >
+              &lt;
+            </button>
+            <div className={styles.pdfBadge} title={`Página ${currentPage} de ${data.totalPages}`}>
+              {isSinglePage ? `Pág ${startPage}` : `Pág ${currentPage}`}
+            </div>
+            <button 
+              className={styles.navBtn} 
+              onClick={(e) => navigatePage(e, 'next')}
+              disabled={currentPage >= endPage}
+            >
+              &gt;
+            </button>
           </div>
         )}
       </div>
@@ -66,6 +102,7 @@ export function CanvasPdfItem({
       {isSelected && !isSepararActive && (
         <>
           <div className={`${styles.handle} ${styles['handle--tl']}`} onMouseDown={(e) => handleResizeStart('tl', e)} />
+          <div className={`${styles.handle} ${styles['handle--tr']}`} onMouseDown={(e) => handleResizeStart('tr', e)} />
           <div className={`${styles.handle} ${styles['handle--bl']}`} onMouseDown={(e) => handleResizeStart('bl', e)} />
           <div className={`${styles.handle} ${styles['handle--br']}`} onMouseDown={(e) => handleResizeStart('br', e)} />
         </>

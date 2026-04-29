@@ -4,9 +4,11 @@ interface TransformOptions {
   x: number;
   y: number;
   width?: number;
+  height?: number;
   rotation?: number;
   minWidth?: number;
-  onUpdate: (updates: { x?: number; y?: number; width?: number; rotation?: number }) => void;
+  minHeight?: number;
+  onUpdate: (updates: { x?: number; y?: number; width?: number; height?: number; rotation?: number }) => void;
   onSelect?: () => void;
   ignoreSelectors?: string[];
 }
@@ -19,7 +21,9 @@ export function useTransformable({
   x,
   y,
   width = 300,
+  height = 300,
   minWidth = 50,
+  minHeight = 50,
   onUpdate,
   onSelect,
   ignoreSelectors = ['button', '.handle']
@@ -66,13 +70,21 @@ export function useTransformable({
     if (onSelect) onSelect();
 
     const startX = e.clientX;
+    const startY = e.clientY;
     const startWidth = width;
+    const startHeight = height;
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const currentX = moveEvent.clientX;
-      const diff = (direction === 'br' || direction === 'tr') ? currentX - startX : startX - currentX;
-      const newWidth = Math.max(minWidth, startWidth + diff);
-      onUpdate({ width: newWidth });
+      const currentY = moveEvent.clientY;
+      
+      const diffX = (direction === 'br' || direction === 'tr') ? currentX - startX : startX - currentX;
+      const diffY = (direction === 'br' || direction === 'bl') ? currentY - startY : startY - currentY;
+      
+      const newWidth = Math.max(minWidth, startWidth + diffX);
+      const newHeight = Math.max(minHeight, startHeight + diffY);
+      
+      onUpdate({ width: newWidth, height: newHeight });
     };
 
     const onMouseUp = () => {
@@ -82,7 +94,7 @@ export function useTransformable({
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, [width, minWidth, onUpdate, onSelect]);
+  }, [width, height, minWidth, minHeight, onUpdate, onSelect]);
 
   const handleRotateStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

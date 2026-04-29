@@ -2,19 +2,28 @@
   background-color: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
 
   &:hover, &.selected {
     border-color: var(--color-accent);
   }
 
   &.selected {
-    box-shadow: 0 0 0 2px var(--color-accent-glow);
+    border-color: var(--color-accent);
+  }
+
+  &.separarMode {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 15px var(--color-accent-glow);
+    cursor: copy;
+
+    &:hover {
+      transform: scale(1.02);
+    }
   }
 
   .noteTitle {
@@ -27,16 +36,103 @@
     opacity: 0.6;
     border-bottom: 1px solid var(--color-border);
     background-color: rgba(255, 255, 255, 0.03);
+    z-index: 1;
+  }
+
+  .noteContentWrapper {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; // Importante para flexbox fill
+  }
+
+  .noteContentMask {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    min-height: 0;
   }
 
   .noteContent {
-    flex: 1;
-    overflow: hidden;
-    white-space: pre-wrap;
+    height: 100%;
+    white-space: normal; // Reset pre-wrap para colunas funcionarem
     word-break: break-word;
     line-height: 1.6;
-    font-family: var(--font-family-serif); // Estilo de leitura
-    padding: var(--spacing-md);
+    font-family: var(--font-family-serif);
+    transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+    column-fill: auto;
+
+    :global(p) {
+      margin-top: 0;
+      margin-bottom: var(--spacing-md);
+      orphans: 2;
+      widows: 2;
+    }
+
+    :global(img) {
+      max-width: 100%;
+      height: auto;
+      border-radius: var(--radius-sm);
+      display: block;
+    }
+
+    :global(h1), :global(h2), :global(h3) {
+      margin-top: var(--spacing-lg);
+      margin-bottom: var(--spacing-md);
+      break-after: avoid;
+    }
+    
+    :global(ul), :global(ol) {
+      padding-left: var(--spacing-lg);
+    }
+  }
+
+  .noteFooter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+    z-index: 2;
+
+    .navBtn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all var(--transition-fast);
+
+      &:hover:not(:disabled) {
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+      }
+
+      &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  .noteBadge {
+    background-color: var(--color-accent);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   }
 }
 

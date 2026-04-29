@@ -58,14 +58,15 @@ export function useCanvasEntities({
       style: {
         fontSize: '14px',
         padding: '24px',
-        color: '#ffffff',
-        backgroundColor: '#1a1a1a',
-        width: cardWidth,   // Persiste no estilo para o NoteConfigPanel
-        height: cardHeight  // Persiste no estilo para o NoteConfigPanel
+        color: 'var(--color-text-primary)',
+        backgroundColor: 'var(--color-bg-elevated)'
       },
       data: {
         noteId: path,
         title: name,
+        startPage: 1,
+        endPage: 0,
+        totalPages: 0
       } as NoteData
     };
 

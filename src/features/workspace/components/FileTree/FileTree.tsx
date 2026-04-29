@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+import { useReferenceStore } from '@/features/references/store/referenceStore';
 import FileTreeItem from '../FileTreeItem/FileTreeItem';
 import styles from './FileTree.module.scss';
-import { FolderOpen, RefreshCw, FilePlus, FolderPlus, FileText, Folder as FolderIcon } from 'lucide-react';
+import { FolderOpen, RefreshCw, FilePlus, FolderPlus, FileText, Folder as FolderIcon, Pin } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useTreeDragAndDrop } from '../../hooks/useTreeDragAndDrop';
 
 import { DEFAULT_TEMPLATES } from '@/features/templates/data/defaultTemplates';
+
+import { FileNode } from '@/tauri-bridge';
 
 export default function FileTree() {
   const {
@@ -19,10 +22,30 @@ export default function FileTree() {
     createDirectory
   } = useWorkspaceStore();
 
+  const { pinnedNotes } = useReferenceStore();
+
   const { dragInfo } = useTreeDragAndDrop();
   const [showInput, setShowInput] = useState<'file' | 'dir' | null>(null);
   const [newName, setNewName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
+
+  // Busca recursiva para encontrar os nós dos arquivos fixados
+  const pinnedNodes = useMemo(() => {
+    const findNode = (nodes: FileNode[], path: string): FileNode | null => {
+      for (const node of nodes) {
+        if (node.path === path) return node;
+        if (node.children) {
+          const found = findNode(node.children, path);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    return pinnedNotes
+      .map(path => findNode(files, path))
+      .filter((node): node is FileNode => node !== null);
+  }, [files, pinnedNotes]);
 
   const handleOpenWorkspace = async () => {
     const selected = await open({
@@ -76,6 +99,19 @@ export default function FileTree() {
       </header>
 
       <div className={styles.tree__content}>
+        {pinnedNodes.length > 0 && (
+          <div className={styles.tree__pinned}>
+            <div className={styles.tree__pinnedHeader}>
+              <Pin size={10} />
+              <span>Fixados</span>
+            </div>
+            {pinnedNodes.map((node) => (
+              <FileTreeItem key={`pinned-${node.path}`} node={node} depth={0} />
+            ))}
+            <div className={styles.tree__divider} />
+          </div>
+        )}
+
         {showInput && (
           <form className={styles.tree__inputForm} onSubmit={handleSubmit}>
             <div className={styles.tree__inputWrapper}>

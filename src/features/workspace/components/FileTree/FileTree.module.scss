@@ -143,6 +143,31 @@
     padding: var(--spacing-sm) 0;
     @include scrollbar;
   }
+
+  &__pinned {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  &__pinnedHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 var(--spacing-md);
+    margin-bottom: 4px;
+    color: var(--color-accent);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+  }
+
+  &__divider {
+    height: 1px;
+    background-color: var(--color-border);
+    margin: var(--spacing-sm) var(--spacing-md);
+    opacity: 0.5;
+  }
 }
 
 .empty {

@@ -1,5 +1,13 @@
+import { ReactNode } from 'react';
 import { PluginKey } from '@tiptap/pm/state';
 import { DecorationSet } from '@tiptap/pm/view';
+
+export interface CommandItem {
+  title: string;
+  icon: ReactNode;
+  color: string;
+  command: (props: { editor: any; range: any }) => void;
+}
 
 export interface NoteData {
   noteId: string;

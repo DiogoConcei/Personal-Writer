@@ -1,0 +1,125 @@
+.sideMenu {
+  position: absolute;
+  left: var(--spacing-md);
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
+  height: fit-content;
+  width: 260px;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-md);
+  pointer-events: auto;
+  max-height: calc(100% - var(--spacing-3xl));
+  overflow-y: auto;
+
+  .subHeader {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+
+    h2 {
+      margin: 0;
+      font-size: var(--font-size-md);
+    }
+  }
+
+  .subBackButton {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+
+    &:hover {
+      background-color: var(--color-bg-hover);
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 2px;
+  }
+
+  header {
+    margin-bottom: var(--spacing-md);
+    
+    h2 {
+      font-size: var(--font-size-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--color-text-muted);
+      font-weight: 700;
+      margin: 0;
+    }
+  }
+
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    
+    .menuButton {
+      width: 100%;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: 0 var(--spacing-md);
+      background-color: var(--color-bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      text-align: left;
+
+      &:hover {
+        background-color: var(--color-bg-hover);
+        border-color: var(--color-accent-dim);
+        color: var(--color-text-primary);
+      }
+
+      &.active {
+        background-color: var(--color-accent);
+        border-color: var(--color-accent);
+        color: #fffafa;
+        box-shadow: 0 0 12px var(--color-accent-glow);
+
+        svg {
+          color: #fffafa !important;
+        }
+      }
+
+      svg {
+        width: 18px;
+        height: 18px;
+        color: var(--color-accent);
+      }
+    }
+  }
+}

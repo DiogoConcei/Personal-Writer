@@ -135,6 +135,13 @@ export function useCanvasEntities({
     setEntities(prev => prev.filter(e => e.id !== id));
   }, []);
 
+  const bringToFront = useCallback((id: string) => {
+    setEntities(prev => {
+      const maxZ = Math.max(0, ...prev.map(e => e.zIndex || 0));
+      return prev.map(e => e.id === id ? { ...e, zIndex: maxZ + 1 } : e);
+    });
+  }, []);
+
   return {
     entities,
     setEntities,
@@ -142,6 +149,7 @@ export function useCanvasEntities({
     addImage,
     addPdf,
     updateEntity,
-    removeEntity
+    removeEntity,
+    bringToFront
   };
 }

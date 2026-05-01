@@ -38,3 +38,15 @@ export interface GalleryBreadcrumb {
   label: string;
   target: GalleryNavTarget;
 }
+
+export interface GalleryModalsState {
+  itemToDelete: any | null;
+  folderToDelete: string | null;
+  isInputModalOpen: boolean;
+  pendingCollectionImages: string[];
+}
+
+export interface GallerySelectionState {
+  isSelectionMode: boolean;
+  selectedPaths: string[];
+}

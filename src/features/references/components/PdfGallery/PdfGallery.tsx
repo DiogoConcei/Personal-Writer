@@ -32,7 +32,8 @@ export const PdfGallery: React.FC<PdfGalleryProps> = ({ onSelect, onClose }) => 
       await handleUpload(paths);
     },
     filters: ['.pdf'],
-    disabled: !rootPath
+    disabled: !rootPath,
+    targetSelector: `.${styles.modal}`
   });
 
   const filteredPdfs = pdfs.filter(pdf => 

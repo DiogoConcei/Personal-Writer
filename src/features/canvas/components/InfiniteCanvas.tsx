@@ -2,8 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import styles from "./InfiniteCanvas.module.scss";
 import { useUIStore } from "../../../store/uiStore";
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
-import ImageGallery from "@/features/SlashMenu/components/ImageGallery/ImageGallery";
-import { PdfGallery } from "../../references/components/PdfGallery/PdfGallery";
 import {
   ZoomIn,
   ZoomOut,
@@ -12,50 +10,53 @@ import {
   Scissors,
   RotateCcw,
 } from "lucide-react";
+
+// Hooks
 import { useTransformable } from "@/shared/hooks/useTransformable/useTransformable";
 import { useZoom } from "@/shared/hooks/useZoom/useZoom";
 import { useCanvasEntities } from "../hooks/useCanvasEntities";
-import { SplitModal } from "./SplitModal/SplitModal";
-import { AnyCanvasEntity, NoteData, PdfData } from "@/shared/types";
+import { useCanvasModals } from "../hooks/useCanvasModals";
+import { useCanvasSplit } from "../hooks/useCanvasSplit";
+import { useCanvasViewport } from "../hooks/useCanvasViewport";
+import { useCanvasHotkeys } from "../hooks/useCanvasHotkeys";
+import { useCanvasNoteStyle } from "../hooks/useCanvasNoteStyle";
+import { NoteData, PdfData, SplitActionData } from "@/shared/types";
 
-// Componentes Extraídos
-import { NoteSelectionModal } from "./NoteSelectionModal/NoteSelectionModal";
+// Componentes
 import { CanvasActionMenu } from "./CanvasActionMenu/CanvasActionMenu";
 import { CanvasNoteItem } from "./CanvasNoteItem/CanvasNoteItem";
 import { CanvasImageItem } from "./CanvasImageItem/CanvasImageItem";
 import { CanvasPdfItem } from "./CanvasPdfItem/CanvasPdfItem";
-import { CanvasSidebar } from "./CanvasSidebar/CanvasSidebar";
+import { CanvasControls } from "./CanvasControls/CanvasControls";
 
 export default function InfiniteCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { rootPath } = useWorkspaceStore();
   const setActivePanel = useUIStore((state) => state.setActivePanel);
 
-  const [isImageGalleryOpen, setIsImageGalleryOpen] = useState(false);
-  const [isPdfGalleryOpen, setIsPdfGalleryOpen] = useState(false);
-  const [isNoteGalleryOpen, setIsNoteGalleryOpen] = useState(false);
   const [isSepararActive, setIsSepararActive] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
-  const [sideMenuMode, setSideMenuMode] = useState<"main" | "notes">("main");
-
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
-  const [splittingItem, setSplittingItem] = useState<{
-    id: string;
-    name: string;
-    total: number;
-    initialPage?: number;
-  } | null>(null);
 
+  // 1. Orquestração de UI e Modais
+  const modalControl = useCanvasModals();
+  const { open, splittingItem, setSideMenuMode } = modalControl;
+
+  // 2. Navegação Espacial (Zoom/Pan/Viewport)
   const { zoom, zoomIn, zoomOut, resetZoom } = useZoom({
     initialZoom: 1,
     minZoom: 0.1,
     maxZoom: 4,
   });
 
-  const [viewState, setViewState] = useState({ x: 0, y: 0 });
+  const {
+    viewState,
+    isPanning,
+    handleCanvasMouseDown,
+    handleReset,
+    getVisibleEntities,
+  } = useCanvasViewport({ zoom, resetZoom, containerRef });
 
-  // Hook centralizado de entidades
+  // 3. Gestão de Dados e Entidades
   const {
     entities,
     setEntities,
@@ -64,254 +65,50 @@ export default function InfiniteCanvas() {
     addPdf,
     updateEntity: handleUpdateEntity,
     removeEntity: handleRemoveEntity,
-  } = useCanvasEntities({
-    zoom,
-    viewState,
-    containerRef,
-    rootPath,
+    bringToFront,
+  } = useCanvasEntities({ zoom, viewState, containerRef, rootPath });
+
+  const { performSplit } = useCanvasSplit({ entities, setEntities });
+
+  // 4. Customização Visual e Hotkeys
+  const { selectedNoteEntity, updateSelectedNoteStyle, handleFontSizeChange } =
+    useCanvasNoteStyle({
+      selectedItemId,
+      entities,
+      onUpdate: handleUpdateEntity,
+    });
+
+  useCanvasHotkeys({
+    selectedItemId,
+    onRemove: handleRemoveEntity,
+    onDeselect: () => setSelectedItemId(null),
   });
-
-  // Listener para teclas de exclusão (Backspace/Delete)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedItemId) return;
-
-      // Não excluir se o usuário estiver digitando em um input ou textarea
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return;
-      }
-
-      if (e.key === 'Backspace' || e.key === 'Delete') {
-        e.preventDefault();
-        handleRemoveEntity(selectedItemId);
-        setSelectedItemId(null);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemId, handleRemoveEntity]);
 
   // Sincronizar painel lateral com seleção
   useEffect(() => {
     const selectedEntity = entities.find((e) => e.id === selectedItemId);
-    if (selectedEntity?.type === "note") {
-      setSideMenuMode("notes");
-    } else {
-      setSideMenuMode("main");
-    }
-  }, [selectedItemId, entities]);
+    setSideMenuMode(selectedEntity?.type === "note" ? "notes" : "main");
+  }, [selectedItemId, entities, setSideMenuMode]);
 
+  // Handlers
   const handleToggleSeparar = (active: boolean) => {
     setIsSepararActive(active);
-    if (active) {
-      setSelectedItemId(null);
-    }
+    if (active) setSelectedItemId(null);
   };
 
-  const handleReset = () => {
-    resetZoom();
-    setViewState({ x: 0, y: 0 });
-  };
-
-  const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0 || e.target !== containerRef.current?.firstChild) return;
-
-    setIsPanning(true);
-    const startX = e.clientX - viewState.x;
-    const startY = e.clientY - viewState.y;
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      setViewState({
-        x: moveEvent.clientX - startX,
-        y: moveEvent.clientY - startY,
-      });
-    };
-
-    const onMouseUp = () => {
-      setIsPanning(false);
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  };
-
-  const handleNoteSelect = (path: string, name: string) => {
-    const newId = addNote(path, name);
-    setSelectedItemId(newId);
-    setIsNoteGalleryOpen(false);
-  };
-
-  const handleImageSelect = (path: string) => {
-    addImage(path);
-    setIsImageGalleryOpen(false);
-  };
-
-  const handlePdfSelect = (path: string) => {
-    addPdf(path);
-    setIsPdfGalleryOpen(false);
-  };
-
-  // Funções de manipulação de estilo para a nota selecionada
-  const updateSelectedNoteStyle = (
-    styleUpdates: Record<string, string | number>,
-  ) => {
-    if (!selectedItemId) return;
-    const entity = entities.find((e) => e.id === selectedItemId);
-    if (entity?.type === "note") {
-      const { width, height, ...cleanStyleUpdates } = styleUpdates;
-      
-      const updates: Partial<AnyCanvasEntity> = {
-        style: { ...entity.style, ...cleanStyleUpdates },
-      };
-      
-      if (width !== undefined) updates.width = width as number;
-      if (height !== undefined) updates.height = height as number;
-
-      handleUpdateEntity(selectedItemId, updates);
-    }
-  };
-
-  const handleFontSizeChange = (increment: number) => {
-    const entity = entities.find((e) => e.id === selectedItemId);
-    if (!entity || entity.type !== "note") return;
-    const currentSize = parseInt(
-      (entity.style?.fontSize as string) || "14",
-      10,
-    );
-    const newSize = Math.max(8, Math.min(72, currentSize + increment));
-    updateSelectedNoteStyle({ fontSize: `${newSize}px` });
-  };
-
-  const selectedNoteEntity = entities.find(
-    (e) => e.id === selectedItemId && e.type === "note",
-  );
-
-  const handleConfirmSplit = (data: any) => {
-    if (!splittingItem) return;
-    const original = entities.find((e) => e.id === splittingItem.id);
-    if (!original) return;
-    if (original.type !== "pdf" && original.type !== "note") return;
-
-    const originalData = original.data as any;
-    const blockStartPage = originalData.startPage || 1;
-    const blockEndPage = originalData.endPage || originalData.totalPages || 1;
-    
-    let pagesToExtract: number[] = [];
-
-    // Mapeamento de páginas relativas para absolutas
-    if (data.mode === "amount") {
-      const relativeStart = data.startPage;
-      const absoluteStart = blockStartPage + (relativeStart - 1);
-      
-      for (let i = 0; i < data.amount; i++) {
-        const page = absoluteStart + i;
-        if (page <= blockEndPage) pagesToExtract.push(page);
-      }
-    } else if (data.mode === "single") {
-      const absolutePage = blockStartPage + (data.singlePage - 1);
-      if (absolutePage <= blockEndPage) {
-        pagesToExtract.push(absolutePage);
-      }
-    } else if (data.mode === "range") {
-      const absoluteStart = blockStartPage + (data.startPage - 1);
-      const absoluteEnd = blockStartPage + (data.endPage - 1);
-      
-      for (let i = absoluteStart; i <= absoluteEnd; i++) {
-        if (i >= blockStartPage && i <= blockEndPage)
-          pagesToExtract.push(i);
-      }
-    }
-
-    if (pagesToExtract.length === 0) return;
-
-    const minExtracted = Math.min(...pagesToExtract);
-    const maxExtracted = Math.max(...pagesToExtract);
-
-    const newEntities: AnyCanvasEntity[] = [];
-    let offsetCount = 1;
-
-    // 1. Bloco da Esquerda (Remanescente anterior)
-    if (minExtracted > blockStartPage) {
-      newEntities.push({
-        ...original,
-        id: `${original.type}-left-${Math.random().toString(36).substring(2, 9)}`,
-        data: {
-          ...originalData,
-          startPage: blockStartPage,
-          endPage: minExtracted - 1,
-        },
-      });
-    }
-
-    // 2. Páginas Extraídas (Individuais)
-    pagesToExtract.forEach((pageNum) => {
-      newEntities.push({
-        id: `${original.type}-page-${Math.random().toString(36).substring(2, 9)}`,
-        type: original.type,
-        x: original.x + offsetCount * 40,
-        y: original.y + offsetCount * 40,
-        width: original.width,
-        height: original.height,
-        rotation: 0,
-        zIndex: entities.length + offsetCount,
-        data: {
-          ...originalData,
-          startPage: pageNum,
-          endPage: pageNum,
-        },
-      });
-      offsetCount++;
-    });
-
-    // 3. Bloco da Direita (Remanescente posterior)
-    if (maxExtracted < blockEndPage) {
-      newEntities.push({
-        ...original,
-        id: `${original.type}-right-${Math.random().toString(36).substring(2, 9)}`,
-        x: original.x + offsetCount * 40,
-        y: original.y + offsetCount * 40,
-        data: {
-          ...originalData,
-          startPage: maxExtracted + 1,
-          endPage: blockEndPage,
-        },
-      });
-    }
-
-    setEntities((prev) => {
-      const filtered = prev.filter((e) => e.id !== original.id);
-      return [...filtered, ...newEntities];
-    });
-
-    setIsSplitModalOpen(false);
+  const handleConfirmSplit = (data: SplitActionData) => {
+    performSplit(splittingItem, data);
     setIsSepararActive(false);
   };
 
-  const visibleEntities = entities.filter((entity) => {
-    if (!containerRef.current) return true;
+  const handleSelectItem = (id: string) => {
+    setSelectedItemId(id);
+    bringToFront(id);
+  };
 
-    const viewportWidth = containerRef.current.clientWidth / zoom;
-    const viewportHeight = containerRef.current.clientHeight / zoom;
-    const minX = -viewState.x / zoom;
-    const minY = -viewState.y / zoom;
-    const maxX = minX + viewportWidth;
-    const maxY = minY + viewportHeight;
+  const visibleEntities = getVisibleEntities(entities);
 
-    const buffer = 500;
-
-    return (
-      entity.x + (entity.width || 300) > minX - buffer &&
-      entity.x < maxX + buffer &&
-      entity.y + (entity.height || 300) > minY - buffer &&
-      entity.y < maxY + buffer
-    );
-  });
-
-  // Ganchos de rotação para o menu
+  // Rotação via ActionMenu
   const selectedEntity = entities.find((e) => e.id === selectedItemId);
   const { handleRotateStart } = useTransformable({
     x: selectedEntity?.x || 0,
@@ -319,6 +116,72 @@ export default function InfiniteCanvas() {
     onUpdate: (updates) =>
       selectedItemId && handleUpdateEntity(selectedItemId, updates),
   });
+
+  /**
+   * Helper para renderizar entidades de forma DRY.
+   */
+  const renderEntity = (entity: any) => {
+    const isSelected = selectedItemId === entity.id;
+
+    switch (entity.type) {
+      case "note":
+        return (
+          <CanvasNoteItem
+            entity={entity}
+            isSelected={isSelected}
+            isSepararActive={isSepararActive}
+            onSelect={() => handleSelectItem(entity.id)}
+            onUpdate={handleUpdateEntity}
+            onRemove={handleRemoveEntity}
+            onSplit={(viewingPage) => {
+              const data = entity.data as NoteData;
+              open("split", {
+                id: entity.id,
+                name: data.title || "Nota",
+                total: (data.endPage || 1) - (data.startPage || 1) + 1,
+                initialPage: viewingPage
+                  ? viewingPage - (data.startPage || 1) + 1
+                  : 1,
+              });
+            }}
+          />
+        );
+      case "image":
+        return (
+          <CanvasImageItem
+            entity={entity}
+            isSelected={isSelected}
+            onSelect={() => handleSelectItem(entity.id)}
+            onUpdate={handleUpdateEntity}
+            onRemove={handleRemoveEntity}
+            rootPath={rootPath}
+          />
+        );
+      case "pdf":
+        return (
+          <CanvasPdfItem
+            entity={entity}
+            isSelected={isSelected}
+            isSepararActive={isSepararActive}
+            onSelect={() => handleSelectItem(entity.id)}
+            onUpdate={handleUpdateEntity}
+            onRemove={handleRemoveEntity}
+            onSplit={() => {
+              const data = entity.data as PdfData;
+              open("split", {
+                id: entity.id,
+                name: data.path.split(/[\\/]/).pop() || "PDF",
+                total: data.endPage - data.startPage + 1,
+                initialPage: 1,
+              });
+            }}
+            rootPath={rootPath}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div
@@ -377,18 +240,22 @@ export default function InfiniteCanvas() {
         </button>
       </div>
 
-      <CanvasSidebar
-        sideMenuMode={sideMenuMode}
-        setSideMenuMode={setSideMenuMode}
-        isSepararActive={isSepararActive}
-        setIsSepararActive={handleToggleSeparar}
-        setIsNoteGalleryOpen={setIsNoteGalleryOpen}
-        setIsPdfGalleryOpen={setIsPdfGalleryOpen}
-        setIsImageGalleryOpen={setIsImageGalleryOpen}
-        selectedNoteEntity={selectedNoteEntity}
-        handleFontSizeChange={handleFontSizeChange}
-        updateSelectedNoteStyle={updateSelectedNoteStyle}
-      />
+      <CanvasControls value={modalControl}>
+        <CanvasControls.Sidebar
+          isSepararActive={isSepararActive}
+          setIsSepararActive={handleToggleSeparar}
+          selectedNoteEntity={selectedNoteEntity}
+          handleFontSizeChange={handleFontSizeChange}
+          updateSelectedNoteStyle={updateSelectedNoteStyle}
+        />
+
+        <CanvasControls.Modals
+          onNoteSelect={(path, name) => handleSelectItem(addNote(path, name))}
+          onImageSelect={addImage}
+          onPdfSelect={addPdf}
+          onConfirmSplit={handleConfirmSplit}
+        />
+      </CanvasControls>
 
       <div
         className={styles.canvas}
@@ -410,107 +277,22 @@ export default function InfiniteCanvas() {
             transformOrigin: "0 0",
           }}
         >
-          {visibleEntities.map((entity) => {
-            const isSelected = selectedItemId === entity.id;
+          {visibleEntities.map((entity) => (
+            <div key={entity.id}>
+              {renderEntity(entity)}
 
-            return (
-              <div key={entity.id}>
-                {entity.type === "note" && (
-                  <CanvasNoteItem
-                    entity={entity}
-                    isSelected={isSelected}
-                    isSepararActive={isSepararActive}
-                    onSelect={() => setSelectedItemId(entity.id)}
-                    onUpdate={handleUpdateEntity}
-                    onRemove={handleRemoveEntity}
-                    onSplit={(viewingPage) => {
-                      const data = entity.data as NoteData;
-                      setSplittingItem({
-                        id: entity.id,
-                        name: data.title || "Nota",
-                        total: (data.endPage || 1) - (data.startPage || 1) + 1,
-                        initialPage: viewingPage ? viewingPage - (data.startPage || 1) + 1 : 1
-                      });
-                      setIsSplitModalOpen(true);
-                    }}
-                  />
-                )}
-                {entity.type === "image" && (
-                  <CanvasImageItem
-                    entity={entity}
-                    isSelected={isSelected}
-                    onSelect={() => setSelectedItemId(entity.id)}
-                    onUpdate={handleUpdateEntity}
-                    onRemove={handleRemoveEntity}
-                    rootPath={rootPath}
-                  />
-                )}
-                {entity.type === "pdf" && (
-                  <CanvasPdfItem
-                    entity={entity}
-                    isSelected={isSelected}
-                    isSepararActive={isSepararActive}
-                    onSelect={() => setSelectedItemId(entity.id)}
-                    onUpdate={handleUpdateEntity}
-                    onRemove={handleRemoveEntity}
-                    onSplit={() => {
-                      const data = entity.data as PdfData;
-                      setSplittingItem({
-                        id: entity.id,
-                        name: data.path.split(/[\\/]/).pop() || "PDF",
-                        total: data.endPage - data.startPage + 1,
-                        initialPage: 1
-                      });
-                      setIsSplitModalOpen(true);
-                    }}
-                    rootPath={rootPath}
-                  />
-                )}
-
-                {isSelected && (
-                  <CanvasActionMenu
-                    entity={entity}
-                    onRemove={handleRemoveEntity}
-                    onUpdate={handleUpdateEntity}
-                    handleRotateStart={handleRotateStart}
-                  />
-                )}
-              </div>
-            );
-          })}
+              {selectedItemId === entity.id && (
+                <CanvasActionMenu
+                  entity={entity}
+                  onRemove={handleRemoveEntity}
+                  onUpdate={handleUpdateEntity}
+                  handleRotateStart={handleRotateStart}
+                />
+              )}
+            </div>
+          ))}
         </div>
       </div>
-
-      <NoteSelectionModal
-        isOpen={isNoteGalleryOpen}
-        onClose={() => setIsNoteGalleryOpen(false)}
-        onSelect={handleNoteSelect}
-      />
-
-      <SplitModal
-        isOpen={isSplitModalOpen}
-        onClose={() => setIsSplitModalOpen(false)}
-        onConfirm={handleConfirmSplit}
-        totalItems={splittingItem?.total || 0}
-        itemName={splittingItem?.name || ""}
-        initialPage={splittingItem?.initialPage}
-      />
-
-      {isImageGalleryOpen && (
-        <ImageGallery
-          disableOrganization
-          largeModal
-          onSelect={handleImageSelect}
-          onClose={() => setIsImageGalleryOpen(false)}
-        />
-      )}
-
-      {isPdfGalleryOpen && (
-        <PdfGallery
-          onSelect={handlePdfSelect}
-          onClose={() => setIsPdfGalleryOpen(false)}
-        />
-      )}
     </div>
   );
 }

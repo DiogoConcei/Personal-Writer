@@ -65,6 +65,9 @@ export default function Editor() {
   const { uploadImages } = useImageManager();
   const { handleUpload: uploadPdfs } = useDocumentManager();
 
+  // Verifica se há qualquer modal aberto para desativar o drop global do editor
+  const isAnyModalOpen = Object.values(editorModals).some((isOpen) => isOpen);
+
   useNativeDragDrop({
     onDrop: async (paths) => {
       if (!editor || !rootPath) return;
@@ -108,7 +111,7 @@ export default function Editor() {
       }
     },
     filters: [...IMAGE_EXTENSIONS, ...PDF_EXTENSIONS],
-    disabled: !rootPath || !editor,
+    disabled: !rootPath || !editor || isAnyModalOpen,
   });
 
   if (!activeFile) return null;

@@ -18,6 +18,12 @@ interface NativeDragDropOptions {
    * Se true, desativa o listener temporariamente.
    */
   disabled?: boolean;
+
+  /**
+   * Opcional: Se fornecido, o drop só será processado se a posição do mouse
+   * estiver sobre um elemento que coincida com este seletor.
+   */
+  targetSelector?: string;
 }
 
 /**
@@ -26,10 +32,11 @@ interface NativeDragDropOptions {
  * 
  * KI-024: Fix race condition in async listener cleanup to prevent multiple triggers.
  */
-export function useNativeDragDrop({ onDrop, filters = [], disabled = false }: NativeDragDropOptions) {
+export function useNativeDragDrop({ onDrop, filters = [], disabled = false, targetSelector }: NativeDragDropOptions) {
   // Usamos refs para evitar que mudanças nas funções/arrays de filtros causem re-registros do listener
   const onDropRef = useRef(onDrop);
   const filtersRef = useRef(filters);
+  const targetSelectorRef = useRef(targetSelector);
 
   useEffect(() => {
     onDropRef.current = onDrop;
@@ -38,6 +45,10 @@ export function useNativeDragDrop({ onDrop, filters = [], disabled = false }: Na
   useEffect(() => {
     filtersRef.current = filters;
   }, [filters]);
+
+  useEffect(() => {
+    targetSelectorRef.current = targetSelector;
+  }, [targetSelector]);
 
   useEffect(() => {
     if (disabled) return;
@@ -49,6 +60,15 @@ export function useNativeDragDrop({ onDrop, filters = [], disabled = false }: Na
     const setupListener = async () => {
       const unlisten = await appWindow.onDragDropEvent(async (event) => {
         if (event.payload.type === 'drop') {
+          const { x, y } = event.payload.position;
+
+          // Validação de Target Selector (Seletor de Destino)
+          if (targetSelectorRef.current) {
+            const elementAtPoint = document.elementFromPoint(x, y);
+            const hasTarget = elementAtPoint?.closest(targetSelectorRef.current);
+            if (!hasTarget) return; // Ignora drop fora do alvo específico
+          }
+
           const allPaths = event.payload.paths;
           const currentFilters = filtersRef.current;
           

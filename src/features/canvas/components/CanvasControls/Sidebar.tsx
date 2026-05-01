@@ -1,19 +1,25 @@
-import { CanvasSidebarProps } from '@/shared/types';
+import { useCanvasControls } from './CanvasControls';
 import { NoteConfigPanel } from '../NoteConfigPanel/NoteConfigPanel';
-import styles from './CanvasSidebar.module.scss';
+import styles from './CanvasControls.module.scss';
+import { AnyCanvasEntity } from '@/shared/types';
 
-export function CanvasSidebar({
-  sideMenuMode,
-  setSideMenuMode,
+interface SidebarProps {
+  isSepararActive: boolean;
+  setIsSepararActive: (active: boolean) => void;
+  selectedNoteEntity: AnyCanvasEntity | undefined;
+  handleFontSizeChange: (increment: number) => void;
+  updateSelectedNoteStyle: (styleUpdates: Record<string, string | number>) => void;
+}
+
+export function Sidebar({
   isSepararActive,
   setIsSepararActive,
-  setIsNoteGalleryOpen,
-  setIsPdfGalleryOpen,
-  setIsImageGalleryOpen,
   selectedNoteEntity,
   handleFontSizeChange,
   updateSelectedNoteStyle,
-}: CanvasSidebarProps) {
+}: SidebarProps) {
+  const { sideMenuMode, setSideMenuMode, open } = useCanvasControls();
+
   return (
     <aside className={styles.sideMenu} onClick={(e) => e.stopPropagation()}>
       {sideMenuMode === "main" ? (
@@ -24,7 +30,7 @@ export function CanvasSidebar({
           <div className={styles.content}>
             <button
               className={styles.menuButton}
-              onClick={() => setIsNoteGalleryOpen(true)}
+              onClick={() => open('note')}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -45,7 +51,7 @@ export function CanvasSidebar({
 
             <button
               className={styles.menuButton}
-              onClick={() => setIsPdfGalleryOpen(true)}
+              onClick={() => open('pdf')}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -79,7 +85,7 @@ export function CanvasSidebar({
 
             <button
               className={styles.menuButton}
-              onClick={() => setIsImageGalleryOpen(true)}
+              onClick={() => open('image')}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -196,7 +202,7 @@ export function CanvasSidebar({
               selectedNoteEntity={selectedNoteEntity}
               handleFontSizeChange={handleFontSizeChange}
               updateSelectedNoteStyle={updateSelectedNoteStyle}
-              setIsNoteGalleryOpen={setIsNoteGalleryOpen}
+              setIsNoteGalleryOpen={(isOpen) => isOpen ? open('note') : undefined}
             />
           )}
         </>

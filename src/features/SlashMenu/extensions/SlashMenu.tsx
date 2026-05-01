@@ -4,13 +4,8 @@ import {
   LayoutTemplate, List, ListOrdered, Quote, Code
 } from 'lucide-react';
 import styles from './SlashMenu.module.scss';
-
-interface CommandItem {
-  title: string;
-  icon: React.ReactNode;
-  color: string;
-  command: (props: { editor: any; range: any }) => void;
-}
+import { CommandItem } from '@/shared/types';
+import { useUIStore } from '@/store/uiStore';
 
 export const SlashMenu = forwardRef((props: any, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -78,7 +73,7 @@ export const SlashMenu = forwardRef((props: any, ref) => {
       color: '#1abc9c',
       command: ({ editor, range }) => {
         editor.chain().focus().deleteRange(range).run();
-        window.dispatchEvent(new CustomEvent('open-gallery'));
+        useUIStore.getState().setEditorModal('showGallery', true);
       },
     },
     {
@@ -87,7 +82,7 @@ export const SlashMenu = forwardRef((props: any, ref) => {
       color: '#ff79c6',
       command: ({ editor, range }) => {
         editor.chain().focus().deleteRange(range).run();
-        window.dispatchEvent(new CustomEvent('open-templates'));
+        useUIStore.getState().setEditorModal('showTemplates', true);
       },
     },
     {
@@ -96,7 +91,7 @@ export const SlashMenu = forwardRef((props: any, ref) => {
       color: '#8be9fd',
       command: ({ editor, range }) => {
         editor.chain().focus().deleteRange(range).run();
-        window.dispatchEvent(new CustomEvent('open-documents'));
+        useUIStore.getState().setEditorModal('showDocuments', true);
       },
     },
   ];

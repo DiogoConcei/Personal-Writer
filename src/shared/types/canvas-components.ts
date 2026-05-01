@@ -1,11 +1,35 @@
 import { AnyCanvasEntity } from './canvas';
 
+export type CanvasModalType = 'image' | 'pdf' | 'note' | 'split';
+
+export interface SplittingItem {
+  id: string;
+  name: string;
+  total: number;
+  initialPage?: number;
+}
+
+export interface CanvasModalsState {
+  openModal: CanvasModalType | null;
+  splittingItem: SplittingItem | null;
+  sideMenuMode: 'main' | 'notes';
+}
+
+export interface SplitActionData {
+  mode: 'amount' | 'single' | 'range';
+  startPage?: number;
+  endPage?: number;
+  amount?: number;
+  singlePage?: number;
+}
+
 export interface SplitModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (data: any) => void;
   totalItems: number;
   itemName: string;
+  initialPage?: number;
 }
 
 export interface NoteSelectionModalProps {
@@ -62,6 +86,15 @@ export interface CanvasSidebarProps {
   selectedNoteEntity: AnyCanvasEntity | undefined;
   handleFontSizeChange: (increment: number) => void;
   updateSelectedNoteStyle: (styleUpdates: Record<string, string | number>) => void;
+}
+
+export interface CanvasControlsContextValue {
+  openModal: CanvasModalType | null;
+  splittingItem: SplittingItem | null;
+  sideMenuMode: 'main' | 'notes';
+  open: (type: CanvasModalType, data?: any) => void;
+  close: () => void;
+  setSideMenuMode: (mode: 'main' | 'notes') => void;
 }
 
 export interface CanvasActionMenuProps {

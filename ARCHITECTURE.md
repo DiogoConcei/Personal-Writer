@@ -68,3 +68,31 @@ Todo novo componente deve seguir o padrão:
 ## 4. UI Global e UX
 - **Foco Total:** Ao entrar em painéis de visualização (Canvas, Galerias, Dashboard), a sidebar esquerda é fechada automaticamente para maximizar o espaço útil.
 - **Identidade Visual:** Uso consistente da cor de acento (Amethyst) e tipografia serifada para leitura confortável.
+
+---
+
+### 5. Metodologia de Construção: O Caminho da Dependência
+
+A ordem de refatoração ou de construção afeta drasticamente a manutenibilidade. Deve-se seguir o fluxo do **Código Puro** para a **Interface Visual**.
+
+#### 1. Tipagem Centralizada (A Fundação)
+*   **Ação:** Definir interfaces em src/shared/types/.
+*   **Razão:** Evita a propagação de any e garante que o contrato de dados seja a única fonte de verdade desde o in�cio.
+
+#### 2. Utils e Lógica Pura (O Motor Invis�vel)
+*   **Ação:** Extrair cálculos, formatações e regras de negócio para arquivos .ts.
+*   **Razão:** Isola a lógica do framework (React). Funções puras são fáceis de testar e agnósticas ao ciclo de vida da UI.
+
+#### 3. Custom Hooks (A Ponte com o React)
+*   **Ação:** Conectar Utils ao ciclo de vida (useState, useEffect) e gerenciar efeitos colaterais.
+*   **Razão:** Atuam como maestros que orquestram a lógica de negócio para o consumo da interface.
+
+#### 4. Seletores do Zustand (Otimização de Estado)
+*   **Ação:** Criar acessos granulares e otimizados � s stores globais.
+*   **Razão:** Garante que componentes só reajam a alterações espec�ficas, evitando re-renderizações desnecessárias.
+
+#### 5. Composição de Componentes (A Interface)
+*   **Ação:** Implementar o JSX utilizando Compound Components (ex: <Menu.Item>).
+*   **Razão:** A interface deve ser 'burra'. Se os passos 1-4 foram seguidos, o componente apenas declara visualmente o que os hooks e tipos já estruturaram.
+
+**Resumo:** Comece pelo Dado/Matemática (Types/Utils), passe para o Comportamento (Hooks/Zustand) e termine na Apresentação (Componentes).

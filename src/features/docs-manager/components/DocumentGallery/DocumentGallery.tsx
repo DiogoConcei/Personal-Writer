@@ -4,6 +4,7 @@ import { useReferenceStore } from '@/features/references/store/referenceStore';
 import { useUIStore } from '@/store/uiStore';
 import { PdfAsset, resolveAssetPath } from '@/tauri-bridge/fs';
 import { useDocumentManager } from '@/shared/hooks/useDocumentManager/useDocumentManager';
+import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
 import styles from './DocumentGallery.module.scss';
 import { FileText, Search, RefreshCw, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { PdfThumbnail } from '../PdfThumbnail/PdfThumbnail';
@@ -24,6 +25,15 @@ export default function DocumentGallery() {
 
   const [filter, setFilter] = useState('');
   const [pdfToDelete, setPdfToDelete] = useState<PdfAsset | null>(null);
+
+  // Listener para Drag & Drop Nativo (Desktop -> Galeria)
+  useNativeDragDrop({
+    onDrop: async (paths) => {
+      await handleUpload(paths);
+    },
+    filters: ['.pdf'],
+    disabled: !rootPath
+  });
 
   const handleOpenPdf = (path: string) => {
     setActivePdf(path);

@@ -7,6 +7,16 @@ interface UIState {
   isRightSidebarVisible: boolean;
   isZenMode: boolean;
   isCommandPaletteOpen: boolean;
+  
+  // Editor UI State
+  editorModals: {
+    showGallery: boolean;
+    showTemplates: boolean;
+    showDocuments: boolean;
+    showHistory: boolean;
+    showTOC: boolean;
+  };
+
   notifications: ToastNotification[];
 
   preview: PreviewState;
@@ -18,6 +28,7 @@ interface UIState {
   toggleRightSidebar: () => void;
   toggleZenMode: () => void;
   setCommandPaletteOpen: (isOpen: boolean) => void;
+  setEditorModal: (modal: keyof UIState['editorModals'], isOpen: boolean) => void;
   setPreview: (preview: Partial<PreviewState>) => void;
   setDragInfo: (info: Partial<DragInfo>) => void;
   resetDrag: () => void;
@@ -49,6 +60,13 @@ export const useUIStore = create<UIState>((set) => ({
   isRightSidebarVisible: false,
   isZenMode: false,
   isCommandPaletteOpen: false,
+  editorModals: {
+    showGallery: false,
+    showTemplates: false,
+    showDocuments: false,
+    showHistory: false,
+    showTOC: false,
+  },
   notifications: [],
   dragInfo: INITIAL_DRAG,
   preview: INITIAL_PREVIEW,
@@ -58,6 +76,9 @@ export const useUIStore = create<UIState>((set) => ({
   toggleRightSidebar: () => set((state) => ({ isRightSidebarVisible: !state.isRightSidebarVisible })),
   toggleZenMode: () => set((state) => ({ isZenMode: !state.isZenMode })),
   setCommandPaletteOpen: (isOpen) => set({ isCommandPaletteOpen: isOpen }),
+  setEditorModal: (modal, isOpen) => set((state) => ({
+    editorModals: { ...state.editorModals, [modal]: isOpen }
+  })),
   setPreview: (preview) => set((state) => ({
     preview: { ...state.preview, ...preview }
   })),
@@ -85,4 +106,3 @@ export const useUIStore = create<UIState>((set) => ({
     notifications: state.notifications.filter((n) => n.id !== id)
   })),
 }));
-

@@ -3,6 +3,7 @@ import { FileText, X, Search, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-re
 import { PdfAsset, resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useDocumentManager } from '@/shared/hooks/useDocumentManager/useDocumentManager';
+import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
 import { PdfThumbnail } from '@/features/docs-manager/components/PdfThumbnail/PdfThumbnail';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
 import styles from './PdfGallery.module.scss';
@@ -24,6 +25,15 @@ export const PdfGallery: React.FC<PdfGalleryProps> = ({ onSelect, onClose }) => 
 
   const [search, setSearch] = useState('');
   const [pdfToDelete, setPdfToDelete] = useState<PdfAsset | null>(null);
+
+  // Listener para Drag & Drop Nativo (Desktop -> Galeria/Modal)
+  useNativeDragDrop({
+    onDrop: async (paths) => {
+      await handleUpload(paths);
+    },
+    filters: ['.pdf'],
+    disabled: !rootPath
+  });
 
   const filteredPdfs = pdfs.filter(pdf => 
     pdf.name.toLowerCase().includes(search.toLowerCase())

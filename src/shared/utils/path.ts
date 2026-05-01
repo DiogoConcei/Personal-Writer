@@ -45,3 +45,33 @@ export function getBaseName(path: string): string {
   const separator = getSeparator(path);
   return path.substring(path.lastIndexOf(separator) + 1);
 }
+
+/**
+ * Calcula a subpasta relativa de um arquivo em relação à raiz do workspace.
+ * Útil para organizar assets na mesma pasta da nota.
+ */
+export function getRelativeSubfolder(filePath: string, rootPath: string | null): string | undefined {
+  if (!filePath || !rootPath) return undefined;
+  
+  const separator = getSeparator(rootPath);
+  const folderPath = filePath.substring(0, filePath.lastIndexOf(separator));
+
+  if (folderPath.toLowerCase().startsWith(rootPath.toLowerCase())) {
+    let sub = folderPath.substring(rootPath.length);
+    if (sub.startsWith(separator)) sub = sub.substring(1);
+    return sub || undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Converte um caminho absoluto para um formato relativo amigável ao Markdown (./assets/...).
+ */
+export function absoluteToRelativeMarkdown(absolutePath: string, rootPath: string | null): string {
+  if (!absolutePath || !rootPath) return absolutePath;
+
+  return absolutePath
+    .replace(rootPath, '')
+    .replace(/^[\\/]/, './')
+    .replace(/\\/g, '/');
+}

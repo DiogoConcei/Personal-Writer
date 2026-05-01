@@ -28,7 +28,9 @@ export function useDragAndDrop<TItem>({
 
   const handleMouseDown = (e: React.MouseEvent, item: TItem) => {
     if (e.button !== 0 || processingDrop.current) return;
-    e.preventDefault();
+    
+    // KI-025: Removido e.preventDefault() para permitir que o evento de 'click' ocorra.
+    // O arraste será detectado no handleMouseMove baseado no threshold.
 
     draggedItemRef.current = item;
     setDraggedItem(item);

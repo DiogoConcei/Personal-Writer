@@ -28,7 +28,7 @@ export interface CanvasPdfItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
-  onSplit: () => void;
+  onSplit: (page?: number) => void;
   rootPath: string | null;
 }
 
@@ -39,7 +39,7 @@ export interface CanvasNoteItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
-  onSplit: () => void;
+  onSplit: (page?: number) => void;
 }
 
 export interface CanvasImageItemProps {

@@ -49,7 +49,9 @@ export function MetadataPreview({ metadata, rootPath, noteName }: MetadataPrevie
               {getTypeLabel()}
             </span>
             <ChevronRight size={14} className={styles.separator} />
-            <span className={styles.statusTag}>Ativo</span>
+            <span className={`${styles.statusTag} ${metadata.fields?.Status === 'Morto' ? styles['statusTag--inactive'] : ''}`}>
+              {metadata.fields?.Status || 'Vivo'}
+            </span>
           </div>
           <h1 className={styles.name}>{noteName}</h1>
           {metadata.fields?.summary && (

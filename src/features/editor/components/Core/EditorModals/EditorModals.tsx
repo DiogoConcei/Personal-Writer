@@ -1,4 +1,5 @@
 import { Editor } from "@tiptap/react";
+import { useState, useEffect } from "react";
 import { useUIStore } from "@/store/uiStore";
 import { useEditorStore } from "../../../store/editorStore";
 import { useReferenceStore } from "@/features/references/store/referenceStore";
@@ -29,6 +30,18 @@ export function EditorModals({ editor, templateToApply, setTemplateToApply }: Ed
   const { metadata, setMetadata, save, setMarkdownContent } = useEditorStore();
   const { setActivePdf } = useReferenceStore();
   const { activeFile, rootPath } = useWorkspaceStore();
+  
+  // Estado local para alternar entre a lista de documentos da nota e a biblioteca geral
+  const [docViewMode, setDocViewMode] = useState<'list' | 'gallery'>('list');
+
+  // Resetar o modo de visualização quando o modal fechar
+  useEffect(() => {
+    if (!editorModals.showDocuments) {
+      setDocViewMode('list');
+    }
+  }, [editorModals.showDocuments]);
+
+  const hasDocuments = metadata.documents && metadata.documents.length > 0;
 
   const handleAddPdfFromLibrary = (path: string) => {
     const newMetadata = addDocumentToMetadata(metadata, path);
@@ -77,30 +90,35 @@ export function EditorModals({ editor, templateToApply, setTemplateToApply }: Ed
         />
       )}
       
-      {editorModals.showTemplates && (
+      {editorModals.showTemplateGallery && (
         <TemplateGallery
           onSelect={(content) => {
             setTemplateToApply(content);
-            setEditorModal("showTemplates", false);
+            setEditorModal("showTemplateGallery", false);
           }}
-          onClose={() => setEditorModal("showTemplates", false)}
+          onClose={() => setEditorModal("showTemplateGallery", false)}
         />
       )}
 
+      {/* Fluxo de Documentos Refinado */}
       {editorModals.showDocuments && (
-        <PdfGallery
-          onSelect={handleAddPdfFromLibrary}
-          onClose={() => setEditorModal("showDocuments", false)}
-        />
-      )}
-
-      {editorModals.showDocuments && metadata.documents && metadata.documents.length > 0 && (
-        <DocumentModal
-          documents={metadata.documents || []}
-          onClose={() => setEditorModal("showDocuments", false)}
-          onOpen={openPdfAnexo}
-          onRemove={handleRemoveDocument}
-        />
+        <>
+          {(!hasDocuments || docViewMode === 'gallery') ? (
+            <PdfGallery
+              onSelect={handleAddPdfFromLibrary}
+              onClose={() => setEditorModal("showDocuments", false)}
+              onToggleMode={hasDocuments ? () => setDocViewMode('list') : undefined}
+            />
+          ) : (
+            <DocumentModal
+              documents={metadata.documents || []}
+              onClose={() => setEditorModal("showDocuments", false)}
+              onOpen={openPdfAnexo}
+              onRemove={handleRemoveDocument}
+              onAddMore={() => setDocViewMode('gallery')}
+            />
+          )}
+        </>
       )}
 
       {editorModals.showHistory && (

@@ -82,6 +82,29 @@
 }
 
 .titleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+
+  .backBtn {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    padding: 6px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    &:hover {
+      background: var(--color-bg-hover);
+      color: var(--color-accent);
+      border-color: var(--color-accent-dim);
+    }
+  }
+
   h2 {
     margin: 0;
     font-size: 1.2rem;

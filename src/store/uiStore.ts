@@ -12,6 +12,7 @@ interface UIState {
   editorModals: {
     showGallery: boolean;
     showTemplates: boolean;
+    showTemplateGallery: boolean;
     showDocuments: boolean;
     showHistory: boolean;
     showTOC: boolean;
@@ -63,6 +64,7 @@ export const useUIStore = create<UIState>((set) => ({
   editorModals: {
     showGallery: false,
     showTemplates: false,
+    showTemplateGallery: false,
     showDocuments: false,
     showHistory: false,
     showTOC: false,
@@ -106,3 +108,4 @@ export const useUIStore = create<UIState>((set) => ({
     notifications: state.notifications.filter((n) => n.id !== id)
   })),
 }));
+

@@ -125,9 +125,7 @@ export default function Editor() {
           icon={LayoutTemplate}
           label="Modelo"
           isOpen={editorModals.showTemplates}
-          onToggle={() =>
-            setEditorModal("showTemplates", !editorModals.showTemplates)
-          }
+          onToggle={(val) => setEditorModal("showTemplates", val)}
         >
           {DEFAULT_TEMPLATES.map((t) => (
             <EditorToolbar.DropdownItem

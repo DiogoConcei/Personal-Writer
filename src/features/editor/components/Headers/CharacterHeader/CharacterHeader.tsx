@@ -107,11 +107,11 @@ export function CharacterHeader({ metadata: propMetadata, readOnly }: CharacterH
             <span className={styles.typeTag}><User size={12} /> Personagem</span>
             <ChevronRight size={14} className={styles.separator} />
             <span
-              className={`${styles.statusTag} ${metadata.fields?.Status === 'Inativo' ? styles['statusTag--inactive'] : ''} ${readOnly ? styles['statusTag--readonly'] : ''}`}
-              onClick={() => !readOnly && handleFieldChange('Status', metadata.fields?.Status === 'Inativo' ? 'Ativo' : 'Inativo')}
+              className={`${styles.statusTag} ${metadata.fields?.Status === 'Morto' ? styles['statusTag--inactive'] : ''} ${readOnly ? styles['statusTag--readonly'] : ''}`}
+              onClick={() => !readOnly && handleFieldChange('Status', metadata.fields?.Status === 'Morto' ? 'Vivo' : 'Morto')}
               title={readOnly ? "" : "Clique para alternar status"}
             >
-              {metadata.fields?.Status || 'Ativo'}
+              {metadata.fields?.Status || 'Vivo'}
             </span>
           </div>
 

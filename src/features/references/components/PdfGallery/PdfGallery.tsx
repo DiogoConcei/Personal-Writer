@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, X, Search, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { FileText, X, Search, Loader2, Plus, RefreshCw, Trash2, ArrowLeft } from 'lucide-react';
 import { PdfAsset, resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useDocumentManager } from '@/shared/hooks/useDocumentManager/useDocumentManager';
@@ -11,9 +11,10 @@ import styles from './PdfGallery.module.scss';
 interface PdfGalleryProps {
   onSelect: (path: string) => void;
   onClose: () => void;
+  onToggleMode?: () => void;
 }
 
-export const PdfGallery: React.FC<PdfGalleryProps> = ({ onSelect, onClose }) => {
+export const PdfGallery: React.FC<PdfGalleryProps> = ({ onSelect, onClose, onToggleMode }) => {
   const { rootPath } = useWorkspaceStore();
   const { 
     pdfs, 
@@ -51,8 +52,15 @@ export const PdfGallery: React.FC<PdfGalleryProps> = ({ onSelect, onClose }) => 
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
           <div className={styles.titleGroup}>
-            <h2>Biblioteca de Documentos</h2>
-            <span className={styles.count}>{pdfs.length} arquivos</span>
+            {onToggleMode && (
+              <button className={styles.backBtn} onClick={onToggleMode} title="Voltar para anexos">
+                <ArrowLeft size={18} />
+              </button>
+            )}
+            <div>
+              <h2>Biblioteca de Documentos</h2>
+              <span className={styles.count}>{pdfs.length} arquivos</span>
+            </div>
           </div>
           
           <div className={styles.headerActions}>

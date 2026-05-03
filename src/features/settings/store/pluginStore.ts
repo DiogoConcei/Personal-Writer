@@ -35,16 +35,6 @@ const INITIAL_PLUGINS: PluginMetadata[] = [
     hasBackend: true,
   },
   {
-    id: 'reading-level',
-    title: 'Reading Level Indicator',
-    description: 'Calcula o nível de complexidade do texto (Flesch-Kincaid) via Rust.',
-    version: '1.0.0',
-    category: 'Performance',
-    level: 3,
-    status: 'not-installed',
-    hasBackend: true,
-  },
-  {
     id: 'mood-board',
     title: 'Mood Board',
     description: 'Mural de referências visuais para colagem de imagens e inspiração.',

@@ -30,7 +30,7 @@ export type Typography = 'sans' | 'serif';
  * Configuração de campo dinâmico no editor.
  */
 export interface FieldConfig {
-  type: 'text' | 'number' | 'select';
+  type: 'text' | 'number' | 'single-select' | 'multi-select';
   options?: string[];
 }
 

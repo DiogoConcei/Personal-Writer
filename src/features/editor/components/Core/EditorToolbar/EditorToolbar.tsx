@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useRef, useEffect } from "react";
 import { LucideIcon } from "lucide-react";
 import styles from "./EditorToolbar.module.scss";
 
@@ -44,7 +44,7 @@ interface DropdownProps {
   icon: LucideIcon;
   label: string;
   isOpen: boolean;
-  onToggle: () => void;
+  onToggle: (isOpen: boolean) => void;
   children: ReactNode;
 }
 
@@ -52,9 +52,24 @@ interface DropdownProps {
  * Container para dropdowns na Toolbar.
  */
 function Dropdown({ icon: Icon, label, isOpen, onToggle, children }: DropdownProps) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        onToggle(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, onToggle]);
+
   return (
-    <div className={styles.dropdown}>
-      <button className={styles.button} onClick={onToggle}>
+    <div className={styles.dropdown} ref={dropdownRef}>
+      <button className={styles.button} onClick={() => onToggle(!isOpen)}>
         <Icon size={14} /> {label}
       </button>
       {isOpen && <div className={styles.menu}>{children}</div>}

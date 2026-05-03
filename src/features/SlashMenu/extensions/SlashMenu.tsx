@@ -82,7 +82,7 @@ export const SlashMenu = forwardRef((props: any, ref) => {
       color: '#ff79c6',
       command: ({ editor, range }) => {
         editor.chain().focus().deleteRange(range).run();
-        useUIStore.getState().setEditorModal('showTemplates', true);
+        useUIStore.getState().setEditorModal('showTemplateGallery', true);
       },
     },
     {

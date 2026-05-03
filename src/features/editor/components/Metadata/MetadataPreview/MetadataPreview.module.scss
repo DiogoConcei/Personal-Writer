@@ -83,6 +83,10 @@
   color: var(--color-success);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+
+  &--inactive {
+    color: var(--color-text-muted);
+  }
 }
 
 .separator { color: var(--color-text-muted); opacity: 0.3; }

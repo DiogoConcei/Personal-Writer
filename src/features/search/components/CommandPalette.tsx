@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
+import { usePluginStore } from '@/features/settings/store/pluginStore';
 import { FileNode } from '@/tauri-bridge';
 import { Search, FileText, FileImage, Type, LayoutGrid, PanelLeft, FolderOpen, Settings as SettingsIcon } from 'lucide-react';
 import styles from './CommandPalette.module.scss';
@@ -16,6 +17,9 @@ export default function CommandPalette() {
   const { files, rootPath, setActiveFile, selectWorkspace } = useWorkspaceStore();
   const { isCommandPaletteOpen, setCommandPaletteOpen, toggleSidebar, setActivePanel, activePanel } = useUIStore();
   const { typography, setTypography } = useEditorStore();
+  const { plugins } = usePluginStore();
+
+  const isDashboardEnabled = plugins.find(p => p.id === 'universe-dashboard')?.status === 'enabled';
 
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -60,13 +64,13 @@ export default function CommandPalette() {
 
   const allFiles = getAllFiles(files);
 
-  const actions: ResultItem[] = [
+  const actions: ResultItem[] = ([
     { type: 'action', id: 'toggle-sidebar', name: 'Alternar Sidebar', icon: <PanelLeft size={16} />, action: toggleSidebar },
-    { type: 'action', id: 'toggle-dashboard', name: 'Alternar Dashboard', icon: <LayoutGrid size={16} />, action: () => setActivePanel(activePanel === 'editor' ? 'dashboard' : 'editor') },
+    isDashboardEnabled ? { type: 'action', id: 'toggle-dashboard', name: 'Alternar Dashboard', icon: <LayoutGrid size={16} />, action: () => setActivePanel(activePanel === 'editor' ? 'dashboard' : 'editor') } : null,
     { type: 'action', id: 'toggle-typography', name: 'Mudar Fonte (Sans/Serif)', icon: <Type size={16} />, action: () => setTypography(typography === 'sans' ? 'serif' : 'sans') },
     { type: 'action', id: 'open-settings', name: 'Abrir Configurações / Plugins', icon: <SettingsIcon size={16} />, action: () => setActivePanel('settings') },
     { type: 'action', id: 'change-workspace', name: 'Trocar Workspace', icon: <FolderOpen size={16} />, action: selectWorkspace },
-  ];
+  ].filter(Boolean) as ResultItem[]);
 
   const filteredItems: ResultItem[] = [
     ...allFiles

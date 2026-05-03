@@ -52,6 +52,32 @@
     }
   }
 
+  .headerActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .addMoreBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+  }
+
   .closeBtn {
     background: none;
     border: none;

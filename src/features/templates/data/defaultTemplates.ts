@@ -14,11 +14,7 @@ export const DEFAULT_TEMPLATES: Template[] = [
     content: `---
 type: character
 icon: ""
-fields:
-  Classe: ""
-  Raça: ""
-  Nível: 1
-  Status: "Vivo"
+fields: {}
 ---
 
 # Novo Personagem

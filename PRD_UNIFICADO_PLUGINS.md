@@ -1,47 +1,46 @@
-Ôªø# PRD ‚Äî Sistema de Plugins e Extens√µes (Add-ons)
+# PRD ó Sistema de Plugins e Extensıes (Add-ons)
 
-**Vis√£o Geral:**
-Para manter o n√∫cleo do editor perform√°tico e focado em texto, todas as funcionalidades de nicho (Acad√™micas, Desenvolvedor, Design e Estudo de L√≠nguas) ser√£o estruturadas como **Plugins (Add-ons)**. O usu√°rio ter√° uma \"P√°gina de Configura√ß√µes\" (Plugin Manager) onde poder√° baixar, habilitar e desabilitar m√≥dulos sob demanda, personalizando o software de acordo com seu perfil de uso.
+**Vis„o Geral:**
+Para manter o n˙cleo do editor perform·tico e focado em texto, todas as funcionalidades de nicho (AcadÍmicas, Desenvolvedor, Design e Estudo de LÌnguas) ser„o estruturadas como **Plugins (Add-ons)**. O usu·rio ter· uma \"P·gina de ConfiguraÁıes\" (Plugin Manager) onde poder· baixar, habilitar e desabilitar mÛdulos sob demanda, personalizando o software de acordo com seu perfil de uso.
 
-## N√≠vel 1: Baixa Complexidade (Quick Wins / UI)
+## NÌvel 1: Baixa Complexidade (Quick Wins / UI)
 
 _Funcionalidades predominantemente de frontend ou que utilizam bibliotecas prontas que podem ser ativadas e desativadas facilmente._
 
-## N√≠vel 2: M√©dia Complexidade (APIs e Integra√ß√µes Locais)
+## NÌvel 2: MÈdia Complexidade (APIs e IntegraÁıes Locais)
 
-_M√≥dulos que requerem chamadas de sistema (Tauri) ou processamento de dados locais ass√≠ncronos._
+_MÛdulos que requerem chamadas de sistema (Tauri) ou processamento de dados locais assÌncronos._
 
 - **Terminal Integrado (Plugin DevTools):** Painel (Drawer) inferior com terminal funcional conectado ao shell nativo usando `xterm.js` no frontend e um Pseudoterminal (PTY) no backend Rust.
-- **Word Insights - Fon√©tica (Plugin Estudo de L√≠nguas):** Exibi√ß√£o da transcri√ß√£o fon√©tica (IPA) ao selecionar uma palavra, consumindo um banco de dados leve.
-- **Pron√∫ncia Ativa TTS (Plugin Estudo de L√≠nguas):** Bot√£o nativo para ouvir a pron√∫ncia de trechos de texto atrav√©s de uma ponte do Tauri com a API de acessibilidade de √°udio do sistema operacional.
-- **Exporta√ß√£o Liter√°ria (Plugin Escritor):** Gerador de manuscritos prontos (PDF e DOCX no padr√£o Times New Roman 12, Espa√ßo Duplo), extraindo par√¢metros dos metadados das notas.
-- **Tradu√ß√£o Inline (Plugin Estudo de L√≠nguas):** Tooltip flutuante exibindo a tradu√ß√£o de senten√ßas complexas sob demanda, mantendo o fluxo de leitura.
-- **Mood Board (Plugin Design):** ‚úÖ **Implementado.** Mural de refer√™ncias visuais para colagem de imagens e inspira√ß√£o, focado em simplicidade e organiza√ß√£o r√°pida.
+- **Word Insights - FonÈtica (Plugin Estudo de LÌnguas):** ExibiÁ„o da transcriÁ„o fonÈtica (IPA) ao selecionar uma palavra, consumindo um banco de dados leve.
+- **Pron˙ncia Ativa TTS (Plugin Estudo de LÌnguas):** Bot„o nativo para ouvir a pron˙ncia de trechos de texto atravÈs de uma ponte do Tauri com a API de acessibilidade de ·udio do sistema operacional.
+- **ExportaÁ„o Liter·ria (Plugin Escritor):** Gerador de manuscritos prontos (PDF e DOCX no padr„o Times New Roman 12, EspaÁo Duplo), extraindo par‚metros dos metadados das notas.
+- **TraduÁ„o Inline (Plugin Estudo de LÌnguas):** Tooltip flutuante exibindo a traduÁ„o de sentenÁas complexas sob demanda, mantendo o fluxo de leitura.
+- **Mood Board (Plugin Design):** ? **Implementado.** Mural de referÍncias visuais para colagem de imagens e inspiraÁ„o, focado em simplicidade e organizaÁ„o r·pida.
 
 ## Plugins Implementados (Fase Atual)
 
-_Funcionalidades j√° integradas ao ecossistema core._
+_Funcionalidades j· integradas ao ecossistema core._
 
-- **Desenho Livre (Plugin Design):** ‚úÖ **Implementado.** Integra√ß√£o completa com Excalidraw para esbo√ßos, wireframes e diagramas r√°pidos com est√©tica de quadro branco.
-- **Galeria de Personagens & Localidades:** ‚úÖ **Implementado.** Sistema de metadados e templates para gest√£o visual de elementos da narrativa.
-- **Dashboard & Timeline:** ‚úÖ **Implementado.** Vis√£o geral do projeto e organiza√ß√£o de notas em formato de cards.
+- **Desenho Livre (Plugin Design):** ? **Implementado.** IntegraÁ„o completa com Excalidraw para esboÁos, wireframes e diagramas r·pidos com estÈtica de quadro branco.
+- **Galeria de Personagens & Localidades:** ? **Implementado.** Sistema de metadados e templates para gest„o visual de elementos da narrativa.
+- **Dashboard & Timeline:** ? **Implementado.** Vis„o geral do projeto e organizaÁ„o de notas em formato de cards.
 
-## N√≠vel 3: Alta Complexidade (Engine Rust, WASM e P2P)
+## NÌvel 3: Alta Complexidade (Engine Rust, WASM e P2P)
 
-_Sistemas que requerem manipula√ß√£o profunda de rede, renderiza√ß√£o avan√ßada em canvas ou motores WebAssembly isolados._
+_Sistemas que requerem manipulaÁ„o profunda de rede, renderizaÁ„o avanÁada em canvas ou motores WebAssembly isolados._
 
-- **Reading Level Indicator (Plugin Lingu√≠stica Avan√ßada):** Motor offline em Rust calculando o n√≠vel de complexidade do texto (Flesch-Kincaid / CEFR) e sincronizando a pontua√ß√£o em tempo real na barra de status.
-- **Colabora√ß√£o P2P em Tempo Real (Plugin Colaborativo):** Edi√ß√£o simult√¢nea sem servidor usando CRDTs (Yjs ou Automerge) transmitidos via WebRTC e conex√µes de rede local. _(Inclui: Indicadores de Presen√ßa e Cursores Coloridos)_.
-- **Workspaces Compartilhados (Plugin Colaborativo):** Compartilhamento de pastas inteiras via Criptografia Ponta-a-Ponta (E2EE) nativa com sistema visual de resolu√ß√£o de conflitos em caso de edi√ß√µes offline.
-- **Advanced Code Blocks - Pyodide (Plugin Data Science):** Download e inicializa√ß√£o do ecossistema Pyodide (Python compilado para WebAssembly) para que o usu√°rio consiga plotar gr√°ficos e rodar an√°lises diretamente dentro das notas markdown sem travar a interface.
-- **Infinite Canvas (Plugin Planejamento Visual):** ‚úÖ **Implementado.** Quadro branco espacial infinito que permite que imagens, notas `.md` e PDFs sejam arrastados, rotacionados no eixo Z e configurados visualmente, utilizando renderiza√ß√£o virtualizada para suportar grandes volumes de dados.
-    - *Nota T√©cnica (Estabiliza√ß√£o de PDF):* ‚úÖ **Conclu√≠do.** Melhorias no resize e extra√ß√£o de p√°ginas implementadas para fluidez m√°xima.
-- **Editor de Imagens Non-Destructive (Plugin Design):** Edi√ß√µes b√°sicas de Crop e Filtros salvos como deltas matem√°ticos JSON, mantendo a imagem original intacta, renderizados via Rust na visualiza√ß√£o da galeria.
-- **Sandboxes de Execu√ß√£o WASM (Plugin DevTools Extremo):** Execu√ß√£o isolada de linguagens pesadas (C, Rust nativo) com seguran√ßa local, renderizando um painel de output compilado no frontend.
-- **Motor de Indexa√ß√£o SQLite (Plugin Alta Performance):** Cache local no backend em SQLite replicando dados YAML e links dos arquivos em tempo real para possibilitar buscas e agrega√ß√µes complexas instant√¢neas (DataView).
+- **ColaboraÁ„o P2P em Tempo Real (Plugin Colaborativo):** EdiÁ„o simult‚nea sem servidor usando CRDTs (Yjs ou Automerge) transmitidos via WebRTC e conexıes de rede local. _(Inclui: Indicadores de PresenÁa e Cursores Coloridos)_.
+- **Workspaces Compartilhados (Plugin Colaborativo):** Compartilhamento de pastas inteiras via Criptografia Ponta-a-Ponta (E2EE) nativa com sistema visual de resoluÁ„o de conflitos em caso de ediÁıes offline.
+- **Advanced Code Blocks - Pyodide (Plugin Data Science):** Download e inicializaÁ„o do ecossistema Pyodide (Python compilado para WebAssembly) para que o usu·rio consiga plotar gr·ficos e rodar an·lises diretamente dentro das notas markdown sem travar a interface.
+- **Infinite Canvas (Plugin Planejamento Visual):** ? **Implementado.** Quadro branco espacial infinito que permite que imagens, notas `.md` e PDFs sejam arrastados, rotacionados no eixo Z e configurados visualmente, utilizando renderizaÁ„o virtualizada para suportar grandes volumes de dados.
+    - *Nota TÈcnica (EstabilizaÁ„o de PDF):* ? **ConcluÌdo.** Melhorias no resize e extraÁ„o de p·ginas implementadas para fluidez m·xima.
+- **Editor de Imagens Non-Destructive (Plugin Design):** EdiÁıes b·sicas de Crop e Filtros salvos como deltas matem·ticos JSON, mantendo a imagem original intacta, renderizados via Rust na visualizaÁ„o da galeria.
+- **Sandboxes de ExecuÁ„o WASM (Plugin DevTools Extremo):** ExecuÁ„o isolada de linguagens pesadas (C, Rust nativo) com seguranÁa local, renderizando um painel de output compilado no frontend.
+- **Motor de IndexaÁ„o SQLite (Plugin Alta Performance):** Cache local no backend em SQLite replicando dados YAML e links dos arquivos em tempo real para possibilitar buscas e agregaÁıes complexas instant‚neas (DataView).
 
-## N√≠vel 4: Complexidade Extrema (Pesquisa Cient√≠fica/Te√≥rica)
+## NÌvel 4: Complexidade Extrema (Pesquisa CientÌfica/TeÛrica)
 
-_M√≥dulos que requerem anos de engenharia, parsers sint√°ticos completos e alto risco arquitetural._
+_MÛdulos que requerem anos de engenharia, parsers sint·ticos completos e alto risco arquitetural._
 
-- **Analisador de Complexidade (Big O):** Ferramenta heur√≠stica offline (sem IA) que examina estaticamente o c√≥digo em C/Python escrito pelo usu√°rio para sugerir a nota√ß√£o de complexidade algor√≠tmica ($O(n^2)$), exigindo a constru√ß√£o de validadores de √Årvores de Sintaxe Abstrata (AST) multi-linguagem.
+- **Analisador de Complexidade (Big O):** Ferramenta heurÌstica offline (sem IA) que examina estaticamente o cÛdigo em C/Python escrito pelo usu·rio para sugerir a notaÁ„o de complexidade algorÌtmica ($O(n^2)$), exigindo a construÁ„o de validadores de ¡rvores de Sintaxe Abstrata (AST) multi-linguagem.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, X, ExternalLink, Trash2 } from 'lucide-react';
+import { FileText, X, ExternalLink, Trash2, Plus } from 'lucide-react';
 import styles from './DocumentModal.module.scss';
 
 interface DocumentModalProps {
@@ -7,9 +7,10 @@ interface DocumentModalProps {
   onClose: () => void;
   onOpen: (path: string) => void;
   onRemove: (path: string) => void;
+  onAddMore?: () => void;
 }
 
-export const DocumentModal: React.FC<DocumentModalProps> = ({ documents, onClose, onOpen, onRemove }) => {
+export const DocumentModal: React.FC<DocumentModalProps> = ({ documents, onClose, onOpen, onRemove, onAddMore }) => {
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
@@ -18,9 +19,17 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({ documents, onClose
             <FileText size={20} className={styles.icon} />
             <h2>Documentos Vinculados</h2>
           </div>
-          <button className={styles.closeBtn} onClick={onClose}>
-            <X size={20} />
-          </button>
+          <div className={styles.headerActions}>
+            {onAddMore && (
+              <button className={styles.addMoreBtn} onClick={onAddMore} title="Anexar novos documentos">
+                <Plus size={18} />
+                <span>Anexar Novo</span>
+              </button>
+            )}
+            <button className={styles.closeBtn} onClick={onClose}>
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className={styles.content}>

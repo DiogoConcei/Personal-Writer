@@ -360,14 +360,15 @@ function App() {
                   <FileSearch size={18} />
                 </button>
 
-                <button
-                  className={`${styles.app__iconBtn} ${activePanel === 'drawing' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => isDrawingEnabled ? setActivePanel('drawing') : addNotification('Plugin de Desenho não ativado.', 'info')}
-                  title="Desenho (Excalidraw)"
-                  style={{ opacity: isDrawingEnabled ? 1 : 0.4 }}
-                >
-                  <Pencil size={18} />
-                </button>
+                {isDrawingEnabled && (
+                  <button
+                    className={`${styles.app__iconBtn} ${activePanel === 'drawing' ? styles['app__iconBtn--active'] : ''}`}
+                    onClick={() => setActivePanel('drawing')}
+                    title="Desenho (Excalidraw)"
+                  >
+                    <Pencil size={18} />
+                  </button>
+                )}
 
                 <button
                   className={`${styles.app__iconBtn} ${activePanel === 'settings' ? styles['app__iconBtn--active'] : ''}`}
@@ -394,38 +395,42 @@ function App() {
                 >
                   <FileEdit size={18} />
                 </button>
-                <button
-                  className={`${styles.app__iconBtn} ${activePanel === 'dashboard' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => isDashboardEnabled ? setActivePanel('dashboard') : addNotification('Plugin Dashboard não ativado.', 'info')}
-                  title="Dashboard (Ctrl+D)"
-                  style={{ opacity: isDashboardEnabled ? 1 : 0.4 }}
-                >
-                  <LayoutGrid size={18} />
-                </button>
-                <button
-                  className={`${styles.app__iconBtn} ${activePanel === 'gallery' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => isGalleryEnabled ? setActivePanel('gallery') : addNotification('Plugin Galeria não ativado.', 'info')}
-                  title="Galeria de Personagens (Ctrl+G)"
-                  style={{ opacity: isGalleryEnabled ? 1 : 0.4 }}
-                >
-                  <Users size={18} />
-                </button>
-                <button
-                  className={`${styles.app__iconBtn} ${activePanel === 'moodboard' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => isMoodBoardEnabled ? setActivePanel('moodboard') : addNotification('Plugin Mood Board não ativado.', 'info')}
-                  title="Mood Board Espacial (Ctrl+M)"
-                  style={{ opacity: isMoodBoardEnabled ? 1 : 0.4 }}
-                >
-                  <ImageIcon size={18} />
-                </button>
-                <button
-                  className={`${styles.app__iconBtn} ${activePanel === 'canvas' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => isInfiniteCanvasEnabled ? setActivePanel('canvas') : addNotification('Plugin Infinite Canvas não ativado.', 'info')}
-                  title="Infinite Canvas (Beta)"
-                  style={{ opacity: isInfiniteCanvasEnabled ? 1 : 0.4 }}
-                >
-                  <Infinity size={18} />
-                </button>
+                {isDashboardEnabled && (
+                  <button
+                    className={`${styles.app__iconBtn} ${activePanel === 'dashboard' ? styles['app__iconBtn--active'] : ''}`}
+                    onClick={() => setActivePanel('dashboard')}
+                    title="Dashboard (Ctrl+D)"
+                  >
+                    <LayoutGrid size={18} />
+                  </button>
+                )}
+                {isGalleryEnabled && (
+                  <button
+                    className={`${styles.app__iconBtn} ${activePanel === 'gallery' ? styles['app__iconBtn--active'] : ''}`}
+                    onClick={() => setActivePanel('gallery')}
+                    title="Galeria de Personagens (Ctrl+G)"
+                  >
+                    <Users size={18} />
+                  </button>
+                )}
+                {isMoodBoardEnabled && (
+                  <button
+                    className={`${styles.app__iconBtn} ${activePanel === 'moodboard' ? styles['app__iconBtn--active'] : ''}`}
+                    onClick={() => setActivePanel('moodboard')}
+                    title="Mood Board Espacial (Ctrl+M)"
+                  >
+                    <ImageIcon size={18} />
+                  </button>
+                )}
+                {isInfiniteCanvasEnabled && (
+                  <button
+                    className={`${styles.app__iconBtn} ${activePanel === 'canvas' ? styles['app__iconBtn--active'] : ''}`}
+                    onClick={() => setActivePanel('canvas')}
+                    title="Infinite Canvas (Beta)"
+                  >
+                    <Infinity size={18} />
+                  </button>
+                )}
               </nav>
 
               <button

@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { togglePluginDaemon } from '@/tauri-bridge';
 import { PluginStatus, PluginMetadata } from '@/shared/types';
 
 interface PluginState {
@@ -15,16 +14,6 @@ interface PluginState {
 // Mock inicial baseado no PRD_UNIFICADO_PLUGINS.md
 const INITIAL_PLUGINS: PluginMetadata[] = [
   {
-    id: 'latex-math',
-    title: 'LaTeX Math Avançado',
-    description: 'Suporte completo a fórmulas complexas renderizadas via KaTeX.',
-    version: '1.0.0',
-    category: 'Academic',
-    level: 1,
-    status: 'not-installed',
-    remoteAssets: ['https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js'],
-  },
-  {
     id: 'mood-board',
     title: 'Mood Board',
     description: 'Mural de referências visuais para colagem de imagens e inspiração.',
@@ -38,7 +27,7 @@ const INITIAL_PLUGINS: PluginMetadata[] = [
     title: 'Infinite Canvas',
     description: 'Quadro branco espacial infinito que integra notas .md e conexões.',
     version: '1.0.0',
-    category: 'Design',
+    category: 'Planning',
     level: 3,
     status: 'not-installed',
   },
@@ -99,16 +88,6 @@ export const usePluginStore = create<PluginState>()(
         if (!plugin || plugin.status === 'not-installed') return;
 
         const newStatus: PluginStatus = plugin.status === 'enabled' ? 'disabled' : 'enabled';
-        const isEnabled = newStatus === 'enabled';
-
-        if (plugin.hasBackend) {
-          try {
-            await togglePluginDaemon(id, isEnabled);
-          } catch (error) {
-            console.error(`Erro ao alternar daemon para ${id}:`, error);
-            return;
-          }
-        }
 
         set((state) => ({
           plugins: state.plugins.map(p => 

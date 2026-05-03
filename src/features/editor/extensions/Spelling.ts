@@ -153,8 +153,8 @@ export const Spelling = Extension.create<SpellingOptions, SpellingStorage>({
                   const nodesToClear: { pos: number, node: any }[] = [];
 
                   view.state.doc.descendants((node, pos) => {
-                    // Ignorar blocos de código e matemática
-                    if (node.type.name === 'codeBlock' || node.type.name === 'mathematics') {
+                    // Ignorar blocos de código
+                    if (node.type.name === 'codeBlock') {
                       node.descendants((child, childPos) => {
                         if (child.isText) {
                           nodesToClear.push({ pos: pos + 1 + childPos, node: child });

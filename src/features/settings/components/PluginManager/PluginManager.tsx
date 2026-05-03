@@ -40,16 +40,11 @@ export const PluginManager: React.FC = () => {
           
           <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <span className={styles.statusIndicator}>
-              {plugin.category === 'Academic' && <Globe size={12} />}
-              {plugin.category === 'DevTools' && <Cpu size={12} />}
+              {plugin.category === 'Writer' && <Globe size={12} />}
+              {plugin.category === 'Planning' && <Cpu size={12} />}
               {plugin.category === 'Design' && <Puzzle size={12} />}
               {plugin.category}
             </span>
-            {plugin.hasBackend && (
-              <span className={styles.statusIndicator} title="Este plugin possui um motor Rust dedicado">
-                <Cpu size={12} /> Rust Engine
-              </span>
-            )}
           </div>
         </div>
 

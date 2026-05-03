@@ -276,7 +276,7 @@ function App() {
     );
   }
 
-  const isCanvasActive = activePanel === 'canvas';
+  const isCanvasActive = activePanel === 'canvas' || activePanel === 'moodboard';
 
   return (
     <div className={`

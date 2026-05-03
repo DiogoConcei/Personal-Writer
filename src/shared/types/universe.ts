@@ -43,4 +43,18 @@ export interface MoodBoardItem {
   scale: number;
   rotation: number;
   zIndex: number;
+  category?: string;
+  groupId?: string;
+  groupOrder?: number;
+}
+
+/**
+ * Grupo de itens no Mood Board.
+ */
+export interface MoodBoardGroup {
+  id: string;
+  x: number;
+  y: number;
+  zIndex: number;
+  title?: string;
 }

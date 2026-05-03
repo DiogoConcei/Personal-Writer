@@ -14,12 +14,10 @@ import { PdfLink } from "../extensions/PdfLink/PdfLink";
 import { FontSize } from "../extensions/FontSize";
 import { Spelling } from "../extensions/Spelling";
 import { SlashCommand } from "@/features/SlashMenu/extensions/SlashCommand";
-import { getMathExtension } from "../extensions/MathExtension";
 import { renderSlashMenuPopup } from "@/features/SlashMenu/utils/renderPopup";
 
 // Stores e Utils
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
-import { usePluginStore } from "@/features/settings/store/pluginStore";
 import { findFileInTree } from "@/shared/utils/files";
 import { getRelativeSubfolder } from "@/shared/utils/path";
 import { saveImageFromBytes } from "@/tauri-bridge";
@@ -47,9 +45,6 @@ interface UseEditorSetupOptions {
  */
 export function useEditorSetup({ onUpdate }: UseEditorSetupOptions) {
   const { activeFile, rootPath } = useWorkspaceStore();
-  const { plugins } = usePluginStore();
-
-  const isMathEnabled = plugins.find((p) => p.id === "latex-math")?.status === "enabled";
 
   const editor = useEditor(
     {
@@ -67,7 +62,6 @@ export function useEditorSetup({ onUpdate }: UseEditorSetupOptions) {
         FontFamily,
         FontSize,
         Spelling.configure({ debounce: 150 }),
-        isMathEnabled ? getMathExtension() : null,
         WikiLink.configure({
           onLinkClick: (noteName: string) => {
             const file = findFileInTree(useWorkspaceStore.getState().files, noteName);

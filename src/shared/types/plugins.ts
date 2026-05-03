@@ -11,9 +11,8 @@ export interface PluginMetadata {
   title: string;
   description: string;
   version: string;
-  category: 'Academic' | 'Writer' | 'DevTools' | 'Language' | 'Design' | 'Performance';
+  category: 'Writer' | 'Design' | 'Planning';
   level: 1 | 2 | 3 | 4;
   status: PluginStatus;
   remoteAssets?: string[]; // URLs ou caminhos para baixar se for 'not-installed'
-  hasBackend?: boolean;    // Se precisa ativar daemon no Rust
 }

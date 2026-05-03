@@ -3,6 +3,7 @@ import { readFile, writeFile, createSnapshot } from '@/tauri-bridge';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { EditorMetadata, SaveStatus, Typography } from '@/shared/types';
 import { parseMarkdownMetadata, stringifyYAML } from './metadataParser';
+import { countWords } from '@/shared/utils/string';
 
 interface EditorState {
   metadata: EditorMetadata;
@@ -16,7 +17,7 @@ interface EditorState {
   sessionGoal: number;
   sessionStartWordCount: number;
 
-  loadContent: (path: string) => Promise<void>;
+  loadContent: (path: string) => Promise<string>;
   setMarkdownContent: (content: string) => void;
   setMetadata: (metadata: EditorMetadata) => void;
   save: (path: string, workspaceRoot?: string) => Promise<boolean>;
@@ -51,17 +52,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const wordGoal = metadata.wordGoal ? Number(metadata.wordGoal) : 0;
       const sessionGoal = metadata.sessionGoal ? Number(metadata.sessionGoal) : 0;
 
+      const initialWordCount = countWords(markdown);
+
       set({
         metadata,
         markdownContent: markdown,
         saveStatus: 'idle',
         lastSavedAt: new Date(),
         wordGoal,
-        sessionGoal
+        sessionGoal,
+        wordCount: initialWordCount,
+        sessionStartWordCount: initialWordCount
       });
+
+      return markdown;
     } catch (error) {
       console.error('Erro ao ler arquivo:', error);
       set({ saveStatus: 'error' });
+      return "";
     }
   },
 
@@ -93,7 +101,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
       useUniverseStore.getState().updateEntity(path, fullContent, now.getTime() / 1000);
 
-      if (workspaceRoot && (!lastSnapshotAt || now.getTime() - lastSnapshotAt.getTime() > 10 * 60 * 1000)) {
+      if (workspaceRoot && (!lastSnapshotAt || now.getTime() - lastSnapshotAt.getTime() > 30 * 60 * 1000)) {
         await createSnapshot(path, workspaceRoot, fullContent);
         set({ lastSnapshotAt: now });
       }

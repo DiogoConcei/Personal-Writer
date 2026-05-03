@@ -13,12 +13,15 @@ export const CustomImage = Image.extend({
       ...this.parent?.(),
       width: {
         default: '300px',
+        parseHTML: element => element.getAttribute('width') || element.style.width || '300px',
         renderHTML: attributes => ({
           style: `width: ${attributes.width}; height: auto;`,
+          width: attributes.width,
         }),
       },
       layout: {
         default: 'inline',
+        parseHTML: element => element.getAttribute('data-layout') || 'inline',
         renderHTML: attributes => ({
           'data-layout': attributes.layout,
         }),

@@ -25,16 +25,6 @@ const INITIAL_PLUGINS: PluginMetadata[] = [
     remoteAssets: ['https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js'],
   },
   {
-    id: 'terminal-integrated',
-    title: 'Terminal Integrado',
-    description: 'Painel inferior com terminal funcional (xterm.js + PTY Rust).',
-    version: '1.0.0',
-    category: 'DevTools',
-    level: 2,
-    status: 'not-installed',
-    hasBackend: true,
-  },
-  {
     id: 'mood-board',
     title: 'Mood Board',
     description: 'Mural de referências visuais para colagem de imagens e inspiração.',

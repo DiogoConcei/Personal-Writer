@@ -35,8 +35,8 @@ export default function ImageNode({ node, updateAttributes, selected, getPos, ed
   }, [node.attrs.src, rootPath]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Ignora se for resize ou botões da toolbar
-    if (e.button !== 0 || (e.target as HTMLElement).closest('button, .handle')) return;
+    // Ignora se for resize, botões da toolbar, ou se o editor for somente leitura
+    if (!editor.isEditable || e.button !== 0 || (e.target as HTMLElement).closest('button, .handle')) return;
     
     e.preventDefault();
     const pos = getPos();
@@ -59,6 +59,7 @@ export default function ImageNode({ node, updateAttributes, selected, getPos, ed
   };
 
   const onResizeStart = (direction: 'tl' | 'tr' | 'bl' | 'br', event: React.MouseEvent) => {
+    if (!editor.isEditable) return;
     event.preventDefault();
     event.stopPropagation();
     setIsResizing(true);
@@ -94,6 +95,7 @@ export default function ImageNode({ node, updateAttributes, selected, getPos, ed
   };
 
   const handleAction = (attr: string, value: string) => {
+    if (!editor.isEditable) return;
     updateAttributes({ [attr]: value });
   };
 
@@ -112,7 +114,7 @@ export default function ImageNode({ node, updateAttributes, selected, getPos, ed
       className={`
         ${styles.wrapper} 
         ${styles[`wrapper--layout-${node.attrs.layout}`]}
-        ${selected ? styles['wrapper--selected'] : ''}
+        ${selected && editor.isEditable ? styles['wrapper--selected'] : ''}
       `}
       onMouseDown={handleMouseDown}
     >
@@ -139,7 +141,7 @@ export default function ImageNode({ node, updateAttributes, selected, getPos, ed
           />
         )}
 
-        {selected && !isResizing && !hasError && (
+        {editor.isEditable && selected && !isResizing && !hasError && (
           <>
             <div className={`${styles.handle} ${styles['handle--tl']}`} onMouseDown={(e) => onResizeStart('tl', e)} />
             <div className={`${styles.handle} ${styles['handle--tr']}`} onMouseDown={(e) => onResizeStart('tr', e)} />
@@ -148,7 +150,7 @@ export default function ImageNode({ node, updateAttributes, selected, getPos, ed
           </>
         )}
 
-        {(showToolbar || selected) && !isResizing && (
+        {editor.isEditable && (showToolbar || selected) && !isResizing && (
           <span className={styles.toolbar}>
             <button 
               onClick={() => handleAction('layout', 'inline')} 

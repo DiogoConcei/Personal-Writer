@@ -5,7 +5,10 @@ import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { WikiLink } from "../../../extensions/WikiLink/WikiLink";
 import { CustomImage } from "../../../extensions/Image/Image";
+import { CustomCodeBlock } from "../../../extensions/CodeBlock/CodeBlock";
+import { PdfLink } from "../../../extensions/PdfLink/PdfLink";
 import { FontSize } from "../../../extensions/FontSize";
+import { Markdown } from "tiptap-markdown";
 import { TextStyle } from '@tiptap/extension-text-style';
 import { FontFamily } from '@tiptap/extension-font-family';
 import {
@@ -32,7 +35,10 @@ import {
   FileClock,
   Eye,
   Loader2,
-  Save
+  Save,
+  CheckSquare,
+  Square,
+  Check
 } from 'lucide-react';
 
 interface VersionHistoryProps {
@@ -52,13 +58,22 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
 
   const [isConfirmingRestore, setIsConfirmingRestore] = useState(false);
   const [snapshotToDelete, setSnapshotToDelete] = useState<SnapshotInfo | null>(null);
+  const [selectedSnapshotIds, setSelectedSnapshotIds] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [isConfirmingBulkDelete, setIsConfirmingBulkDelete] = useState(false);
   const [loadingList, setLoadingList] = useState(false);
 
   const noteName = activeFile ? activeFile.split(/[\\/]/).pop()?.replace('.md', '') : '';
 
   const previewEditor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ codeBlock: false }),
+      CustomCodeBlock,
+      Markdown.configure({
+        html: true,
+        tightLists: true,
+        linkify: true,
+      }),
       TextStyle,
       FontFamily,
       FontSize,
@@ -66,6 +81,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
         onLinkClick: () => {},
       } as any),
       CustomImage.configure({ inline: true, allowBase64: true }),
+      PdfLink,
     ],
     content: '',
     editable: false,
@@ -138,6 +154,19 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
     }
   };
 
+  const handleItemClick = (snapshot: SnapshotInfo) => {
+    if (isSelectionMode) {
+      if (snapshot.is_locked) return;
+      setSelectedSnapshotIds(prev => 
+        prev.includes(snapshot.id) 
+          ? prev.filter(id => id !== snapshot.id) 
+          : [...prev, snapshot.id]
+      );
+    } else {
+      setSelectedSnapshot(snapshot);
+    }
+  };
+
   const handleDeleteClick = (e: React.MouseEvent, snapshot: SnapshotInfo) => {
     e.stopPropagation();
     if (snapshot.is_locked) return;
@@ -157,6 +186,28 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
       console.error('Erro ao excluir snapshot:', error);
     } finally {
       setSnapshotToDelete(null);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    if (!activeFile || !rootPath || selectedSnapshotIds.length === 0) return;
+    try {
+      setLoadingList(true);
+      for (const id of selectedSnapshotIds) {
+        await deleteSnapshot(activeFile, rootPath, id);
+        if (selectedSnapshot?.id === id) {
+          setSelectedSnapshot(null);
+          previewEditor?.commands.clearContent();
+        }
+      }
+      await loadSnapshots();
+      setSelectedSnapshotIds([]);
+      setIsSelectionMode(false);
+    } catch (error) {
+      console.error('Erro ao excluir snapshots em massa:', error);
+    } finally {
+      setIsConfirmingBulkDelete(false);
+      setLoadingList(false);
     }
   };
 
@@ -215,15 +266,39 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                 <FileClock size={14} />
                 <span>{snapshots.length} versões</span>
               </div>
-              <button
-                className={styles.btnSaveNow}
-                onClick={handleCreateManualSnapshot}
-                disabled={isSaving}
-                title="Criar novo snapshot do estado atual"
-              >
-                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                <span>Salvar agora</span>
-              </button>
+              
+              <div className={styles.selectionActions}>
+                <button 
+                  className={`${styles.btnMultiSelect} ${isSelectionMode ? styles['btnMultiSelect--active'] : ''}`}
+                  onClick={() => {
+                    setIsSelectionMode(!isSelectionMode);
+                    setSelectedSnapshotIds([]);
+                  }}
+                  title="Seleção Múltipla"
+                >
+                  {isSelectionMode ? <CheckSquare size={14} /> : <Square size={14} />}
+                </button>
+
+                {isSelectionMode && selectedSnapshotIds.length > 0 && (
+                  <button 
+                    className={styles.btnBulkDelete}
+                    onClick={() => setIsConfirmingBulkDelete(true)}
+                  >
+                    <Trash2 size={14} />
+                    <span>({selectedSnapshotIds.length})</span>
+                  </button>
+                )}
+
+                <button
+                  className={styles.btnSaveNow}
+                  onClick={handleCreateManualSnapshot}
+                  disabled={isSaving || isSelectionMode}
+                  title="Criar novo snapshot do estado atual"
+                >
+                  {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  <span>Salvar agora</span>
+                </button>
+              </div>
             </div>
 
             <div className={styles.scrollArea}>
@@ -235,6 +310,8 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                 snapshots.map((s) => {
                   const date = formatDate(s.timestamp);
                   const isSelected = selectedSnapshot?.id === s.id;
+                  const isChecked = selectedSnapshotIds.includes(s.id);
+                  
                   return (
                     <div
                       key={s.id}
@@ -243,9 +320,14 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                         ${isSelected ? styles['item--active'] : ''}
                         ${s.is_locked ? styles['item--locked'] : ''}
                       `}
-                      onClick={() => setSelectedSnapshot(s)}
+                      onClick={() => handleItemClick(s)}
                     >
                       <div className={styles.item__main}>
+                        {isSelectionMode && !s.is_locked && (
+                          <div className={`${styles.checkbox} ${isChecked ? styles['checkbox--checked'] : ''}`}>
+                            <Check size={10} />
+                          </div>
+                        )}
                         <div className={styles.item__indicator} />
                         <div className={styles.item__info}>
                           <span className={styles.item__date}>{date.full}</span>
@@ -261,7 +343,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
                         >
                           {s.is_locked ? <Lock size={12} /> : <Unlock size={12} />}
                         </button>
-                        {!s.is_locked && (
+                        {!s.is_locked && !isSelectionMode && (
                           <button
                             className={styles.actionBtn}
                             onClick={(e) => handleDeleteClick(e, s)}
@@ -276,7 +358,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
               )}
             </div>
 
-            {selectedSnapshot && (
+            {selectedSnapshot && !isSelectionMode && (
               <div className={styles.footer}>
                 <button className={styles.btnRestore} onClick={() => setIsConfirmingRestore(true)}>
                   <RotateCcw size={16} /> Restaurar esta versão
@@ -331,6 +413,16 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
         title="Excluir Versão"
         message="Esta ação é irreversível."
         confirmLabel="Excluir"
+        variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={isConfirmingBulkDelete}
+        onClose={() => setIsConfirmingBulkDelete(false)}
+        onConfirm={confirmBulkDelete}
+        title="Excluir Várias Versões"
+        message={`Deseja excluir as ${selectedSnapshotIds.length} versões selecionadas? Esta ação é irreversível.`}
+        confirmLabel={`Excluir ${selectedSnapshotIds.length} versões`}
         variant="danger"
       />
     </div>

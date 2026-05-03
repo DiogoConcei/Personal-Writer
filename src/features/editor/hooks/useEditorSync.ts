@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Editor } from "@tiptap/react";
 import { useEditorStore } from "../store/editorStore";
 import { countWords } from "@/shared/utils/string";
@@ -14,22 +14,19 @@ interface UseEditorSyncOptions {
  */
 export function useEditorSync({ editor, activeFile }: UseEditorSyncOptions) {
   const { loadContent, setWordCount } = useEditorStore();
-  const loadingRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    if (activeFile && editor && !loadingRef.current) {
-      loadingRef.current = true;
+    if (activeFile && editor) {
+      // Limpa imediatamente para evitar flicker e race conditions da UI
+      editor.commands.setContent("", { emitUpdate: false });
       
-      loadContent(activeFile).then(() => {
+      loadContent(activeFile).then((content) => {
         if (!isMounted) return;
         
         try {
-          // Obtemos o conteúdo mais recente da store após o loadContent
-          const content = useEditorStore.getState().markdownContent || "";
-          
-          // Injetamos no editor sem disparar o evento onUpdate para evitar loops
+          // Injetamos o conteúdo retornado diretamente, eliminando a dependência do estado global assíncrono
           editor.commands.setContent(content, { emitUpdate: false });
 
           // Atualizamos as métricas iniciais
@@ -37,8 +34,6 @@ export function useEditorSync({ editor, activeFile }: UseEditorSyncOptions) {
           setWordCount(countWords(text));
         } catch (error) {
           console.error("[useEditorSync] Erro ao sincronizar conteúdo:", error);
-        } finally {
-          loadingRef.current = false;
         }
       });
     }
@@ -49,6 +44,6 @@ export function useEditorSync({ editor, activeFile }: UseEditorSyncOptions) {
   }, [activeFile, editor, loadContent, setWordCount]);
 
   return {
-    isLoading: loadingRef.current
+    isLoading: false
   };
 }

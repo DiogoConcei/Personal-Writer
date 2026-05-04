@@ -5,6 +5,7 @@ import Editor from '@/features/editor/components/Core/Editor/Editor';
 import ImageViewer from '@/features/image-manager/components/ImageViewer/ImageViewer';
 import Dashboard from '@/features/dashboard/components/Dashboard/Dashboard';
 import MoodBoard from '@/features/universe/components/MoodBoard/MoodBoard';
+import MoodBoardMap from '@/features/universe/components/MoodBoardMap/MoodBoardMap';
 import AssetGallery from '@/features/image-manager/components/AssetGallery/AssetGallery';
 import DocumentGallery from '@/features/docs-manager/components/DocumentGallery/DocumentGallery';
 import CharacterGallery from '@/features/universe/components/CharacterGallery/CharacterGallery';
@@ -201,17 +202,18 @@ function App() {
   };
 
   const renderBreadcrumb = () => {
-    if (activePanel === 'dashboard' || activePanel === 'gallery' || activePanel === 'moodboard' || activePanel === 'assets' || activePanel === 'documents' || activePanel === 'drawing' || activePanel === 'settings') {
+    if (activePanel === 'dashboard' || activePanel === 'gallery' || activePanel === 'moodboard' || activePanel === 'moodboard-map' || activePanel === 'assets' || activePanel === 'documents' || activePanel === 'drawing' || activePanel === 'settings') {
       const { dashboardFilterPath } = useWorkspaceStore.getState();
       let prefix = 'Dashboard';
       if (activePanel === 'gallery') prefix = 'Personagens';
       if (activePanel === 'moodboard') prefix = 'Mood Board';
+      if (activePanel === 'moodboard-map') prefix = 'Mapa de Murais';
       if (activePanel === 'assets') prefix = 'Galeria';
       if (activePanel === 'documents') prefix = 'Documentos';
       if (activePanel === 'drawing') prefix = 'Desenho';
       if (activePanel === 'settings') prefix = 'Ajustes';
 
-      if (!dashboardFilterPath || !rootPath || activePanel === 'moodboard' || activePanel === 'assets' || activePanel === 'documents' || activePanel === 'drawing' || activePanel === 'settings') return <span>{prefix}</span>;
+      if (!dashboardFilterPath || !rootPath || activePanel === 'moodboard' || activePanel === 'moodboard-map' || activePanel === 'assets' || activePanel === 'documents' || activePanel === 'drawing' || activePanel === 'settings') return <span>{prefix}</span>;
 
       const relativePath = dashboardFilterPath.replace(rootPath, '').replace(/^[\\/]/, '');
       const parts = relativePath.split(/[\\/]/);
@@ -276,7 +278,7 @@ function App() {
     );
   }
 
-  const isCanvasActive = activePanel === 'canvas' || activePanel === 'moodboard';
+  const isCanvasActive = activePanel === 'canvas' || activePanel === 'moodboard' || activePanel === 'moodboard-map';
 
   return (
     <div className={`
@@ -451,6 +453,8 @@ function App() {
             isGalleryEnabled ? <CharacterGallery /> : <PluginPlaceholder name="Galeria de Personagens" id="character-gallery" />
           ) : activePanel === 'moodboard' ? (
             isMoodBoardEnabled ? <MoodBoard /> : <PluginPlaceholder name="Mood Board" id="mood-board" />
+          ) : activePanel === 'moodboard-map' ? (
+            isMoodBoardEnabled ? <MoodBoardMap /> : <PluginPlaceholder name="Mapa de Murais" id="mood-board" />
           ) : activePanel === 'assets' ? (
             <AssetGallery />
           ) : activePanel === 'documents' ? (

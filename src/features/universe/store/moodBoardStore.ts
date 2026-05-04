@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { readFile, writeFile, exists } from '@/tauri-bridge/fs';
 import { MoodBoardItem, MoodBoardGroup } from '@/shared/types';
+import { useUIStore } from '@/store/uiStore';
 
 interface MoodBoardState {
   items: MoodBoardItem[];
   groups: MoodBoardGroup[];
   selectedItems: string[];
+  boardName: string;
   backgroundImage: string | null;
   backgroundRotation: number;
   backgroundZoom: number;
@@ -14,6 +16,7 @@ interface MoodBoardState {
 
   loadBoard: (rootPath: string) => Promise<void>;
   saveBoard: (rootPath: string) => Promise<void>;
+  setBoardName: (name: string) => void;
   addItem: (item: Omit<MoodBoardItem, 'id' | 'zIndex'>) => void;
   updateItem: (id: string, updates: Partial<MoodBoardItem>) => void;
   removeItem: (id: string) => void;
@@ -42,6 +45,7 @@ export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
   items: [],
   groups: [],
   selectedItems: [],
+  boardName: 'Mural Principal',
   backgroundImage: null,
   backgroundRotation: 0,
   backgroundZoom: 1,
@@ -60,6 +64,7 @@ export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
           set({ 
             items: data, 
             groups: [], 
+            boardName: 'Mural Principal',
             backgroundImage: null, 
             backgroundRotation: 0,
             backgroundZoom: 1,
@@ -69,6 +74,7 @@ export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
           set({ 
             items: data.items || [], 
             groups: data.groups || [], 
+            boardName: data.boardName || 'Mural Principal',
             backgroundImage: data.backgroundImage || null,
             backgroundRotation: data.backgroundRotation || 0,
             backgroundZoom: data.backgroundZoom || 1,
@@ -76,23 +82,49 @@ export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
           });
         }
       } else {
-        set({ items: [], groups: [], backgroundImage: null, backgroundRotation: 0, backgroundZoom: 1, isLoading: false });
+        set({ items: [], groups: [], boardName: 'Mural Principal', backgroundImage: null, backgroundRotation: 0, backgroundZoom: 1, isLoading: false });
       }
     } catch (err) {
       console.error('Erro ao carregar moodboard.json:', err);
-      set({ items: [], groups: [], backgroundImage: null, backgroundRotation: 0, backgroundZoom: 1, isLoading: false });
+      set({ items: [], groups: [], boardName: 'Mural Principal', backgroundImage: null, backgroundRotation: 0, backgroundZoom: 1, isLoading: false });
     }
   },
 
   saveBoard: async (rootPath) => {
     const configPath = `${rootPath}/moodboard.json`;
+    const addNotification = useUIStore.getState().addNotification;
+
     try {
-      const { items, groups, backgroundImage, backgroundRotation, backgroundZoom } = get();
-      await writeFile(configPath, JSON.stringify({ items, groups, backgroundImage, backgroundRotation, backgroundZoom }, null, 2));
+      const { items, groups, boardName, backgroundImage, backgroundRotation, backgroundZoom } = get();
+      
+      // Gerar lista única de referências (caminhos de arquivos)
+      const referenceSet = new Set<string>();
+      items.forEach(item => {
+        if (item.path) referenceSet.add(item.path);
+      });
+      if (backgroundImage) referenceSet.add(backgroundImage);
+      
+      const references = Array.from(referenceSet);
+
+      // O writeFile atualiza o arquivo existente por padrão (sobrescreve)
+      await writeFile(configPath, JSON.stringify({ 
+        items, 
+        groups, 
+        boardName, 
+        backgroundImage, 
+        backgroundRotation, 
+        backgroundZoom,
+        references 
+      }, null, 2));
+
+      addNotification('Mural salvo com sucesso', 'success');
     } catch (err) {
       console.error('Erro ao salvar moodboard.json:', err);
+      addNotification('Erro ao salvar mural', 'error');
     }
   },
+
+  setBoardName: (name) => set({ boardName: name }),
 
   addItem: (itemData) => set((state) => {
     const newItem: MoodBoardItem = {
@@ -279,7 +311,6 @@ export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
         if (item.id === sourceId || item.id === targetId) {
           // Contar itens já no grupo para definir a ordem
           const itemsInGroupCount = state.items.filter(i => i.groupId === targetGroupId).length;
-          const order = item.id === targetId && target.groupId ? target.groupOrder : itemsInGroupCount;
           
           return {
             ...item,

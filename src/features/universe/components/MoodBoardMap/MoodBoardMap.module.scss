@@ -1,0 +1,213 @@
+@use "@/shared/styles/variables" as v;
+@use "@/shared/styles/mixins" as m;
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--color-bg-base);
+  overflow: hidden;
+  position: relative;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.header {
+  padding: 2rem 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface);
+
+  h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+    letter-spacing: -0.02em;
+  }
+
+  .backBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: var(--color-bg-surface-hover);
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+      transform: translateX(-4px);
+    }
+  }
+}
+
+.content {
+  flex: 1;
+  padding: 3rem 4rem;
+  overflow-y: auto;
+  @include m.scrollbar;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 3rem;
+  justify-items: center;
+}
+
+.boardCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  cursor: pointer;
+  width: 100%;
+  max-width: 200px;
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-8px);
+
+    .imageContainer {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 4px rgba(155, 89, 182, 0.2);
+      
+      .cardActions {
+        opacity: 1;
+      }
+    }
+
+    span {
+      color: var(--color-accent);
+    }
+  }
+}
+
+.imageContainer {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 3px solid var(--color-border);
+  background-color: var(--color-bg-surface);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .placeholderIcon {
+    color: var(--color-text-muted);
+    opacity: 0.5;
+  }
+}
+
+.cardActions {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
+  background-color: var(--color-bg-surface);
+  backdrop-filter: blur(4px);
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+
+  .actionBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    border-radius: var(--radius-full);
+    transition: all 0.2s;
+    padding: 4px;
+
+    &:hover {
+      color: var(--color-accent);
+      background-color: var(--color-bg-base);
+    }
+
+    &.deleteBtn:hover {
+      color: var(--color-error);
+    }
+  }
+}
+
+.editNameContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem;
+  margin-top: -0.2rem;
+
+  input {
+    background: transparent;
+    border: none;
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    width: 130px;
+    text-align: center;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 0.2rem;
+    border-radius: var(--radius-sm);
+
+    &:hover {
+      background-color: var(--color-bg-base);
+      color: var(--color-text-primary);
+    }
+  }
+}
+
+.boardName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-align: center;
+  transition: color 0.2s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

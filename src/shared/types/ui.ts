@@ -1,7 +1,7 @@
 /**
  * Tipos de painéis principais que podem estar ativos na UI.
  */
-export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard' | 'assets' | 'documents' | 'drawing' | 'settings' | 'canvas';
+export type ActivePanel = 'editor' | 'dashboard' | 'gallery' | 'moodboard' | 'moodboard-map' | 'assets' | 'documents' | 'drawing' | 'settings' | 'canvas';
 
 /**
  * Informações de estado para operações de Drag & Drop globais.

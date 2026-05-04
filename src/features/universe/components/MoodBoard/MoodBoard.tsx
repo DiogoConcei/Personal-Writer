@@ -8,7 +8,7 @@ import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDra
 import { copyFileToWorkspace, resolveAssetPath } from '@/tauri-bridge/fs';
 import ImageGallery from '@/features/SlashMenu/components/ImageGallery/ImageGallery';
 import styles from './MoodBoard.module.scss';
-import { Image as ImageIcon, MousePointer2, Plus, ImagePlus, Image as Wallpaper, Link, Map, Save, Type, Layers, RotateCw, ZoomOut } from 'lucide-react';
+import { Image as ImageIcon, Plus, ImagePlus, Image as Wallpaper, Link, Map, Save, Type, Layers, RotateCw, ZoomOut } from 'lucide-react';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
@@ -18,6 +18,7 @@ export default function MoodBoard() {
     items, 
     groups, 
     selectedItems, 
+    boardName,
     backgroundImage,
     backgroundRotation,
     backgroundZoom,
@@ -25,22 +26,34 @@ export default function MoodBoard() {
     addItem, 
     loadBoard, 
     saveBoard, 
+    setBoardName,
     groupSelectedItems,
     clearSelection,
     setBackgroundImage,
     setBackgroundRotation,
     setBackgroundZoom
   } = useMoodBoardStore();
+
+  const setActivePanel = useUIStore((state) => state.setActivePanel);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [galleryMode, setGalleryMode] = useState<'item' | 'background' | null>(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState(boardName);
 
   useEffect(() => {
     if (rootPath && !isReady) {
-      loadBoard(rootPath).then(() => setIsReady(true));
+      loadBoard(rootPath).then(() => {
+        setIsReady(true);
+      });
     }
   }, [rootPath, loadBoard, isReady]);
+
+  // Sincronizar tempName quando boardName carregar
+  useEffect(() => {
+    setTempName(boardName);
+  }, [boardName]);
 
   // Itens que não pertencem a nenhum grupo
   const independentItems = items.filter(i => !i.groupId);
@@ -61,6 +74,14 @@ export default function MoodBoard() {
     const newZoom = backgroundZoom === 1 ? 0.75 : backgroundZoom === 0.75 ? 0.5 : 1;
     setBackgroundZoom(newZoom);
     if (rootPath) saveBoard(rootPath);
+  };
+
+  const handleSaveName = () => {
+    setIsEditingName(false);
+    if (tempName.trim() && tempName !== boardName) {
+      setBoardName(tempName);
+      if (rootPath) saveBoard(rootPath);
+    }
   };
 
   useEffect(() => {
@@ -151,7 +172,31 @@ export default function MoodBoard() {
     <div className={styles.container}>
       <div className={styles.floatingToolbar}>
         <div className={styles.toolbar}>
-          <button className={styles.toolbarBtn} title="Nome do Quadro"><Type size={16} /><span>Mural Principal</span></button>
+          {isEditingName ? (
+            <input
+              autoFocus
+              className={styles.boardTitleInput}
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+              onBlur={handleSaveName}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveName();
+                if (e.key === 'Escape') {
+                  setIsEditingName(false);
+                  setTempName(boardName);
+                }
+              }}
+            />
+          ) : (
+            <button 
+              className={styles.toolbarBtn} 
+              title="Renomear Quadro" 
+              onClick={() => setIsEditingName(true)}
+            >
+              <Type size={16} />
+              <span>{boardName}</span>
+            </button>
+          )}
           <div className={styles.divider}></div>
           <button className={styles.toolbarBtn} title="Adicionar Imagem" onClick={() => setGalleryMode('item')}><ImagePlus size={16} /></button>
           
@@ -208,9 +253,9 @@ export default function MoodBoard() {
             </>
           )}
 
-          <button className={styles.toolbarBtn} title="Mapa"><Map size={16} /></button>
+          <button className={styles.toolbarBtn} title="Mapa" onClick={() => setActivePanel('moodboard-map')}><Map size={16} /></button>
           <div className={styles.divider}></div>
-          <button className={styles.toolbarBtn} title="Salvar" onClick={() => saveBoard(rootPath)}><Save size={16} /></button>
+          <button className={styles.toolbarBtn} title="Salvar" onClick={() => rootPath && saveBoard(rootPath)}><Save size={16} /></button>
         </div>
       </div>
 

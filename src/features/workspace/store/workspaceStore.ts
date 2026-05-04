@@ -33,7 +33,7 @@ interface WorkspaceState {
 }
 
 const STORAGE_KEY = 'hybrid-editor-root-path';
-const HIDDEN_ITEMS = ['assets', 'docs', 'moodboard.json'];
+const HIDDEN_ITEMS = ['assets', 'docs', 'murais', 'mesa.json', 'moodboard.json'];
 
 function updatePathsRecursively(node: FileNode, newPath: string): FileNode {
   const separator = getSeparator(newPath);

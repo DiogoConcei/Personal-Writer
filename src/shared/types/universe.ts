@@ -33,9 +33,9 @@ export interface EntityFilters {
 }
 
 /**
- * Item individual de um Mood Board (mural visual).
+ * Item individual de uma Mesa de Trabalho (mural visual).
  */
-export interface MoodBoardItem {
+export interface MesaItem {
   id: string;
   path: string;
   x: number;
@@ -46,12 +46,14 @@ export interface MoodBoardItem {
   category?: string;
   groupId?: string;
   groupOrder?: number;
+  ownerId?: string;
+  customName?: string;
 }
 
 /**
- * Grupo de itens no Mood Board.
+ * Grupo de itens na Mesa de Trabalho.
  */
-export interface MoodBoardGroup {
+export interface MesaGrupo {
   id: string;
   x: number;
   y: number;

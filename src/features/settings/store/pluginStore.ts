@@ -15,7 +15,7 @@ interface PluginState {
 const INITIAL_PLUGINS: PluginMetadata[] = [
   {
     id: 'mood-board',
-    title: 'Mood Board',
+    title: 'Mesa de Trabalho',
     description: 'Mural de referências visuais para colagem de imagens e inspiração.',
     version: '1.0.0',
     category: 'Design',

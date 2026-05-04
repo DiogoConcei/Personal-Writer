@@ -47,6 +47,31 @@
       transform: translateX(-4px);
     }
   }
+
+  .addBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--radius-full);
+    border: none;
+    background-color: var(--color-accent);
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+
+    &:hover {
+      background-color: var(--color-accent-dim);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(155, 89, 182, 0.4);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
 }
 
 .content {
@@ -72,6 +97,7 @@
   width: 100%;
   max-width: 200px;
   transition: transform 0.3s ease;
+  position: relative;
 
   &:hover {
     transform: translateY(-8px);
@@ -86,6 +112,16 @@
     }
 
     span {
+      color: var(--color-accent);
+    }
+  }
+
+  &.activeCard {
+    .imageContainer {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 4px rgba(155, 89, 182, 0.3);
+    }
+    .boardName {
       color: var(--color-accent);
     }
   }

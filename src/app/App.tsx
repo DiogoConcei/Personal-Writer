@@ -4,8 +4,8 @@ import FileTree from '@/features/workspace/components/FileTree/FileTree';
 import Editor from '@/features/editor/components/Core/Editor/Editor';
 import ImageViewer from '@/features/image-manager/components/ImageViewer/ImageViewer';
 import Dashboard from '@/features/dashboard/components/Dashboard/Dashboard';
-import MoodBoard from '@/features/universe/components/MoodBoard/MoodBoard';
-import MoodBoardMap from '@/features/universe/components/MoodBoardMap/MoodBoardMap';
+import MesaTrabalho from '@/features/universe/components/MesaTrabalho/MesaTrabalho';
+import MapaMesas from '@/features/universe/components/MapaMesas/MapaMesas';
 import AssetGallery from '@/features/image-manager/components/AssetGallery/AssetGallery';
 import DocumentGallery from '@/features/docs-manager/components/DocumentGallery/DocumentGallery';
 import CharacterGallery from '@/features/universe/components/CharacterGallery/CharacterGallery';
@@ -104,6 +104,12 @@ function App() {
     // Fecha a sidebar automaticamente ao mudar para painéis de visualização (foco total)
     if (activePanel !== 'editor' && isSidebarVisible) {
       toggleSidebar();
+    }
+
+    // Fecha a sidebar de referências ao entrar no canvas para liberar espaço
+    const isCanvasActive = activePanel === 'canvas' || activePanel === 'moodboard' || activePanel === 'moodboard-map';
+    if (isCanvasActive && isRightSidebarVisible) {
+      toggleRightSidebar();
     }
   }, [activePanel, activeFile, setPreview]);
 
@@ -206,8 +212,8 @@ function App() {
       const { dashboardFilterPath } = useWorkspaceStore.getState();
       let prefix = 'Dashboard';
       if (activePanel === 'gallery') prefix = 'Personagens';
-      if (activePanel === 'moodboard') prefix = 'Mood Board';
-      if (activePanel === 'moodboard-map') prefix = 'Mapa de Murais';
+      if (activePanel === 'moodboard') prefix = 'Mesa de Trabalho';
+      if (activePanel === 'moodboard-map') prefix = 'Mapa de Mesas';
       if (activePanel === 'assets') prefix = 'Galeria';
       if (activePanel === 'documents') prefix = 'Documentos';
       if (activePanel === 'drawing') prefix = 'Desenho';
@@ -319,129 +325,137 @@ function App() {
             </div>
 
             <div className={styles.app__actions}>
-              <div className={styles.app__toolGroup}>
-                <button
-                  className={styles.app__iconBtn}
-                  onClick={() => setCommandPaletteOpen(true)}
-                  title="Busca Rápida e Comandos (Ctrl+P)"
-                >
-                  <Search size={18} />
-                </button>
-
-                <button
-                  className={styles.app__iconBtn}
-                  onClick={handleBackup}
-                  title="Exportar Backup (ZIP)"
-                >
-                  <Download size={18} />
-                </button>
-
-                {activePanel === 'editor' && !isImage && (
+              {!isCanvasActive && (
+                <div className={styles.app__toolGroup}>
                   <button
                     className={styles.app__iconBtn}
-                    onClick={toggleTypography}
-                    title="Alternar Tipografia"
+                    onClick={() => setCommandPaletteOpen(true)}
+                    title="Busca Rápida e Comandos (Ctrl+P)"
                   >
-                    <Type size={18} />
+                    <Search size={18} />
                   </button>
-                )}
 
+                  <button
+                    className={styles.app__iconBtn}
+                    onClick={handleBackup}
+                    title="Exportar Backup (ZIP)"
+                  >
+                    <Download size={18} />
+                  </button>
+
+                  {activePanel === 'editor' && !isImage && (
+                    <button
+                      className={styles.app__iconBtn}
+                      onClick={toggleTypography}
+                      title="Alternar Tipografia"
+                    >
+                      <Type size={18} />
+                    </button>
+                  )}
+
+                  <button
+                    className={`${styles.app__iconBtn} ${activePanel === 'assets' ? styles['app__iconBtn--active'] : ''}`}
+                    onClick={() => setActivePanel('assets')}
+                    title="Galeria de Assets (Ctrl+I)"
+                  >
+                    <Images size={18} />
+                  </button>
+
+                  <button
+                    className={`${styles.app__iconBtn} ${activePanel === 'documents' ? styles['app__iconBtn--active'] : ''}`}
+                    onClick={() => setActivePanel('documents')}
+                    title="Galeria de Documentos (Ctrl+Q)"
+                  >
+                    <FileSearch size={18} />
+                  </button>
+
+                  {isDrawingEnabled && (
+                    <button
+                      className={`${styles.app__iconBtn} ${activePanel === 'drawing' ? styles['app__iconBtn--active'] : ''}`}
+                      onClick={() => setActivePanel('drawing')}
+                      title="Desenho (Excalidraw)"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                  )}
+
+                  <button
+                    className={`${styles.app__iconBtn} ${activePanel === 'settings' ? styles['app__iconBtn--active'] : ''}`}
+                    onClick={() => setActivePanel('settings')}
+                    title="Configurações e Plugins (Ctrl+,)"
+                  >
+                    <SettingsIcon size={18} />
+                  </button>
+                </div>
+              )}
+
+              {!isCanvasActive && (
                 <button
-                  className={`${styles.app__iconBtn} ${activePanel === 'assets' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => setActivePanel('assets')}
-                  title="Galeria de Assets (Ctrl+I)"
+                  className={styles.app__iconBtn}
+                  onClick={selectWorkspace}
+                  title="Trocar Workspace"
                 >
-                  <Images size={18} />
+                  <FolderOpen size={18} />
                 </button>
+              )}
 
+              {!isCanvasActive && (
+                <nav className={styles.app__nav}>
+                  <button
+                    className={`${styles.app__iconBtn} ${activePanel === 'editor' ? styles['app__iconBtn--active'] : ''}`}
+                    onClick={() => setActivePanel('editor')}
+                    title="Editor (Ctrl+E)"
+                  >
+                    <FileEdit size={18} />
+                  </button>
+                  {isDashboardEnabled && (
+                    <button
+                      className={`${styles.app__iconBtn} ${activePanel === 'dashboard' ? styles['app__iconBtn--active'] : ''}`}
+                      onClick={() => setActivePanel('dashboard')}
+                      title="Dashboard (Ctrl+D)"
+                    >
+                      <LayoutGrid size={18} />
+                    </button>
+                  )}
+                  {isGalleryEnabled && (
+                    <button
+                      className={`${styles.app__iconBtn} ${activePanel === 'gallery' ? styles['app__iconBtn--active'] : ''}`}
+                      onClick={() => setActivePanel('gallery')}
+                      title="Galeria de Personagens (Ctrl+G)"
+                    >
+                      <Users size={18} />
+                    </button>
+                  )}
+                  {isMoodBoardEnabled && (
+                    <button
+                      className={`${styles.app__iconBtn} ${(activePanel as string) === 'moodboard' ? styles['app__iconBtn--active'] : ''}`}
+                      onClick={() => setActivePanel('moodboard')}
+                      title="Mesa de Trabalho (Ctrl+M)"
+                    >
+                      <ImageIcon size={18} />
+                    </button>
+                  )}
+                  {isInfiniteCanvasEnabled && (
+                    <button
+                      className={`${styles.app__iconBtn} ${(activePanel as string) === 'canvas' ? styles['app__iconBtn--active'] : ''}`}
+                      onClick={() => setActivePanel('canvas')}
+                      title="Infinite Canvas (Beta)"
+                    >
+                      <Infinity size={18} />
+                    </button>
+                  )}
+                </nav>
+              )}
+
+              {!isCanvasActive && (
                 <button
-                  className={`${styles.app__iconBtn} ${activePanel === 'documents' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => setActivePanel('documents')}
-                  title="Galeria de Documentos (Ctrl+Q)"
+                  className={`${styles.app__iconBtn} ${isRightSidebarVisible ? styles['app__iconBtn--active'] : ''}`}
+                  onClick={toggleRightSidebar}
+                  title="Referências Lateral"
                 >
-                  <FileSearch size={18} />
+                  <PanelRight size={18} />
                 </button>
-
-                {isDrawingEnabled && (
-                  <button
-                    className={`${styles.app__iconBtn} ${activePanel === 'drawing' ? styles['app__iconBtn--active'] : ''}`}
-                    onClick={() => setActivePanel('drawing')}
-                    title="Desenho (Excalidraw)"
-                  >
-                    <Pencil size={18} />
-                  </button>
-                )}
-
-                <button
-                  className={`${styles.app__iconBtn} ${activePanel === 'settings' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => setActivePanel('settings')}
-                  title="Configurações e Plugins (Ctrl+,)"
-                >
-                  <SettingsIcon size={18} />
-                </button>
-              </div>
-
-              <button
-                className={styles.app__iconBtn}
-                onClick={selectWorkspace}
-                title="Trocar Workspace"
-              >
-                <FolderOpen size={18} />
-              </button>
-
-              <nav className={styles.app__nav}>
-                <button
-                  className={`${styles.app__iconBtn} ${activePanel === 'editor' ? styles['app__iconBtn--active'] : ''}`}
-                  onClick={() => setActivePanel('editor')}
-                  title="Editor (Ctrl+E)"
-                >
-                  <FileEdit size={18} />
-                </button>
-                {isDashboardEnabled && (
-                  <button
-                    className={`${styles.app__iconBtn} ${activePanel === 'dashboard' ? styles['app__iconBtn--active'] : ''}`}
-                    onClick={() => setActivePanel('dashboard')}
-                    title="Dashboard (Ctrl+D)"
-                  >
-                    <LayoutGrid size={18} />
-                  </button>
-                )}
-                {isGalleryEnabled && (
-                  <button
-                    className={`${styles.app__iconBtn} ${activePanel === 'gallery' ? styles['app__iconBtn--active'] : ''}`}
-                    onClick={() => setActivePanel('gallery')}
-                    title="Galeria de Personagens (Ctrl+G)"
-                  >
-                    <Users size={18} />
-                  </button>
-                )}
-                {isMoodBoardEnabled && (
-                  <button
-                    className={`${styles.app__iconBtn} ${activePanel === 'moodboard' ? styles['app__iconBtn--active'] : ''}`}
-                    onClick={() => setActivePanel('moodboard')}
-                    title="Mood Board Espacial (Ctrl+M)"
-                  >
-                    <ImageIcon size={18} />
-                  </button>
-                )}
-                {isInfiniteCanvasEnabled && (
-                  <button
-                    className={`${styles.app__iconBtn} ${activePanel === 'canvas' ? styles['app__iconBtn--active'] : ''}`}
-                    onClick={() => setActivePanel('canvas')}
-                    title="Infinite Canvas (Beta)"
-                  >
-                    <Infinity size={18} />
-                  </button>
-                )}
-              </nav>
-
-              <button
-                className={`${styles.app__iconBtn} ${isRightSidebarVisible ? styles['app__iconBtn--active'] : ''}`}
-                onClick={toggleRightSidebar}
-                title="Referências Lateral"
-              >
-                <PanelRight size={18} />
-              </button>
+              )}
             </div>
           </header>
         )}
@@ -452,9 +466,9 @@ function App() {
           ) : activePanel === 'gallery' ? (
             isGalleryEnabled ? <CharacterGallery /> : <PluginPlaceholder name="Galeria de Personagens" id="character-gallery" />
           ) : activePanel === 'moodboard' ? (
-            isMoodBoardEnabled ? <MoodBoard /> : <PluginPlaceholder name="Mood Board" id="mood-board" />
+            isMoodBoardEnabled ? <MesaTrabalho /> : <PluginPlaceholder name="Mesa de Trabalho" id="mood-board" />
           ) : activePanel === 'moodboard-map' ? (
-            isMoodBoardEnabled ? <MoodBoardMap /> : <PluginPlaceholder name="Mapa de Murais" id="mood-board" />
+            isMoodBoardEnabled ? <MapaMesas /> : <PluginPlaceholder name="Mapa de Mesas" id="mood-board" />
           ) : activePanel === 'assets' ? (
             <AssetGallery />
           ) : activePanel === 'documents' ? (

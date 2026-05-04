@@ -1,14 +1,14 @@
 import React from 'react';
-import { MoodBoardGroup, MoodBoardItem as IMoodBoardItem } from '@/shared/types';
-import { MoodBoardItem } from './MoodBoardItem';
-import styles from './MoodBoard.module.scss';
+import { MesaGrupo, MesaItem as IMesaItem } from '@/shared/types';
+import { MesaItem } from './MesaItem';
+import styles from './MesaTrabalho.module.scss';
 
 interface Props {
-  group: MoodBoardGroup;
-  items: IMoodBoardItem[];
+  group: MesaGrupo;
+  items: IMesaItem[];
 }
 
-export const MoodBoardGroupContainer: React.FC<Props> = ({ group, items }) => {
+export const MesaGrupoContainer: React.FC<Props> = ({ group, items }) => {
   const sortedItems = [...items].sort((a, b) => (a.groupOrder || 0) - (b.groupOrder || 0));
 
   return (
@@ -23,7 +23,7 @@ export const MoodBoardGroupContainer: React.FC<Props> = ({ group, items }) => {
       <div className={styles.groupContent}>
         {sortedItems.map((item) => (
           <div key={item.id} className={styles.groupedItemWrapper}>
-            <MoodBoardItem item={item} />
+            <MesaItem item={item} />
           </div>
         ))}
       </div>

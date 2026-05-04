@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useMoodBoardStore } from '../../store/moodBoardStore';
-import { MoodBoardItem as IMoodBoardItem } from '@/shared/types';
+import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
+import { MesaItem as IMesaItem } from '@/shared/types';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { X, Maximize2, RotateCw, Tag, Check, Unlink } from 'lucide-react';
-import styles from './MoodBoard.module.scss';
+import { X, Tag, Check, Unlink, User } from 'lucide-react';
+import styles from './MesaTrabalho.module.scss';
 
 interface Props {
-  item: IMoodBoardItem;
+  item: IMesaItem;
 }
 
 const DEFAULT_CATEGORIES = ['Personagens', 'Itens', 'Figurantes'];
@@ -21,25 +21,28 @@ const getCategoryColor = (category?: string) => {
   return '#3b82f6';                            // Blue for others
 };
 
-export const MoodBoardItem: React.FC<Props> = ({ item }) => {
+export const MesaItem: React.FC<Props> = ({ item }) => {
   const { rootPath } = useWorkspaceStore();
   const { 
     updateItem, 
     removeItem, 
     bringToFront, 
-    saveBoard, 
     toggleSelection, 
     selectedItems,
     groups,
     updateGroup,
     mergeIntoGroup,
-    ungroupItems
-  } = useMoodBoardStore();
-  
+    ungroupItems,
+    attachItemToCharacter,
+    toggleDetailsId,
+    items,
+    boardMode
+  } = useMesaTrabalhoStore();
+
   const [isDragging, setIsDragging] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
-  
+
   const dragStartPos = useRef({ x: 0, y: 0 });
   const itemStartPos = useRef({ x: 0, y: 0 });
   const groupStartPos = useRef({ x: 0, y: 0 });
@@ -47,9 +50,16 @@ export const MoodBoardItem: React.FC<Props> = ({ item }) => {
   const isSelected = selectedItems.includes(item.id);
   const isInGroup = !!item.groupId;
 
+  const categoryColor = getCategoryColor(item.category);
+  const isCharacter = item.category?.toLowerCase() === 'personagens';
+  const isItem = item.category?.toLowerCase() === 'itens';
+
+  const isPolaroid = isCharacter && boardMode === 'planning';
+  const isCircleAvatar = isCharacter && boardMode === 'free';
+
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     // Seleção com Shift ou Ctrl
     if (e.shiftKey || e.ctrlKey || e.metaKey) {
       toggleSelection(item.id, true);
@@ -78,7 +88,7 @@ export const MoodBoardItem: React.FC<Props> = ({ item }) => {
     const handleMouseMove = (e: MouseEvent) => {
       const dx = e.clientX - dragStartPos.current.x;
       const dy = e.clientY - dragStartPos.current.y;
-      
+
       if (isInGroup) {
         updateGroup(item.groupId!, {
           x: groupStartPos.current.x + dx,
@@ -94,8 +104,8 @@ export const MoodBoardItem: React.FC<Props> = ({ item }) => {
 
     const handleMouseUp = (e: MouseEvent) => {
       setIsDragging(false);
-      
-      // Detecção de colisão para agrupamento automático ao soltar
+
+      // Detecção de colisão para agrupamento ou atrelamento automático ao soltar
       if (!isInGroup) {
         const elements = document.elementsFromPoint(e.clientX, e.clientY);
         const targetElement = elements.find(el => 
@@ -106,11 +116,26 @@ export const MoodBoardItem: React.FC<Props> = ({ item }) => {
 
         if (targetElement) {
           const targetId = targetElement.getAttribute('data-item-id')!;
-          mergeIntoGroup(item.id, targetId);
+          const targetItem = items.find(i => i.id === targetId);
+
+          if (targetItem) {
+            const targetIsCharacter = targetItem.category?.toLowerCase() === 'personagens';
+            const targetIsItem = targetItem.category?.toLowerCase() === 'itens';
+
+            // Regra 1 e 2: Itens não se agrupam com personagens, mas podem ser atrelados
+            if ((isItem && targetIsCharacter) || (isCharacter && targetIsItem)) {
+              if (isItem) {
+                attachItemToCharacter(item.id, targetId);
+              } else {
+                attachItemToCharacter(targetId, item.id);
+              }
+            } else if (!isCharacter && !targetIsCharacter) {
+              // Só agrupa se nenhum for personagem (ou ambos forem figurantes/outros, mantendo lógica anterior)
+              mergeIntoGroup(item.id, targetId);
+            }
+          }
         }
       }
-
-      if (rootPath) saveBoard(rootPath);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -119,27 +144,13 @@ export const MoodBoardItem: React.FC<Props> = ({ item }) => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, item.id, item.groupId, isInGroup, rootPath, updateItem, updateGroup, saveBoard, mergeIntoGroup]);
-
-  const handleScale = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newScale = item.scale === 1 ? 1.5 : item.scale === 1.5 ? 0.5 : 1;
-    updateItem(item.id, { scale: newScale });
-    if (rootPath) saveBoard(rootPath);
-  };
-
-  const handleRotate = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    updateItem(item.id, { rotation: (item.rotation + 45) % 360 });
-    if (rootPath) saveBoard(rootPath);
-  };
+  }, [isDragging, item.id, item.groupId, isInGroup, rootPath, updateItem, updateGroup, mergeIntoGroup, attachItemToCharacter, items]);
 
   const handleUngroup = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (item.groupId) {
       if (window.confirm("Deseja desfazer este grupo inteiro?")) {
         ungroupItems(item.groupId);
-        if (rootPath) saveBoard(rootPath);
       }
     }
   };
@@ -147,18 +158,15 @@ export const MoodBoardItem: React.FC<Props> = ({ item }) => {
   const setCategory = (cat: string | undefined) => {
     updateItem(item.id, { category: cat });
     setShowCategoryMenu(false);
-    if (rootPath) saveBoard(rootPath);
   };
-
-  const categoryColor = getCategoryColor(item.category);
-  const isCharacter = item.category?.toLowerCase() === 'personagens';
 
   return (
     <div 
       className={`
         ${styles.boardItem} 
         ${isDragging ? styles['boardItem--dragging'] : ''} 
-        ${isCharacter ? styles['boardItem--character'] : ''}
+        ${isCircleAvatar ? styles['boardItem--character'] : ''}
+        ${isPolaroid ? styles['boardItem--polaroid'] : ''}
         ${isSelected ? styles['boardItem--selected'] : ''}
         ${isInGroup ? styles['boardItem--grouped'] : ''}
       `}
@@ -175,9 +183,9 @@ export const MoodBoardItem: React.FC<Props> = ({ item }) => {
       } as React.CSSProperties}
       onMouseDown={handleMouseDown}
     >
-      {item.category && (
+      {item.category && !isPolaroid && (
         <div className={styles.categoryBadge} style={{ backgroundColor: categoryColor }}>
-          {item.category}
+          {isCharacter && item.customName ? item.customName : item.category}
         </div>
       )}
 
@@ -185,9 +193,21 @@ export const MoodBoardItem: React.FC<Props> = ({ item }) => {
         src={resolveAssetPath(item.path, rootPath) || undefined} 
         alt="Mood item" 
         draggable={false}
-        className={isCharacter ? styles.characterImage : ''}
-        style={isCharacter ? { border: `3px solid ${categoryColor}` } : {}}
+        className={`${isCharacter ? styles.characterImage : ''} ${isItem ? styles.itemImage : ''}`}
+        style={isCircleAvatar ? { border: `3px solid ${categoryColor}` } : {}}
       />
+
+      {isCharacter && item.customName && !item.category && !isPolaroid && (
+        <div className={styles.characterNameLabel}>
+          {item.customName}
+        </div>
+      )}
+
+      {isPolaroid && item.customName && (
+        <div className={styles.polaroidLabel}>
+          {item.customName}
+        </div>
+      )}
       
       <div className={styles.itemActions}>
         <button 
@@ -205,8 +225,16 @@ export const MoodBoardItem: React.FC<Props> = ({ item }) => {
         )}
 
         <button onClick={() => removeItem(item.id)} className={styles.actionBtn} title="Remover"><X size={12} /></button>
-        <button onClick={handleScale} className={styles.actionBtn} title="Escala"><Maximize2 size={12} /></button>
-        <button onClick={handleRotate} className={styles.actionBtn} title="Girar"><RotateCw size={12} /></button>
+        
+        {isCharacter && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); toggleDetailsId(item.id); }} 
+            className={styles.actionBtn} 
+            title="Detalhes do Personagem"
+          >
+            <User size={12} />
+          </button>
+        )}
 
         {showCategoryMenu && (
           <div className={styles.categoryMenu} onMouseDown={(e) => e.stopPropagation()}>

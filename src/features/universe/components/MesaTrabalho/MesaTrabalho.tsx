@@ -1,43 +1,50 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
-import { useMoodBoardStore } from '../../store/moodBoardStore';
-import { MoodBoardItem } from './MoodBoardItem';
-import { MoodBoardGroupContainer } from './MoodBoardGroupContainer';
+import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
+import { MesaItem } from './MesaItem';
+import { MesaGrupoContainer } from './MesaGrupoContainer';
 import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
 import { copyFileToWorkspace, resolveAssetPath } from '@/tauri-bridge/fs';
 import ImageGallery from '@/features/SlashMenu/components/ImageGallery/ImageGallery';
-import styles from './MoodBoard.module.scss';
-import { Image as ImageIcon, Plus, ImagePlus, Image as Wallpaper, Link, Map, Save, Type, Layers, RotateCw, ZoomOut } from 'lucide-react';
+import styles from './MesaTrabalho.module.scss';
+import { Image as ImageIcon, Plus, ImagePlus, Image as Wallpaper, Link, Map, Save, Type, Layers, RotateCw, ZoomOut, Settings2, Layout, LayoutPanelLeft } from 'lucide-react';
+
+import { CharacterDetailsModal } from './CharacterDetailsModal';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
-export default function MoodBoard() {
+export default function MesaTrabalho() {
   const { rootPath } = useWorkspaceStore();
   const { 
     items, 
     groups, 
     selectedItems, 
     boardName,
+    boardMode,
     backgroundImage,
     backgroundRotation,
     backgroundZoom,
+    activeDetailsIds,
     isLoading, 
     addItem, 
     loadBoard, 
     saveBoard, 
     setBoardName,
+    setBoardMode,
+    toggleDetailsId,
     groupSelectedItems,
     clearSelection,
     setBackgroundImage,
     setBackgroundRotation,
     setBackgroundZoom
-  } = useMoodBoardStore();
+  } = useMesaTrabalhoStore();
 
   const setActivePanel = useUIStore((state) => state.setActivePanel);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [galleryMode, setGalleryMode] = useState<'item' | 'background' | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(boardName);
@@ -55,34 +62,55 @@ export default function MoodBoard() {
     setTempName(boardName);
   }, [boardName]);
 
-  // Itens que não pertencem a nenhum grupo
-  const independentItems = items.filter(i => !i.groupId);
+  // Itens que não pertencem a nenhum grupo e não estão em inventários
+  const independentItems = items.filter(i => !i.groupId && !i.ownerId);
 
   const handleGroupAction = () => {
-    const groupId = groupSelectedItems();
-    if (groupId && rootPath) saveBoard(rootPath);
+    groupSelectedItems();
   };
 
   const handleRotateBackground = () => {
     const newRotation = (backgroundRotation + 90) % 360;
     setBackgroundRotation(newRotation);
-    if (rootPath) saveBoard(rootPath);
   };
 
   const handleZoomBackground = () => {
     // Ciclar entre 1x, 0.75x, 0.5x
     const newZoom = backgroundZoom === 1 ? 0.75 : backgroundZoom === 0.75 ? 0.5 : 1;
     setBackgroundZoom(newZoom);
-    if (rootPath) saveBoard(rootPath);
   };
 
   const handleSaveName = () => {
     setIsEditingName(false);
     if (tempName.trim() && tempName !== boardName) {
       setBoardName(tempName);
-      if (rootPath) saveBoard(rootPath);
     }
   };
+
+  // Salvamento Automático a cada 20 minutos
+  useEffect(() => {
+    if (!rootPath) return;
+    const interval = setInterval(() => {
+      saveBoard(rootPath);
+    }, 1200000); // 20 minutos
+    
+    return () => clearInterval(interval);
+  }, [rootPath, saveBoard]);
+
+  // Atalho Ctrl+S para salvamento manual
+  useEffect(() => {
+    const handleSaveShortcut = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (rootPath) {
+          saveBoard(rootPath);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleSaveShortcut);
+    return () => window.removeEventListener('keydown', handleSaveShortcut);
+  }, [rootPath, saveBoard]);
 
   useEffect(() => {
     const handleMouseUp = (e: MouseEvent) => {
@@ -110,8 +138,6 @@ export default function MoodBoard() {
               scale: 1,
               rotation: 0
             });
-
-            saveBoard(rootPath);
           }
         }
       }
@@ -119,7 +145,7 @@ export default function MoodBoard() {
 
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [rootPath, addItem, saveBoard]);
+  }, [rootPath, addItem]);
 
   // Efeito para Drag & Drop Externo
   useNativeDragDrop({
@@ -157,8 +183,6 @@ export default function MoodBoard() {
             scale: 1,
             rotation: 0
           });
-
-          saveBoard(rootPath);
         } catch (err) {
           console.error('Erro ao adicionar imagem ao moodboard:', err);
         }
@@ -190,7 +214,7 @@ export default function MoodBoard() {
           ) : (
             <button 
               className={styles.toolbarBtn} 
-              title="Renomear Quadro" 
+              title="Renomear Mesa" 
               onClick={() => setIsEditingName(true)}
             >
               <Type size={16} />
@@ -229,7 +253,7 @@ export default function MoodBoard() {
                 <button 
                   className={styles.removeBgBtn} 
                   title="Remover Fundo"
-                  onClick={() => { setBackgroundImage(null); setBackgroundRotation(0); setBackgroundZoom(1); if (rootPath) saveBoard(rootPath); }}
+                  onClick={() => { setBackgroundImage(null); setBackgroundRotation(0); setBackgroundZoom(1); }}
                 >
                   <Plus size={10} style={{ transform: 'rotate(45deg)' }} />
                 </button>
@@ -237,7 +261,9 @@ export default function MoodBoard() {
             )}
           </div>
 
-          <button className={styles.toolbarBtn} title="Conectar Itens"><Link size={16} /></button>
+          {boardMode === 'planning' && (
+            <button className={styles.toolbarBtn} title="Conectar Itens"><Link size={16} /></button>
+          )}
           
           {selectedItems.length > 1 && (
             <>
@@ -254,24 +280,62 @@ export default function MoodBoard() {
           )}
 
           <button className={styles.toolbarBtn} title="Mapa" onClick={() => setActivePanel('moodboard-map')}><Map size={16} /></button>
+          
           <div className={styles.divider}></div>
-          <button className={styles.toolbarBtn} title="Salvar" onClick={() => rootPath && saveBoard(rootPath)}><Save size={16} /></button>
+          
+          <div className={styles.settingsWrapper}>
+            <button 
+              className={`${styles.toolbarBtn} ${isSettingsOpen ? styles.active : ''}`} 
+              title="Configurações da Mesa" 
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            >
+              <Settings2 size={16} />
+            </button>
+
+            {isSettingsOpen && (
+              <div className={styles.settingsPopover}>
+                <div className={styles.settingsHeader}>Configurações</div>
+                <div className={styles.settingsSection}>
+                  <label>Modelo da Mesa</label>
+                  <div className={styles.modeToggle}>
+                    <button 
+                      className={boardMode === 'free' ? styles.active : ''} 
+                      onClick={() => setBoardMode('free')}
+                    >
+                      <Layout size={14} />
+                      Livre
+                    </button>
+                    <button 
+                      className={boardMode === 'planning' ? styles.active : ''} 
+                      onClick={() => setBoardMode('planning')}
+                    >
+                      <LayoutPanelLeft size={14} />
+                      Planejamento
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.divider}></div>
+          <button className={styles.toolbarBtn} title="Salvar Mesa (Manual)" onClick={() => rootPath && saveBoard(rootPath)}><Save size={16} /></button>
         </div>
       </div>
 
       <div
         ref={containerRef}
-        className={styles.canvas}
+        className={`${styles.canvas} ${boardMode === 'planning' ? styles['canvas--planning'] : ''}`}
         onDragOver={(e) => e.preventDefault()}
         onMouseDown={(e) => {
           if (e.target === e.currentTarget) clearSelection();
         }}
         style={{
           backgroundImage: backgroundImage ? `url(${resolveAssetPath(backgroundImage, rootPath)})` : undefined,
-          backgroundSize: backgroundZoom === 1 ? 'cover' : `${backgroundZoom * 100}%`,
+          backgroundSize: backgroundImage ? (backgroundZoom === 1 ? 'cover' : `${backgroundZoom * 100}%`) : undefined,
           backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          rotate: `${backgroundRotation}deg`
+          backgroundRepeat: backgroundImage ? 'no-repeat' : 'repeat',
+          rotate: backgroundImage ? `${backgroundRotation}deg` : undefined
         } as React.CSSProperties}
       >
         {items.length === 0 && !isLoading && !backgroundImage && (
@@ -280,14 +344,14 @@ export default function MoodBoard() {
               <Plus size={48} />
               <ImageIcon size={32} className={styles.subIcon} />
             </div>
-            <p>Seu mural está vazio.</p>
+            <p>Sua mesa está vazia.</p>
             <span>Arraste arquivos de imagem do seu computador diretamente para este espaço.</span>
           </div>
         )}
 
         {/* Renderizar Grupos */}
         {groups.map(group => (
-          <MoodBoardGroupContainer 
+          <MesaGrupoContainer 
             key={group.id}
             group={group}
             items={items.filter(i => i.groupId === group.id)}
@@ -296,7 +360,7 @@ export default function MoodBoard() {
 
         {/* Renderizar Itens Independentes */}
         {independentItems.map((item) => (
-          <MoodBoardItem
+          <MesaItem
             key={item.id}
             item={item}
           />
@@ -305,7 +369,7 @@ export default function MoodBoard() {
         {isLoading && items.length === 0 && (
           <div className={styles.canvasLoading}>
              <ImageIcon size={48} className={styles.spin} />
-             <p>Carregando mural...</p>
+             <p>Organizando mesa...</p>
           </div>
         )}
       </div>
@@ -330,12 +394,18 @@ export default function MoodBoard() {
             } else if (galleryMode === 'background') {
               setBackgroundImage(relativePath);
             }
-            
-            if (rootPath) saveBoard(rootPath);
           }}
           onClose={() => setGalleryMode(null)}
         />
       )}
+
+      {activeDetailsIds.map(id => (
+        <CharacterDetailsModal 
+          key={id}
+          characterId={id} 
+          onClose={() => toggleDetailsId(id, true)} 
+        />
+      ))}
     </div>
   );
 }

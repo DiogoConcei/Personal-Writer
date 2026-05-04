@@ -1,29 +1,44 @@
 import { create } from 'zustand';
-import { readFile, writeFile, exists } from '@/tauri-bridge/fs';
-import { MoodBoardItem, MoodBoardGroup } from '@/shared/types';
+import { readFile, writeFile } from '@/tauri-bridge/fs';
+import { MesaItem, MesaGrupo } from '@/shared/types';
 import { useUIStore } from '@/store/uiStore';
 
-interface MoodBoardState {
-  items: MoodBoardItem[];
-  groups: MoodBoardGroup[];
+interface MesaTrabalhoState {
+  items: MesaItem[];
+  groups: MesaGrupo[];
   selectedItems: string[];
+  boardId: string | null;
   boardName: string;
+  boardMode: 'free' | 'planning';
   backgroundImage: string | null;
   backgroundRotation: number;
   backgroundZoom: number;
+  activeDetailsIds: string[];
+  modalZIndexes: Record<string, number>;
   isLoading: boolean;
   error: string | null;
+  allBoards: Array<{ id: string, name: string, backgroundImage: string | null }>;
 
-  loadBoard: (rootPath: string) => Promise<void>;
+  loadBoard: (rootPath: string, boardId?: string) => Promise<void>;
   saveBoard: (rootPath: string) => Promise<void>;
+  loadAllBoards: (rootPath: string) => Promise<void>;
+  createBoard: (rootPath: string, name: string) => Promise<string>;
+  deleteBoard: (rootPath: string, id: string) => Promise<void>;
   setBoardName: (name: string) => void;
-  addItem: (item: Omit<MoodBoardItem, 'id' | 'zIndex'>) => void;
-  updateItem: (id: string, updates: Partial<MoodBoardItem>) => void;
+  setBoardMode: (mode: 'free' | 'planning') => void;
+  toggleDetailsId: (id: string, forceClose?: boolean) => void;
+  bringDetailsToFront: (id: string) => void;
+  addItem: (item: Omit<MesaItem, 'id' | 'zIndex'>) => void;
+  updateItem: (id: string, updates: Partial<MesaItem>) => void;
   removeItem: (id: string) => void;
   bringToFront: (id: string) => void;
   
+  // Anexar itens a personagens
+  attachItemToCharacter: (itemId: string, characterId: string) => void;
+  detachItemFromCharacter: (itemId: string, x: number, y: number) => void;
+
   // Grupos
-  updateGroup: (id: string, updates: Partial<MoodBoardGroup>) => void;
+  updateGroup: (id: string, updates: Partial<MesaGrupo>) => void;
   removeGroup: (id: string) => void;
   groupSelectedItems: () => string | null;
   ungroupItems: (groupId: string) => void;
@@ -41,93 +56,198 @@ interface MoodBoardState {
   setBackgroundZoom: (zoom: number) => void;
 }
 
-export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
+export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
   items: [],
   groups: [],
   selectedItems: [],
-  boardName: 'Mural Principal',
+  boardId: null,
+  boardName: 'Mesa Principal',
+  boardMode: 'free',
   backgroundImage: null,
   backgroundRotation: 0,
   backgroundZoom: 1,
+  activeDetailsIds: [],
+  modalZIndexes: {},
   isLoading: false,
   error: null,
+  allBoards: [],
 
-  loadBoard: async (rootPath) => {
-    set({ isLoading: true, error: null });
-    const configPath = `${rootPath}/moodboard.json`;
+  loadAllBoards: async (rootPath) => {
+    const { listDirectory, exists, createDirectory } = await import('@/tauri-bridge/fs');
+    const muraisDir = `${rootPath}/murais`;
+    
     try {
+      if (!(await exists(muraisDir))) {
+        await createDirectory(muraisDir);
+      }
+
+      const files = await listDirectory(muraisDir);
+      const boards = [];
+
+      for (const file of files) {
+        if (file.name.endsWith('.json')) {
+          try {
+            const content = await readFile(`${muraisDir}/${file.name}`);
+            const data = JSON.parse(content);
+            boards.push({
+              id: file.name.replace('.json', ''),
+              name: data.boardName || 'Sem título',
+              backgroundImage: data.backgroundImage || null
+            });
+          } catch (e) {
+            console.error(`Erro ao carregar meta de ${file.name}:`, e);
+          }
+        }
+      }
+      set({ allBoards: boards });
+    } catch (err) {
+      console.error('Erro ao listar murais:', err);
+    }
+  },
+
+  loadBoard: async (rootPath, boardId) => {
+    set({ isLoading: true, error: null });
+    const { exists, createDirectory } = await import('@/tauri-bridge/fs');
+    
+    // Garantir que a pasta murais existe
+    const muraisDir = `${rootPath}/murais`;
+    if (!(await exists(muraisDir))) {
+      await createDirectory(muraisDir);
+    }
+
+    const targetId = boardId || get().boardId || 'default';
+    const configPath = `${muraisDir}/${targetId}.json`;
+    const legacyPath = `${rootPath}/mesa.json`; // Legado agora é o antigo mesa.json
+    
+    try {
+      let data;
+      let shouldMigrateLegacy = false;
+
       if (await exists(configPath)) {
         const content = await readFile(configPath);
-        const data = JSON.parse(content);
-        
-        if (Array.isArray(data)) {
-          set({ 
-            items: data, 
-            groups: [], 
-            boardName: 'Mural Principal',
-            backgroundImage: null, 
-            backgroundRotation: 0,
-            backgroundZoom: 1,
-            isLoading: false 
-          });
-        } else {
-          set({ 
-            items: data.items || [], 
-            groups: data.groups || [], 
-            boardName: data.boardName || 'Mural Principal',
-            backgroundImage: data.backgroundImage || null,
-            backgroundRotation: data.backgroundRotation || 0,
-            backgroundZoom: data.backgroundZoom || 1,
-            isLoading: false 
-          });
+        data = JSON.parse(content);
+      } else if (!boardId && await exists(legacyPath)) {
+        // Migração apenas se estiver tentando carregar o padrão e o legado existir
+        const content = await readFile(legacyPath);
+        data = JSON.parse(content);
+        shouldMigrateLegacy = true;
+      }
+
+      if (data) {
+        set({ 
+          boardId: targetId,
+          items: data.items || [], 
+          groups: data.groups || [], 
+          boardName: data.boardName || 'Mesa Principal',
+          boardMode: data.boardMode || 'free',
+          backgroundImage: data.backgroundImage || null,
+          backgroundRotation: data.backgroundRotation || 0,
+          backgroundZoom: data.backgroundZoom || 1,
+          isLoading: false 
+        });
+
+        if (shouldMigrateLegacy) {
+          const { deleteItem } = await import('@/tauri-bridge/fs');
+          await get().saveBoard(rootPath);
+          await deleteItem(legacyPath);
         }
       } else {
-        set({ items: [], groups: [], boardName: 'Mural Principal', backgroundImage: null, backgroundRotation: 0, backgroundZoom: 1, isLoading: false });
+        set({ 
+          boardId: targetId,
+          items: [], 
+          groups: [], 
+          boardName: 'Novo Mural', 
+          boardMode: 'free', 
+          backgroundImage: null, 
+          backgroundRotation: 0, 
+          backgroundZoom: 1, 
+          isLoading: false 
+        });
       }
     } catch (err) {
-      console.error('Erro ao carregar moodboard.json:', err);
-      set({ items: [], groups: [], boardName: 'Mural Principal', backgroundImage: null, backgroundRotation: 0, backgroundZoom: 1, isLoading: false });
+      console.error(`Erro ao carregar mural ${targetId}:`, err);
+      set({ isLoading: false, error: 'Falha ao carregar mural' });
     }
   },
 
   saveBoard: async (rootPath) => {
-    const configPath = `${rootPath}/moodboard.json`;
+    const { boardId } = get();
+    if (!boardId) return;
+
+    const configPath = `${rootPath}/murais/${boardId}.json`;
     const addNotification = useUIStore.getState().addNotification;
 
     try {
-      const { items, groups, boardName, backgroundImage, backgroundRotation, backgroundZoom } = get();
+      const { items, groups, boardName, boardMode, backgroundImage, backgroundRotation, backgroundZoom } = get();
       
-      // Gerar lista única de referências (caminhos de arquivos)
       const referenceSet = new Set<string>();
-      items.forEach(item => {
-        if (item.path) referenceSet.add(item.path);
-      });
+      items.forEach(item => { if (item.path) referenceSet.add(item.path); });
       if (backgroundImage) referenceSet.add(backgroundImage);
       
       const references = Array.from(referenceSet);
 
-      // O writeFile atualiza o arquivo existente por padrão (sobrescreve)
       await writeFile(configPath, JSON.stringify({ 
         items, 
         groups, 
         boardName, 
+        boardMode,
         backgroundImage, 
         backgroundRotation, 
         backgroundZoom,
         references 
       }, null, 2));
 
-      addNotification('Mural salvo com sucesso', 'success');
+      // Atualizar lista local de murais após salvar
+      await get().loadAllBoards(rootPath);
     } catch (err) {
-      console.error('Erro ao salvar moodboard.json:', err);
+      console.error('Erro ao salvar mural:', err);
       addNotification('Erro ao salvar mural', 'error');
+    }
+  },
+
+  createBoard: async (rootPath, name) => {
+    const id = crypto.randomUUID();
+    const muraisDir = `${rootPath}/murais`;
+    const { exists, createDirectory } = await import('@/tauri-bridge/fs');
+    
+    if (!(await exists(muraisDir))) {
+      await createDirectory(muraisDir);
+    }
+
+    const newBoardData = {
+      boardName: name,
+      boardMode: 'free',
+      items: [],
+      groups: [],
+      backgroundImage: null,
+      backgroundRotation: 0,
+      backgroundZoom: 1,
+      references: []
+    };
+
+    await writeFile(`${muraisDir}/${id}.json`, JSON.stringify(newBoardData, null, 2));
+    await get().loadAllBoards(rootPath);
+    return id;
+  },
+
+  deleteBoard: async (rootPath, id) => {
+    const { deleteItem } = await import('@/tauri-bridge/fs');
+    const path = `${rootPath}/murais/${id}.json`;
+    await deleteItem(path);
+    await get().loadAllBoards(rootPath);
+    
+    // Se o mural deletado for o atual, carregar outro ou resetar
+    if (get().boardId === id) {
+      set({ boardId: null, items: [], groups: [], boardName: 'Mesa Principal' });
     }
   },
 
   setBoardName: (name) => set({ boardName: name }),
 
+  setBoardMode: (mode) => set({ boardMode: mode }),
+
   addItem: (itemData) => set((state) => {
-    const newItem: MoodBoardItem = {
+    const newItem: MesaItem = {
       ...itemData,
       id: crypto.randomUUID(),
       zIndex: state.items.length > 0 ? Math.max(...state.items.map(i => i.zIndex)) + 1 : 1
@@ -140,7 +260,8 @@ export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
   })),
 
   removeItem: (id) => set((state) => ({
-    items: state.items.filter(item => item.id !== id),
+    // Deleta o item E todos os itens atrelados a ele (se for personagem)
+    items: state.items.filter(item => item.id !== id && item.ownerId !== id),
     selectedItems: state.selectedItems.filter(sid => sid !== id)
   })),
 
@@ -161,6 +282,27 @@ export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
     // Se for um grupo
     return {
       groups: state.groups.map(group => group.id === id ? { ...group, zIndex: topZ + 1 } : group)
+    };
+  }),
+
+  // Anexar itens a personagens
+  attachItemToCharacter: (itemId, characterId) => set((state) => ({
+    items: state.items.map(item => 
+      item.id === itemId 
+        ? { ...item, ownerId: characterId, groupId: undefined, groupOrder: undefined } 
+        : item
+    ),
+    selectedItems: state.selectedItems.filter(sid => sid !== itemId)
+  })),
+
+  detachItemFromCharacter: (itemId, x, y) => set((state) => {
+    const maxZ = Math.max(0, ...state.items.map(i => i.zIndex), ...state.groups.map(g => g.zIndex));
+    return {
+      items: state.items.map(item => 
+        item.id === itemId 
+          ? { ...item, ownerId: undefined, x, y, zIndex: maxZ + 1 } 
+          : item
+      )
     };
   }),
 
@@ -186,7 +328,7 @@ export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
     const maxZ = Math.max(0, ...items.map(i => i.zIndex), ...groups.map(g => g.zIndex));
 
     const groupId = crypto.randomUUID();
-    const newGroup: MoodBoardGroup = {
+    const newGroup: MesaGrupo = {
       id: groupId,
       x: avgX,
       y: avgY,
@@ -330,4 +472,46 @@ export const useMoodBoardStore = create<MoodBoardState>((set, get) => ({
   setBackgroundRotation: (rotation) => set({ backgroundRotation: rotation }),
 
   setBackgroundZoom: (zoom) => set({ backgroundZoom: zoom }),
+
+  toggleDetailsId: (id, forceClose) => set((state) => {
+    if (forceClose) {
+      const newZIndexes = { ...state.modalZIndexes };
+      delete newZIndexes[id];
+      return { 
+        activeDetailsIds: state.activeDetailsIds.filter(activeId => activeId !== id),
+        modalZIndexes: newZIndexes
+      };
+    }
+    
+    const exists = state.activeDetailsIds.includes(id);
+    if (exists) {
+      const newZIndexes = { ...state.modalZIndexes };
+      delete newZIndexes[id];
+      return { 
+        activeDetailsIds: state.activeDetailsIds.filter(activeId => activeId !== id),
+        modalZIndexes: newZIndexes
+      };
+    }
+
+    const currentMaxZ = Object.values(state.modalZIndexes).length > 0 
+      ? Math.max(...Object.values(state.modalZIndexes)) 
+      : 10000;
+
+    return { 
+      activeDetailsIds: [...state.activeDetailsIds, id],
+      modalZIndexes: { ...state.modalZIndexes, [id]: currentMaxZ + 1 }
+    };
+  }),
+
+  bringDetailsToFront: (id) => set((state) => {
+    const currentMaxZ = Object.values(state.modalZIndexes).length > 0 
+      ? Math.max(...Object.values(state.modalZIndexes)) 
+      : 10000;
+    
+    if (state.modalZIndexes[id] === currentMaxZ) return state;
+
+    return {
+      modalZIndexes: { ...state.modalZIndexes, [id]: currentMaxZ + 1 }
+    };
+  }),
 }));

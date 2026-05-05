@@ -10,9 +10,11 @@ interface MesaTrabalhoState {
   boardId: string | null;
   boardName: string;
   boardMode: 'free' | 'planning';
+  backgroundPattern: 'dots' | 'grid' | 'cork';
   backgroundImage: string | null;
   backgroundRotation: number;
   backgroundZoom: number;
+  connections: Array<{ id: string; from: string; to: string; color?: string }>;
   activeDetailsIds: string[];
   modalZIndexes: Record<string, number>;
   isLoading: boolean;
@@ -26,6 +28,7 @@ interface MesaTrabalhoState {
   deleteBoard: (rootPath: string, id: string) => Promise<void>;
   setBoardName: (name: string) => void;
   setBoardMode: (mode: 'free' | 'planning') => void;
+  setBackgroundPattern: (pattern: 'dots' | 'grid' | 'cork') => void;
   toggleDetailsId: (id: string, forceClose?: boolean) => void;
   bringDetailsToFront: (id: string) => void;
   addItem: (item: Omit<MesaItem, 'id' | 'zIndex'>) => void;
@@ -33,6 +36,10 @@ interface MesaTrabalhoState {
   removeItem: (id: string) => void;
   bringToFront: (id: string) => void;
   
+  // Conexões
+  addConnection: (from: string, to: string) => void;
+  removeConnection: (id: string) => void;
+
   // Anexar itens a personagens
   attachItemToCharacter: (itemId: string, characterId: string) => void;
   detachItemFromCharacter: (itemId: string, x: number, y: number) => void;
@@ -63,9 +70,11 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
   boardId: null,
   boardName: 'Mesa Principal',
   boardMode: 'free',
+  backgroundPattern: 'grid',
   backgroundImage: null,
   backgroundRotation: 0,
   backgroundZoom: 1,
+  connections: [],
   activeDetailsIds: [],
   modalZIndexes: {},
   isLoading: false,
@@ -138,8 +147,10 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
           boardId: targetId,
           items: data.items || [], 
           groups: data.groups || [], 
+          connections: data.connections || [],
           boardName: data.boardName || 'Mesa Principal',
           boardMode: data.boardMode || 'free',
+          backgroundPattern: data.backgroundPattern || 'grid',
           backgroundImage: data.backgroundImage || null,
           backgroundRotation: data.backgroundRotation || 0,
           backgroundZoom: data.backgroundZoom || 1,
@@ -178,7 +189,7 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
     const addNotification = useUIStore.getState().addNotification;
 
     try {
-      const { items, groups, boardName, boardMode, backgroundImage, backgroundRotation, backgroundZoom } = get();
+      const { items, groups, connections, boardName, boardMode, backgroundPattern, backgroundImage, backgroundRotation, backgroundZoom } = get();
       
       const referenceSet = new Set<string>();
       items.forEach(item => { if (item.path) referenceSet.add(item.path); });
@@ -189,8 +200,10 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
       await writeFile(configPath, JSON.stringify({ 
         items, 
         groups, 
+        connections,
         boardName, 
         boardMode,
+        backgroundPattern,
         backgroundImage, 
         backgroundRotation, 
         backgroundZoom,
@@ -217,6 +230,7 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
     const newBoardData = {
       boardName: name,
       boardMode: 'free',
+      backgroundPattern: 'grid',
       items: [],
       groups: [],
       backgroundImage: null,
@@ -245,6 +259,8 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
   setBoardName: (name) => set({ boardName: name }),
 
   setBoardMode: (mode) => set({ boardMode: mode }),
+
+  setBackgroundPattern: (pattern) => set({ backgroundPattern: pattern }),
 
   addItem: (itemData) => set((state) => {
     const newItem: MesaItem = {
@@ -284,6 +300,28 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
       groups: state.groups.map(group => group.id === id ? { ...group, zIndex: topZ + 1 } : group)
     };
   }),
+
+  // Conexões
+  addConnection: (from, to) => set((state) => {
+    // Evitar conexões duplicadas
+    const exists = state.connections.some(c => 
+      (c.from === from && c.to === to) || (c.from === to && c.to === from)
+    );
+    if (exists || from === to) return state;
+
+    const newConnection = {
+      id: crypto.randomUUID(),
+      from,
+      to,
+      color: '#ef4444' // Cor padrão de "fio"
+    };
+
+    return { connections: [...state.connections, newConnection] };
+  }),
+
+  removeConnection: (id) => set((state) => ({
+    connections: state.connections.filter(c => c.id !== id)
+  })),
 
   // Anexar itens a personagens
   attachItemToCharacter: (itemId, characterId) => set((state) => ({

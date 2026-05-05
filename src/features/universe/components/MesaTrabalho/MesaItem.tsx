@@ -8,6 +8,8 @@ import styles from './MesaTrabalho.module.scss';
 
 interface Props {
   item: IMesaItem;
+  onClick?: () => void;
+  isConnectingSource?: boolean;
 }
 
 const DEFAULT_CATEGORIES = ['Personagens', 'Itens', 'Figurantes'];
@@ -21,7 +23,7 @@ const getCategoryColor = (category?: string) => {
   return '#3b82f6';                            // Blue for others
 };
 
-export const MesaItem: React.FC<Props> = ({ item }) => {
+export const MesaItem: React.FC<Props> = ({ item, onClick, isConnectingSource }) => {
   const { rootPath } = useWorkspaceStore();
   const { 
     updateItem, 
@@ -59,6 +61,11 @@ export const MesaItem: React.FC<Props> = ({ item }) => {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    if (onClick) {
+      onClick();
+      return;
+    }
 
     // Seleção com Shift ou Ctrl
     if (e.shiftKey || e.ctrlKey || e.metaKey) {
@@ -169,6 +176,7 @@ export const MesaItem: React.FC<Props> = ({ item }) => {
         ${isPolaroid ? styles['boardItem--polaroid'] : ''}
         ${isSelected ? styles['boardItem--selected'] : ''}
         ${isInGroup ? styles['boardItem--grouped'] : ''}
+        ${isConnectingSource ? styles['boardItem--connecting'] : ''}
       `}
       data-item-id={item.id}
       style={{

@@ -11,6 +11,8 @@ import styles from './MesaTrabalho.module.scss';
 import { Image as ImageIcon, Plus, ImagePlus, Image as Wallpaper, Link, Map, Save, Type, Layers, RotateCw, ZoomOut, Settings2, Layout, LayoutPanelLeft } from 'lucide-react';
 
 import { CharacterDetailsModal } from './CharacterDetailsModal';
+import { MesaLeftToolbar } from './MesaLeftToolbar';
+import { MesaConnectionsLayer } from './MesaConnectionsLayer';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
@@ -22,6 +24,7 @@ export default function MesaTrabalho() {
     selectedItems, 
     boardName,
     boardMode,
+    backgroundPattern,
     backgroundImage,
     backgroundRotation,
     backgroundZoom,
@@ -32,12 +35,14 @@ export default function MesaTrabalho() {
     saveBoard, 
     setBoardName,
     setBoardMode,
+    setBackgroundPattern,
     toggleDetailsId,
     groupSelectedItems,
     clearSelection,
     setBackgroundImage,
     setBackgroundRotation,
-    setBackgroundZoom
+    setBackgroundZoom,
+    addConnection
   } = useMesaTrabalhoStore();
 
   const setActivePanel = useUIStore((state) => state.setActivePanel);
@@ -48,6 +53,10 @@ export default function MesaTrabalho() {
   const [galleryMode, setGalleryMode] = useState<'item' | 'background' | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(boardName);
+
+  // Estado para conexões
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (rootPath && !isReady) {
@@ -67,6 +76,25 @@ export default function MesaTrabalho() {
 
   const handleGroupAction = () => {
     groupSelectedItems();
+  };
+
+  const handleToggleConnectionMode = () => {
+    setIsConnecting(!isConnecting);
+    setConnectionSourceId(null);
+  };
+
+  const handleItemClickForConnection = (itemId: string) => {
+    if (!isConnecting) return;
+
+    if (!connectionSourceId) {
+      setConnectionSourceId(itemId);
+    } else {
+      if (connectionSourceId !== itemId) {
+        addConnection(connectionSourceId, itemId);
+      }
+      setConnectionSourceId(null);
+      setIsConnecting(false);
+    }
   };
 
   const handleRotateBackground = () => {
@@ -194,6 +222,16 @@ export default function MesaTrabalho() {
 
   return (
     <div className={styles.container}>
+      <MesaLeftToolbar
+        backgroundImage={backgroundImage}
+        backgroundPattern={backgroundPattern}
+        onOpenBackgroundGallery={() => setGalleryMode('background')}
+        onRotateBackground={handleRotateBackground}
+        onZoomBackground={handleZoomBackground}
+        onRemoveBackground={() => { setBackgroundImage(null); setBackgroundRotation(0); setBackgroundZoom(1); }}
+        onSetBackgroundPattern={setBackgroundPattern}
+      />
+
       <div className={styles.floatingToolbar}>
         <div className={styles.toolbar}>
           {isEditingName ? (
@@ -224,45 +262,15 @@ export default function MesaTrabalho() {
           <div className={styles.divider}></div>
           <button className={styles.toolbarBtn} title="Adicionar Imagem" onClick={() => setGalleryMode('item')}><ImagePlus size={16} /></button>
           
-          <div className={styles.bgControls}>
-            <button 
-              className={`${styles.toolbarBtn} ${backgroundImage ? styles.active : ''}`} 
-              title="Adicionar Imagem de Fundo" 
-              onClick={() => setGalleryMode('background')}
-            >
-              <Wallpaper size={16} />
-            </button>
-            {backgroundImage && (
-              <>
-                <button 
-                  className={styles.bgActionBtn} 
-                  style={{ bottom: '-4px', right: '-4px' }}
-                  title="Rotacionar Fundo"
-                  onClick={handleRotateBackground}
-                >
-                  <RotateCw size={12} />
-                </button>
-                <button 
-                  className={styles.bgActionBtn} 
-                  style={{ bottom: '-4px', right: '18px' }}
-                  title="Reduzir Zoom do Fundo"
-                  onClick={handleZoomBackground}
-                >
-                  <ZoomOut size={12} />
-                </button>
-                <button 
-                  className={styles.removeBgBtn} 
-                  title="Remover Fundo"
-                  onClick={() => { setBackgroundImage(null); setBackgroundRotation(0); setBackgroundZoom(1); }}
-                >
-                  <Plus size={10} style={{ transform: 'rotate(45deg)' }} />
-                </button>
-              </>
-            )}
-          </div>
-
           {boardMode === 'planning' && (
-            <button className={styles.toolbarBtn} title="Conectar Itens"><Link size={16} /></button>
+            <button 
+              className={`${styles.toolbarBtn} ${isConnecting ? styles.active : ''}`} 
+              title={isConnecting ? "Selecione o segundo item" : "Conectar Itens"} 
+              onClick={handleToggleConnectionMode}
+            >
+              <Link size={16} />
+              {isConnecting && <span className={styles.connectingPulse}></span>}
+            </button>
           )}
           
           {selectedItems.length > 1 && (
@@ -325,7 +333,11 @@ export default function MesaTrabalho() {
 
       <div
         ref={containerRef}
-        className={`${styles.canvas} ${boardMode === 'planning' ? styles['canvas--planning'] : ''}`}
+        className={`
+          ${styles.canvas} 
+          ${backgroundPattern === 'dots' ? styles['canvas--dots'] : backgroundPattern === 'cork' ? styles['canvas--cork'] : styles['canvas--grid']}
+          ${boardMode === 'planning' ? styles['canvas--planning'] : ''}
+        `}
         onDragOver={(e) => e.preventDefault()}
         onMouseDown={(e) => {
           if (e.target === e.currentTarget) clearSelection();
@@ -338,6 +350,8 @@ export default function MesaTrabalho() {
           rotate: backgroundImage ? `${backgroundRotation}deg` : undefined
         } as React.CSSProperties}
       >
+        <MesaConnectionsLayer />
+
         {items.length === 0 && !isLoading && !backgroundImage && (
           <div className={styles.canvasPlaceholder}>
             <div className={styles.placeholderIcon}>
@@ -355,6 +369,8 @@ export default function MesaTrabalho() {
             key={group.id}
             group={group}
             items={items.filter(i => i.groupId === group.id)}
+            onItemClick={handleItemClickForConnection}
+            connectionSourceId={connectionSourceId}
           />
         ))}
 
@@ -363,6 +379,8 @@ export default function MesaTrabalho() {
           <MesaItem
             key={item.id}
             item={item}
+            onClick={() => handleItemClickForConnection(item.id)}
+            isConnectingSource={connectionSourceId === item.id}
           />
         ))}
 

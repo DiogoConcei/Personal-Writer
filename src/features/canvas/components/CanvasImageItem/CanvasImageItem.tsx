@@ -9,15 +9,27 @@ import styles from './CanvasImageItem.module.scss';
 export function CanvasImageItem({ 
   entity, 
   isSelected, 
+  isScissorsActive,
   onSelect, 
   onUpdate,
   onRemove,
+  onFocus,
   rootPath 
 }: CanvasImageItemProps) {
   const data = entity.data as ImageData;
+
+  const handleEntityInteraction = () => {
+    if (isScissorsActive) {
+      onFocus();
+    } else {
+      onSelect();
+    }
+  };
+
   const { handleMouseDown, handleResizeStart } = useCanvasEntity({
     entity,
-    onSelect,
+    minWidth: 100,
+    onSelect: handleEntityInteraction,
     onUpdate,
     onRemove
   });

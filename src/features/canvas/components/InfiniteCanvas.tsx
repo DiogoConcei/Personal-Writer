@@ -34,7 +34,8 @@ export default function InfiniteCanvas() {
   const { rootPath } = useWorkspaceStore();
   const setActivePanel = useUIStore((state) => state.setActivePanel);
 
-  const [isSepararActive, setIsSepararActive] = useState(false);
+  const [isSplitModeActive, setIsSplitModeActive] = useState(false);
+  const [isScissorsActive, setIsScissorsActive] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   // 1. Orquestração de UI e Modais
@@ -91,14 +92,25 @@ export default function InfiniteCanvas() {
   }, [selectedItemId, entities, setSideMenuMode]);
 
   // Handlers
-  const handleToggleSeparar = (active: boolean) => {
-    setIsSepararActive(active);
-    if (active) setSelectedItemId(null);
+  const handleToggleSplitMode = (active: boolean) => {
+    setIsSplitModeActive(active);
+    if (active) {
+      setSelectedItemId(null);
+      setIsScissorsActive(false);
+    }
+  };
+
+  const handleToggleScissors = (active: boolean) => {
+    setIsScissorsActive(active);
+    if (active) {
+      setSelectedItemId(null);
+      setIsSplitModeActive(false);
+    }
   };
 
   const handleConfirmSplit = (data: SplitActionData) => {
     performSplit(splittingItem, data);
-    setIsSepararActive(false);
+    setIsSplitModeActive(false);
   };
 
   const handleSelectItem = (id: string) => {
@@ -123,16 +135,22 @@ export default function InfiniteCanvas() {
   const renderEntity = (entity: any) => {
     const isSelected = selectedItemId === entity.id;
 
+    const commonProps = {
+      entity,
+      isSelected,
+      isSepararActive: isSplitModeActive,
+      isScissorsActive,
+      onSelect: () => handleSelectItem(entity.id),
+      onUpdate: handleUpdateEntity,
+      onRemove: handleRemoveEntity,
+      onFocus: () => open("focus", entity),
+    };
+
     switch (entity.type) {
       case "note":
         return (
           <CanvasNoteItem
-            entity={entity}
-            isSelected={isSelected}
-            isSepararActive={isSepararActive}
-            onSelect={() => handleSelectItem(entity.id)}
-            onUpdate={handleUpdateEntity}
-            onRemove={handleRemoveEntity}
+            {...commonProps}
             onSplit={(viewingPage) => {
               const data = entity.data as NoteData;
               open("split", {
@@ -148,24 +166,12 @@ export default function InfiniteCanvas() {
         );
       case "image":
         return (
-          <CanvasImageItem
-            entity={entity}
-            isSelected={isSelected}
-            onSelect={() => handleSelectItem(entity.id)}
-            onUpdate={handleUpdateEntity}
-            onRemove={handleRemoveEntity}
-            rootPath={rootPath}
-          />
+          <CanvasImageItem {...commonProps} rootPath={rootPath} />
         );
       case "pdf":
         return (
           <CanvasPdfItem
-            entity={entity}
-            isSelected={isSelected}
-            isSepararActive={isSepararActive}
-            onSelect={() => handleSelectItem(entity.id)}
-            onUpdate={handleUpdateEntity}
-            onRemove={handleRemoveEntity}
+            {...commonProps}
             onSplit={() => {
               const data = entity.data as PdfData;
               open("split", {
@@ -227,7 +233,11 @@ export default function InfiniteCanvas() {
         <button className={styles.toolButton} title="Borracha">
           <Eraser size={18} />
         </button>
-        <button className={styles.toolButton} title="Tesoura">
+        <button 
+          className={`${styles.toolButton} ${isScissorsActive ? styles.active : ''}`} 
+          onClick={() => handleToggleScissors(!isScissorsActive)}
+          title="Tesoura (Focar Entidade)"
+        >
           <Scissors size={18} />
         </button>
         <div className={styles.separator} />
@@ -242,8 +252,8 @@ export default function InfiniteCanvas() {
 
       <CanvasControls value={modalControl}>
         <CanvasControls.Sidebar
-          isSepararActive={isSepararActive}
-          setIsSepararActive={handleToggleSeparar}
+          isSepararActive={isSplitModeActive}
+          setIsSepararActive={handleToggleSplitMode}
           selectedNoteEntity={selectedNoteEntity}
           handleFontSizeChange={handleFontSizeChange}
           updateSelectedNoteStyle={updateSelectedNoteStyle}
@@ -254,6 +264,7 @@ export default function InfiniteCanvas() {
           onImageSelect={addImage}
           onPdfSelect={addPdf}
           onConfirmSplit={handleConfirmSplit}
+          rootPath={rootPath}
         />
       </CanvasControls>
 

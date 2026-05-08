@@ -12,10 +12,12 @@ export function CanvasPdfItem({
   entity, 
   isSelected, 
   isSepararActive,
+  isScissorsActive,
   onSelect, 
   onUpdate,
   onRemove,
   onSplit,
+  onFocus,
   rootPath 
 }: CanvasPdfItemProps) {
   const data = entity.data as PdfData;
@@ -29,12 +31,22 @@ export function CanvasPdfItem({
   useEffect(() => {
     if (currentPage < startPage) setCurrentPage(startPage);
     if (currentPage > endPage) setCurrentPage(endPage);
-  }, [startPage, endPage]);
+  }, [startPage, endPage, currentPage]);
+
+  const handleEntityInteraction = () => {
+    if (isScissorsActive) {
+      onFocus();
+    } else if (isSepararActive) {
+      onSplit();
+    } else {
+      onSelect();
+    }
+  };
 
   const { handleMouseDown, handleResizeStart } = useCanvasEntity({
     entity,
     minWidth: 150,
-    onSelect: isSepararActive ? () => onSplit(currentPage) : onSelect,
+    onSelect: handleEntityInteraction,
     onUpdate,
     onRemove
   });

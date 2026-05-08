@@ -67,8 +67,8 @@ export function calculateSplitEntities(
     newEntities.push({
       id: `${original.type}-page-${Math.random().toString(36).substring(2, 9)}`,
       type: original.type,
-      x: original.x + offsetCount * 40,
-      y: original.y + offsetCount * 40,
+      x: original.x + (original.width || 250) + 40,
+      y: original.y + (offsetCount - 1) * 40,
       width: original.width,
       height: original.height,
       rotation: 0,
@@ -87,8 +87,8 @@ export function calculateSplitEntities(
     newEntities.push({
       ...original,
       id: `${original.type}-right-${Math.random().toString(36).substring(2, 9)}`,
-      x: original.x + offsetCount * 40,
-      y: original.y + offsetCount * 40,
+      x: original.x,
+      y: original.y + (original.height || 400) + 40,
       data: {
         ...originalData,
         startPage: maxExtracted + 1,

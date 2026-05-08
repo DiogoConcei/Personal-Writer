@@ -1,6 +1,6 @@
 import { AnyCanvasEntity } from './canvas';
 
-export type CanvasModalType = 'image' | 'pdf' | 'note' | 'split';
+export type CanvasModalType = 'image' | 'pdf' | 'note' | 'split' | 'focus';
 
 export interface SplittingItem {
   id: string;
@@ -12,6 +12,7 @@ export interface SplittingItem {
 export interface CanvasModalsState {
   openModal: CanvasModalType | null;
   splittingItem: SplittingItem | null;
+  focusItem: AnyCanvasEntity | null;
   sideMenuMode: 'main' | 'notes';
 }
 
@@ -49,10 +50,12 @@ export interface CanvasPdfItemProps {
   entity: AnyCanvasEntity;
   isSelected: boolean;
   isSepararActive: boolean;
+  isScissorsActive: boolean;
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
   onSplit: (page?: number) => void;
+  onFocus: () => void;
   rootPath: string | null;
 }
 
@@ -60,18 +63,22 @@ export interface CanvasNoteItemProps {
   entity: AnyCanvasEntity;
   isSelected: boolean;
   isSepararActive: boolean;
+  isScissorsActive: boolean;
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
   onSplit: (page?: number) => void;
+  onFocus: () => void;
 }
 
 export interface CanvasImageItemProps {
   entity: AnyCanvasEntity;
   isSelected: boolean;
+  isScissorsActive: boolean;
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
+  onFocus: () => void;
   rootPath: string | null;
 }
 
@@ -91,6 +98,7 @@ export interface CanvasSidebarProps {
 export interface CanvasControlsContextValue {
   openModal: CanvasModalType | null;
   splittingItem: SplittingItem | null;
+  focusItem: AnyCanvasEntity | null;
   sideMenuMode: 'main' | 'notes';
   open: (type: CanvasModalType, data?: any) => void;
   close: () => void;

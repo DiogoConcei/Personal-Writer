@@ -5,6 +5,7 @@ export function useCanvasModals() {
   const [state, setState] = useState<CanvasModalsState>({
     openModal: null,
     splittingItem: null,
+    focusItem: null,
     sideMenuMode: 'main',
   });
 
@@ -13,6 +14,7 @@ export function useCanvasModals() {
       ...prev,
       openModal: type,
       splittingItem: type === 'split' ? data : prev.splittingItem,
+      focusItem: type === 'focus' ? data : prev.focusItem,
     }));
   }, []);
 
@@ -21,6 +23,7 @@ export function useCanvasModals() {
       ...prev,
       openModal: null,
       splittingItem: null,
+      focusItem: null,
     }));
   }, []);
 

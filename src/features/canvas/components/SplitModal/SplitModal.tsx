@@ -16,8 +16,6 @@ export const SplitModal: React.FC<SplitModalProps & { initialPage?: number }> = 
   const [endPage, setEndPage] = useState(Math.min(initialPage + 1, totalItems));
   const [singlePage, setSinglePage] = useState(initialPage);
 
-  if (!isOpen) return null;
-
   useEffect(() => {
     if (isOpen) {
       setSinglePage(initialPage);
@@ -25,6 +23,8 @@ export const SplitModal: React.FC<SplitModalProps & { initialPage?: number }> = 
       setEndPage(Math.min(initialPage + 1, totalItems));
     }
   }, [isOpen, initialPage, totalItems]);
+
+  if (!isOpen) return null;
 
   const handleManualInput = (val: string, setter: (n: number) => void, max: number) => {
     const num = parseInt(val.replace(/\D/g, ''), 10);

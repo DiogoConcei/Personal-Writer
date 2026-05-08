@@ -19,35 +19,47 @@ export function CanvasNoteItem({
   entity, 
   isSelected, 
   isSepararActive,
+  isScissorsActive,
   onSelect, 
   onUpdate,
   onRemove,
-  onSplit
+  onSplit,
+  onFocus
 }: CanvasNoteItemProps) {
   const data = entity.data as NoteData;
   const [html, setHtml] = useState('');
+  const [currentPage, setCurrentPage] = useState(data.startPage || 1);
+  const [columnWidth, setColumnWidth] = useState<number>(0);
   const contentRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const startPage = data.startPage || 1;
   const endPage = data.endPage || data.totalPages || 1;
+  const paddingValue = 24;
 
-  // Estado interno para folhear a nota dentro do bloco
-  const [currentPage, setCurrentPage] = useState(startPage);
+  const handleEntityInteraction = () => {
+    if (isScissorsActive) {
+      onFocus();
+    } else if (isSepararActive) {
+      onSplit(currentPage);
+    } else {
+      onSelect();
+    }
+  };
+
+  const { handleMouseDown, handleResizeStart } = useCanvasEntity({
+    entity,
+    minWidth: 200,
+    onSelect: handleEntityInteraction,
+    onUpdate,
+    onRemove
+  });
 
   // Sincroniza a página atual se os limites do bloco mudarem
   useEffect(() => {
     if (currentPage < startPage) setCurrentPage(startPage);
     if (currentPage > endPage) setCurrentPage(endPage);
-  }, [startPage, endPage]);
-
-  const { handleMouseDown, handleResizeStart } = useCanvasEntity({
-    entity,
-    minWidth: 200,
-    onSelect: isSepararActive ? () => onSplit(currentPage) : onSelect,
-    onUpdate,
-    onRemove
-  });
+  }, [startPage, endPage, currentPage]);
 
   useEffect(() => {
     readFile(data.noteId).then(text => {
@@ -58,8 +70,6 @@ export function CanvasNoteItem({
       console.error(err);
     });
   }, [data.noteId]);
-  const [columnWidth, setColumnWidth] = useState<number>(0);
-  const paddingValue = 24;
 
   // Observer para paginação dinâmica baseada em CSS Columns
   useEffect(() => {

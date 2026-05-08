@@ -8,9 +8,20 @@ interface Props {
   items: IMesaItem[];
   onItemClick?: (id: string) => void;
   connectionSourceId?: string | null;
+  isGroupingMode?: boolean;
+  onConfirmGroup?: () => void;
+  onCancelGroup?: () => void;
 }
 
-export const MesaGrupoContainer: React.FC<Props> = ({ group, items, onItemClick, connectionSourceId }) => {
+export const MesaGrupoContainer: React.FC<Props> = ({ 
+  group, 
+  items, 
+  onItemClick, 
+  connectionSourceId,
+  isGroupingMode,
+  onConfirmGroup,
+  onCancelGroup
+}) => {
   const sortedItems = [...items].sort((a, b) => (a.groupOrder || 0) - (b.groupOrder || 0));
 
   return (
@@ -29,6 +40,9 @@ export const MesaGrupoContainer: React.FC<Props> = ({ group, items, onItemClick,
               item={item} 
               onClick={onItemClick ? () => onItemClick(item.id) : undefined}
               isConnectingSource={connectionSourceId === item.id}
+              isGroupingMode={isGroupingMode}
+              onConfirmGroup={onConfirmGroup}
+              onCancelGroup={onCancelGroup}
             />
           </div>
         ))}

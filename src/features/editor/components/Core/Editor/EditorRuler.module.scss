@@ -1,0 +1,66 @@
+@use '@/shared/styles/variables' as *;
+@use '@/shared/styles/mixins' as *;
+
+.rulerContainer {
+  width: 100%;
+  height: 24px;
+  background-color: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  padding: 0;
+}
+
+.ruler {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+  background-size: 20px 100%; // Cada 20px um traço
+}
+
+.marginHandle {
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 24px;
+  background-color: var(--color-accent);
+  cursor: ew-resize;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color var(--transition-fast);
+  z-index: 11;
+
+  &:hover {
+    background-color: var(--color-accent-hover);
+  }
+
+  &::after {
+    content: '';
+    width: 2px;
+    height: 12px;
+    background-color: white;
+    border-radius: 1px;
+  }
+}
+
+.leftHandle {
+  border-radius: 0 4px 4px 0;
+  transform: translateX(-100%);
+}
+
+.rightHandle {
+  border-radius: 4px 0 0 4px;
+}
+
+.rulerActiveArea {
+  position: absolute;
+  height: 100%;
+  background-color: var(--color-bg-primary);
+  opacity: 0.5;
+}

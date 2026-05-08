@@ -16,6 +16,7 @@ interface UIState {
     showDocuments: boolean;
     showHistory: boolean;
     showTOC: boolean;
+    showRuler: boolean;
   };
 
   notifications: ToastNotification[];
@@ -68,6 +69,7 @@ export const useUIStore = create<UIState>((set) => ({
     showDocuments: false,
     showHistory: false,
     showTOC: false,
+    showRuler: true,
   },
   notifications: [],
   dragInfo: INITIAL_DRAG,

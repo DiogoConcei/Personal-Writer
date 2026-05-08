@@ -37,6 +37,13 @@ export interface FieldConfig {
 /**
  * Metadados específicos do Editor (YAML Frontmatter).
  */
+export interface EditorMargins {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 export interface EditorMetadata {
   type?: string;
   icon?: string;
@@ -46,6 +53,7 @@ export interface EditorMetadata {
   linked_characters?: string[];
   wordGoal?: number;
   sessionGoal?: number;
+  margins?: EditorMargins;
   config?: Record<string, FieldConfig>;
   fields?: Record<string, any>;
 }

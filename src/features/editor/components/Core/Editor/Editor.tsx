@@ -21,6 +21,7 @@ import { EditorModals } from "../EditorModals/EditorModals";
 import EditorBubbleMenu from "../EditorBubbleMenu/EditorBubbleMenu";
 import { DictionaryContextMenu } from "../DictionaryContextMenu/DictionaryContextMenu";
 import { TableOfContents } from "../TableOfContents/TableOfContents";
+import { EditorRuler } from "./EditorRuler";
 
 // Utils e Tipos
 import { useUIStore } from "@/store/uiStore";
@@ -30,7 +31,7 @@ import {
   FileText,
   List,
   History,
-  LayoutTemplate,
+  Ruler,
 } from "lucide-react";
 
 import styles from "./Editor.module.scss";
@@ -119,25 +120,20 @@ export default function Editor() {
   return (
     <div
       className={`${styles.container} ${styles[`container--${typography}`]}`}
+      style={{
+        '--editor-margin-left': `${metadata.margins?.left ?? 80}px`,
+        '--editor-margin-right': `${metadata.margins?.right ?? 80}px`,
+        '--editor-margin-top': `${metadata.margins?.top ?? 40}px`,
+        '--editor-margin-bottom': `${metadata.margins?.bottom ?? 40}px`,
+      } as React.CSSProperties}
     >
       <EditorToolbar>
-        <EditorToolbar.Dropdown
-          icon={LayoutTemplate}
-          label="Modelo"
-          isOpen={editorModals.showTemplates}
-          onToggle={(val) => setEditorModal("showTemplates", val)}
-        >
-          {DEFAULT_TEMPLATES.map((t) => (
-            <EditorToolbar.DropdownItem
-              key={t.id}
-              label={t.name}
-              onClick={() => {
-                setTemplateToApply(t.content);
-                setEditorModal("showTemplates", false);
-              }}
-            />
-          ))}
-        </EditorToolbar.Dropdown>
+        <EditorToolbar.Action
+          icon={Ruler}
+          label="Régua"
+          onClick={() => setEditorModal("showRuler", !editorModals.showRuler)}
+          active={editorModals.showRuler}
+        />
 
         <EditorToolbar.Action
           icon={FileText}
@@ -165,6 +161,8 @@ export default function Editor() {
 
       <div onContextMenu={handleContextMenu} onClick={closeContextMenu}>
         <MetadataHeader />
+        
+        {editorModals.showRuler && <EditorRuler />}
 
         {editorModals.showTOC && (
           <TableOfContents

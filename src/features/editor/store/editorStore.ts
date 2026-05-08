@@ -1,9 +1,16 @@
 import { create } from 'zustand';
 import { readFile, writeFile, createSnapshot } from '@/tauri-bridge';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
-import { EditorMetadata, SaveStatus, Typography } from '@/shared/types';
+import { EditorMetadata, SaveStatus, Typography, EditorMargins } from '@/shared/types';
 import { parseMarkdownMetadata, stringifyYAML } from './metadataParser';
 import { countWords } from '@/shared/utils/string';
+
+export const DEFAULT_MARGINS: EditorMargins = {
+  left: 80,
+  right: 80,
+  top: 40,
+  bottom: 40
+};
 
 interface EditorState {
   metadata: EditorMetadata;
@@ -20,6 +27,7 @@ interface EditorState {
   loadContent: (path: string) => Promise<string>;
   setMarkdownContent: (content: string) => void;
   setMetadata: (metadata: EditorMetadata) => void;
+  setMargins: (margins: EditorMargins) => void;
   save: (path: string, workspaceRoot?: string) => Promise<boolean>;
   setTypography: (typography: Typography) => void;
   setWordCount: (count: number) => void;
@@ -48,6 +56,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     try {
       const fullContent = await readFile(path);
       const { metadata, markdown } = parseMarkdownMetadata(fullContent);
+
+      // Garantir que as margens existem
+      if (!metadata.margins) {
+        metadata.margins = { ...DEFAULT_MARGINS };
+      }
 
       const wordGoal = metadata.wordGoal ? Number(metadata.wordGoal) : 0;
       const sessionGoal = metadata.sessionGoal ? Number(metadata.sessionGoal) : 0;
@@ -79,6 +92,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setMetadata: (metadata: EditorMetadata) => {
     set({ metadata });
+  },
+
+  setMargins: (margins: EditorMargins) => {
+    const { metadata } = get();
+    set({ metadata: { ...metadata, margins } });
   },
 
   save: async (path: string, workspaceRoot?: string) => {

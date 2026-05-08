@@ -12,6 +12,7 @@ import { CustomImage } from "../extensions/Image/Image";
 import { CustomCodeBlock } from "../extensions/CodeBlock/CodeBlock";
 import { PdfLink } from "../extensions/PdfLink/PdfLink";
 import { FontSize } from "../extensions/FontSize";
+import { Indent } from "../extensions/Indent";
 import { Spelling } from "../extensions/Spelling";
 import { SlashCommand } from "@/features/SlashMenu/extensions/SlashCommand";
 import { renderSlashMenuPopup } from "@/features/SlashMenu/utils/renderPopup";
@@ -22,18 +23,6 @@ import { findFileInTree } from "@/shared/utils/files";
 import { getRelativeSubfolder } from "@/shared/utils/path";
 import { saveImageFromBytes } from "@/tauri-bridge";
 import typographyStyles from "../components/Core/Editor/EditorTypography.module.scss";
-
-/**
- * Extensão customizada para permitir indentação com a tecla Tab
- */
-const IndentExtension = Extension.create({
-  name: "indentExtension",
-  addKeyboardShortcuts() {
-    return {
-      Tab: () => this.editor.commands.insertContent("\t"),
-    };
-  },
-});
 
 interface UseEditorSetupOptions {
   onUpdate: (props: { editor: any }) => void;
@@ -50,7 +39,7 @@ export function useEditorSetup({ onUpdate }: UseEditorSetupOptions) {
     {
       extensions: [
         StarterKit.configure({ codeBlock: false }),
-        IndentExtension,
+        Indent,
         CustomCodeBlock,
         Markdown.configure({
           html: true,

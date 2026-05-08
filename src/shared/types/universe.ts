@@ -37,7 +37,10 @@ export interface EntityFilters {
  */
 export interface MesaItem {
   id: string;
-  path: string;
+  type?: 'image' | 'text';
+  path?: string; // Para imagens
+  text?: string; // Para blocos de texto
+  extraPaths?: string[]; // Novos caminhos para galeria interna do item
   x: number;
   y: number;
   scale: number;
@@ -48,6 +51,19 @@ export interface MesaItem {
   groupOrder?: number;
   ownerId?: string;
   customName?: string;
+  fontSize?: number;
+  color?: string;
+}
+
+/**
+ * Desenho livre (lápis) na Mesa de Trabalho.
+ */
+export interface MesaDrawing {
+  id: string;
+  points: Array<{ x: number; y: number }>;
+  color: string;
+  width: number;
+  opacity?: number;
 }
 
 /**

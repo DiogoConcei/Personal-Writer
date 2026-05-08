@@ -8,9 +8,10 @@
   line-height: var(--line-height-body);
   font-size: var(--font-size-lg);
   color: var(--color-text-primary);
-  padding-bottom: 20vh;
-  padding-left: 5rem;
-  padding-right: 5rem;
+  padding-top: var(--editor-margin-top, 40px);
+  padding-bottom: calc(20vh + var(--editor-margin-bottom, 40px));
+  padding-left: var(--editor-margin-left, 5rem);
+  padding-right: var(--editor-margin-right, 5rem);
   width: 100%;
   margin: 0;
 

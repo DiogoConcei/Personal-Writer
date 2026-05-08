@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/uiStore';
 interface MesaTrabalhoState {
   items: MesaItem[];
   groups: MesaGrupo[];
+  drawings: MesaDrawing[];
   selectedItems: string[];
   boardId: string | null;
   boardName: string;
@@ -36,6 +37,12 @@ interface MesaTrabalhoState {
   removeItem: (id: string) => void;
   bringToFront: (id: string) => void;
   
+  // Desenhos
+  addDrawing: (drawing: MesaDrawing) => void;
+  updateDrawing: (id: string, updates: Partial<MesaDrawing>) => void;
+  removeDrawing: (id: string) => void;
+  clearDrawings: () => void;
+
   // Conexões
   addConnection: (from: string, to: string) => void;
   removeConnection: (id: string) => void;
@@ -66,6 +73,7 @@ interface MesaTrabalhoState {
 export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
   items: [],
   groups: [],
+  drawings: [],
   selectedItems: [],
   boardId: null,
   boardName: 'Mesa Principal',
@@ -147,6 +155,7 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
           boardId: targetId,
           items: data.items || [], 
           groups: data.groups || [], 
+          drawings: data.drawings || [],
           connections: data.connections || [],
           boardName: data.boardName || 'Mesa Principal',
           boardMode: data.boardMode || 'free',
@@ -167,6 +176,7 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
           boardId: targetId,
           items: [], 
           groups: [], 
+          drawings: [],
           boardName: 'Novo Mural', 
           boardMode: 'free', 
           backgroundImage: null, 
@@ -189,7 +199,7 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
     const addNotification = useUIStore.getState().addNotification;
 
     try {
-      const { items, groups, connections, boardName, boardMode, backgroundPattern, backgroundImage, backgroundRotation, backgroundZoom } = get();
+      const { items, groups, drawings, connections, boardName, boardMode, backgroundPattern, backgroundImage, backgroundRotation, backgroundZoom } = get();
       
       const referenceSet = new Set<string>();
       items.forEach(item => { if (item.path) referenceSet.add(item.path); });
@@ -200,6 +210,7 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
       await writeFile(configPath, JSON.stringify({ 
         items, 
         groups, 
+        drawings,
         connections,
         boardName, 
         boardMode,
@@ -209,6 +220,8 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
         backgroundZoom,
         references 
       }, null, 2));
+
+      addNotification('Mesa salva com sucesso', 'success');
 
       // Atualizar lista local de murais após salvar
       await get().loadAllBoards(rootPath);
@@ -233,6 +246,7 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
       backgroundPattern: 'grid',
       items: [],
       groups: [],
+      drawings: [],
       backgroundImage: null,
       backgroundRotation: 0,
       backgroundZoom: 1,
@@ -301,6 +315,21 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
     };
   }),
 
+  // Desenhos
+  addDrawing: (drawing) => set((state) => ({
+    drawings: [...state.drawings, drawing]
+  })),
+
+  updateDrawing: (id, updates) => set((state) => ({
+    drawings: state.drawings.map(d => d.id === id ? { ...d, ...updates } : d)
+  })),
+
+  removeDrawing: (id) => set((state) => ({
+    drawings: state.drawings.filter(d => d.id !== id)
+  })),
+
+  clearDrawings: () => set({ drawings: [] }),
+
   // Conexões
   addConnection: (from, to) => set((state) => {
     // Evitar conexões duplicadas
@@ -355,12 +384,38 @@ export const useMesaTrabalhoStore = create<MesaTrabalhoState>((set, get) => ({
   })),
 
   groupSelectedItems: () => {
-    const { selectedItems, items, groups } = get();
+    const { selectedItems, items, groups, boardMode } = get();
     if (selectedItems.length < 2) return null;
 
     const itemsToGroup = items.filter(i => selectedItems.includes(i.id));
     
-    // Calcular posição média
+    // MODO PLANEJAMENTO: Fundir em uma única entidade (Galeria)
+    if (boardMode === 'planning') {
+      const [primaryItem, ...otherItems] = itemsToGroup;
+      
+      // Coletar todos os caminhos de imagem dos outros itens
+      const newExtraPaths = [...(primaryItem.extraPaths || [])];
+      otherItems.forEach(item => {
+        newExtraPaths.push(item.path);
+        if (item.extraPaths) {
+          newExtraPaths.push(...item.extraPaths);
+        }
+      });
+
+      // Remover duplicatas
+      const uniqueExtraPaths = Array.from(new Set(newExtraPaths));
+
+      set(state => ({
+        items: state.items
+          .filter(i => !selectedItems.includes(i.id) || i.id === primaryItem.id)
+          .map(i => i.id === primaryItem.id ? { ...i, extraPaths: uniqueExtraPaths } : i),
+        selectedItems: []
+      }));
+
+      return primaryItem.id;
+    }
+
+    // MODO LIVRE: Comportamento padrão de layout em linha
     const avgX = itemsToGroup.reduce((acc, i) => acc + i.x, 0) / itemsToGroup.length;
     const avgY = itemsToGroup.reduce((acc, i) => acc + i.y, 0) / itemsToGroup.length;
     const maxZ = Math.max(0, ...items.map(i => i.zIndex), ...groups.map(g => g.zIndex));

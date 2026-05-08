@@ -8,11 +8,13 @@ import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDra
 import { copyFileToWorkspace, resolveAssetPath } from '@/tauri-bridge/fs';
 import ImageGallery from '@/features/SlashMenu/components/ImageGallery/ImageGallery';
 import styles from './MesaTrabalho.module.scss';
-import { Image as ImageIcon, Plus, ImagePlus, Image as Wallpaper, Link, Map, Save, Type, Layers, RotateCw, ZoomOut, Settings2, Layout, LayoutPanelLeft } from 'lucide-react';
+import { Image as ImageIcon, Plus, ImagePlus, Link, Map, Save, Type, Layers, Settings2, Layout, LayoutPanelLeft, Check, X, Pencil, Eraser, MousePointer2 } from 'lucide-react';
 
 import { CharacterDetailsModal } from './CharacterDetailsModal';
 import { MesaLeftToolbar } from './MesaLeftToolbar';
 import { MesaConnectionsLayer } from './MesaConnectionsLayer';
+import { MesaDrawingLayer } from './MesaDrawingLayer';
+import { useMesaDrawing } from '@/shared/hooks/useMesaDrawing';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
@@ -31,6 +33,7 @@ export default function MesaTrabalho() {
     activeDetailsIds,
     isLoading, 
     addItem, 
+    updateItem,
     loadBoard, 
     saveBoard, 
     setBoardName,
@@ -42,7 +45,8 @@ export default function MesaTrabalho() {
     setBackgroundImage,
     setBackgroundRotation,
     setBackgroundZoom,
-    addConnection
+    addConnection,
+    toggleSelection
   } = useMesaTrabalhoStore();
 
   const setActivePanel = useUIStore((state) => state.setActivePanel);
@@ -50,13 +54,36 @@ export default function MesaTrabalho() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [galleryMode, setGalleryMode] = useState<'item' | 'background' | null>(null);
+  const [galleryMode, setGalleryMode] = useState<'item' | 'background' | { type: 'attach', itemId: string } | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(boardName);
 
-  // Estado para conexões
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
+  const [isPencilActive, setIsPencilActive] = useState(false);
+  const [isEraserActive, setIsEraserActive] = useState(false);
+  const [isTextToolActive, setIsTextToolActive] = useState(false);
+  const [isGroupingMode, setIsGroupingMode] = useState(false);
+
+  // Hook de Desenho
+  const { startDrawing, draw, stopDrawing, isDrawing } = useMesaDrawing({
+    containerRef,
+    isEnabled: isPencilActive,
+    color: '#ef4444',
+    width: 3
+  });
+
+  // Registrar eventos globais de desenho
+  useEffect(() => {
+    if (isPencilActive) {
+      window.addEventListener('mousemove', draw);
+      window.addEventListener('mouseup', stopDrawing);
+      return () => {
+        window.removeEventListener('mousemove', draw);
+        window.removeEventListener('mouseup', stopDrawing);
+      };
+    }
+  }, [isPencilActive, draw, stopDrawing]);
 
   useEffect(() => {
     if (rootPath && !isReady) {
@@ -76,6 +103,21 @@ export default function MesaTrabalho() {
 
   const handleGroupAction = () => {
     groupSelectedItems();
+    setIsGroupingMode(false);
+  };
+
+  const handleToggleGroupingMode = () => {
+    if (isGroupingMode) {
+      setIsGroupingMode(false);
+      clearSelection();
+    } else {
+      setIsGroupingMode(true);
+      clearSelection();
+    }
+  };
+
+  const handleItemClickForGrouping = (itemId: string) => {
+    toggleSelection(itemId, true);
   };
 
   const handleToggleConnectionMode = () => {
@@ -154,10 +196,24 @@ export default function MesaTrabalho() {
             const dropX = e.clientX - rect.left;
             const dropY = e.clientY - rect.top;
 
+            // Verificar se caiu sobre um item existente
+            const elements = document.elementsFromPoint(e.clientX, e.clientY);
+            const targetElement = elements.find(el => el.classList.contains(styles.boardItem));
+            
             const relativePath = sourcePath
               .replace(rootPath, '')
               .replace(/^[\\/]/, './')
               .replace(/\\/g, '/');
+
+            if (targetElement) {
+              const targetId = targetElement.getAttribute('data-item-id');
+              const targetItem = items.find(i => i.id === targetId);
+              if (targetItem) {
+                const extraPaths = [...(targetItem.extraPaths || []), relativePath];
+                updateItem(targetItem.id, { extraPaths });
+                return;
+              }
+            }
 
             addItem({
               path: relativePath,
@@ -173,7 +229,7 @@ export default function MesaTrabalho() {
 
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [rootPath, addItem]);
+  }, [rootPath, addItem, items, updateItem]);
 
   // Efeito para Drag & Drop Externo
   useNativeDragDrop({
@@ -199,6 +255,20 @@ export default function MesaTrabalho() {
               .replace(/\\/g, '/');
           } else {
             relativePath = await copyFileToWorkspace(path, rootPath, 'assets/moodboard');
+          }
+
+          // Verificar se caiu sobre um item
+          const elements = document.elementsFromPoint(position.x, position.y);
+          const targetElement = elements.find(el => el.classList.contains(styles.boardItem));
+          
+          if (targetElement) {
+            const targetId = targetElement.getAttribute('data-item-id');
+            const targetItem = items.find(i => i.id === targetId);
+            if (targetItem) {
+              const extraPaths = [...(targetItem.extraPaths || []), relativePath];
+              updateItem(targetItem.id, { extraPaths });
+              continue;
+            }
           }
 
           const isDuplicate = items.some(i => i.path === relativePath && Math.abs(i.x - dropX) < 5 && Math.abs(i.y - dropY) < 5);
@@ -260,8 +330,65 @@ export default function MesaTrabalho() {
             </button>
           )}
           <div className={styles.divider}></div>
+          <button 
+            className={`${styles.toolbarBtn} ${!isPencilActive && !isEraserActive && !isTextToolActive && !isConnecting && !isGroupingMode ? styles.active : ''}`} 
+            title="Selecionar / Mover"
+            onClick={() => {
+              setIsPencilActive(false);
+              setIsEraserActive(false);
+              setIsTextToolActive(false);
+              setIsConnecting(false);
+              setIsGroupingMode(false);
+            }}
+          >
+            <MousePointer2 size={16} />
+          </button>
+          <div className={styles.divider}></div>
           <button className={styles.toolbarBtn} title="Adicionar Imagem" onClick={() => setGalleryMode('item')}><ImagePlus size={16} /></button>
           
+          {boardMode === 'planning' && (
+            <>
+              <button 
+                className={`${styles.toolbarBtn} ${isPencilActive ? styles.active : ''}`} 
+                title="Desenhar (Lápis)"
+                onClick={() => {
+                  setIsPencilActive(!isPencilActive);
+                  setIsEraserActive(false);
+                  setIsConnecting(false);
+                  setIsGroupingMode(false);
+                }}
+              >
+                <Pencil size={16} />
+              </button>
+              <button 
+                className={`${styles.toolbarBtn} ${isEraserActive ? styles.active : ''}`} 
+                title="Borracha (Excluir Desenho)"
+                onClick={() => {
+                  setIsEraserActive(!isEraserActive);
+                  setIsPencilActive(false);
+                  setIsConnecting(false);
+                  setIsGroupingMode(false);
+                }}
+              >
+                <Eraser size={16} />
+              </button>
+              <button 
+                className={`${styles.toolbarBtn} ${isTextToolActive ? styles.active : ''}`} 
+                title="Adicionar Texto"
+                onClick={() => {
+                  setIsTextToolActive(!isTextToolActive);
+                  setIsPencilActive(false);
+                  setIsEraserActive(false);
+                  setIsConnecting(false);
+                  setIsGroupingMode(false);
+                }}
+              >
+                <Type size={16} />
+              </button>
+              <div className={styles.divider}></div>
+            </>
+          )}
+
           {boardMode === 'planning' && (
             <button 
               className={`${styles.toolbarBtn} ${isConnecting ? styles.active : ''}`} 
@@ -269,24 +396,19 @@ export default function MesaTrabalho() {
               onClick={handleToggleConnectionMode}
             >
               <Link size={16} />
-              {isConnecting && <span className={styles.connectingPulse}></span>}
             </button>
           )}
-          
-          {selectedItems.length > 1 && (
-            <>
-              <div className={styles.divider}></div>
-              <button 
-                className={`${styles.toolbarBtn} ${styles.groupBtn}`} 
-                title="Agrupar Seleção"
-                onClick={handleGroupAction}
-              >
-                <Layers size={16} />
-                <span>Agrupar ({selectedItems.length})</span>
-              </button>
-            </>
-          )}
 
+          <div className={styles.divider}></div>
+          <button 
+            className={`${styles.toolbarBtn} ${isGroupingMode ? styles.active : ''}`} 
+            title={isGroupingMode ? "Cancelar Agrupamento" : "Iniciar Agrupamento"}
+            onClick={handleToggleGroupingMode}
+          >
+            <Layers size={16} />
+          </button>
+          
+          <div className={styles.divider}></div>
           <button className={styles.toolbarBtn} title="Mapa" onClick={() => setActivePanel('moodboard-map')}><Map size={16} /></button>
           
           <div className={styles.divider}></div>
@@ -340,17 +462,41 @@ export default function MesaTrabalho() {
         `}
         onDragOver={(e) => e.preventDefault()}
         onMouseDown={(e) => {
-          if (e.target === e.currentTarget) clearSelection();
+          if (isPencilActive) {
+            startDrawing(e);
+          } else if (isTextToolActive) {
+            if (e.target === e.currentTarget && containerRef.current) {
+              const rect = containerRef.current.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+
+              addItem({
+                type: 'text',
+                text: '',
+                x,
+                y,
+                scale: 1,
+                rotation: 0
+              });
+              
+              // Opcional: Desativar ferramenta após adicionar
+              // setIsTextToolActive(false);
+            }
+          } else if (e.target === e.currentTarget) {
+            clearSelection();
+          }
         }}
         style={{
           backgroundImage: backgroundImage ? `url(${resolveAssetPath(backgroundImage, rootPath)})` : undefined,
           backgroundSize: backgroundImage ? (backgroundZoom === 1 ? 'cover' : `${backgroundZoom * 100}%`) : undefined,
           backgroundPosition: 'center',
           backgroundRepeat: backgroundImage ? 'no-repeat' : 'repeat',
-          rotate: backgroundImage ? `${backgroundRotation}deg` : undefined
+          rotate: backgroundImage ? `${backgroundRotation}deg` : undefined,
+          cursor: isPencilActive ? 'crosshair' : isEraserActive ? 'cell' : isTextToolActive ? 'text' : undefined
         } as React.CSSProperties}
       >
         <MesaConnectionsLayer />
+        <MesaDrawingLayer isEraserActive={isEraserActive} />
 
         {items.length === 0 && !isLoading && !backgroundImage && (
           <div className={styles.canvasPlaceholder}>
@@ -369,8 +515,11 @@ export default function MesaTrabalho() {
             key={group.id}
             group={group}
             items={items.filter(i => i.groupId === group.id)}
-            onItemClick={handleItemClickForConnection}
+            onItemClick={isConnecting ? handleItemClickForConnection : isGroupingMode ? handleItemClickForGrouping : undefined}
             connectionSourceId={connectionSourceId}
+            isGroupingMode={isGroupingMode}
+            onConfirmGroup={handleGroupAction}
+            onCancelGroup={handleToggleGroupingMode}
           />
         ))}
 
@@ -379,8 +528,12 @@ export default function MesaTrabalho() {
           <MesaItem
             key={item.id}
             item={item}
-            onClick={() => handleItemClickForConnection(item.id)}
+            onClick={isConnecting ? () => handleItemClickForConnection(item.id) : isGroupingMode ? () => handleItemClickForGrouping(item.id) : undefined}
+            onAddPhoto={() => setGalleryMode({ type: 'attach', itemId: item.id })}
             isConnectingSource={connectionSourceId === item.id}
+            isGroupingMode={isGroupingMode}
+            onConfirmGroup={handleGroupAction}
+            onCancelGroup={handleToggleGroupingMode}
           />
         ))}
 
@@ -411,6 +564,12 @@ export default function MesaTrabalho() {
               });
             } else if (galleryMode === 'background') {
               setBackgroundImage(relativePath);
+            } else if (typeof galleryMode === 'object' && galleryMode.type === 'attach') {
+              const targetItem = items.find(i => i.id === galleryMode.itemId);
+              if (targetItem) {
+                const extraPaths = [...(targetItem.extraPaths || []), relativePath];
+                updateItem(targetItem.id, { extraPaths });
+              }
             }
           }}
           onClose={() => setGalleryMode(null)}

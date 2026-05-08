@@ -1,4 +1,3 @@
-import React from 'react';
 import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
 import styles from './MesaTrabalho.module.scss';
 
@@ -48,18 +47,6 @@ export function MesaConnectionsLayer() {
               filter="url(#stringShadow)"
               className={styles.stringPath}
             />
-            {boardMode === 'planning' && (
-              <circle
-                cx={midX}
-                cy={midY}
-                r="6"
-                className={styles.removeConnBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeConnection(conn.id);
-                }}
-              />
-            )}
           </g>
         );
       })}

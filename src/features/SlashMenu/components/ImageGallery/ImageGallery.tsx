@@ -21,6 +21,7 @@ import { GalleryHeader } from "./components/GalleryHeader";
 import { GalleryItem } from "./components/GalleryItem";
 import { GallerySelectionBar } from "./components/GallerySelectionBar";
 import { GalleryDragGhost } from "./components/GalleryDragGhost";
+import { SectionTabs } from "@/features/image-manager/components/AssetGallery/components/SectionTabs/SectionTabs";
 
 import { Image as ImageIcon, Search } from "lucide-react";
 import styles from "./ImageGallery.module.scss";
@@ -58,6 +59,8 @@ export default function ImageGallery({
     deletePhysicalFolder,
     handleImageDrop,
     activeTarget,
+    activeSection,
+    handleSectionChange,
     filter,
     setFilter,
     filteredImages,

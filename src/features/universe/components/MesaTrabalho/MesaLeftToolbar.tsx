@@ -1,9 +1,10 @@
-import { Wallpaper, RotateCw, ZoomOut, Plus, Grid3X3, Circle } from 'lucide-react';
+import { Wallpaper, RotateCw, ZoomOut, Maximize2, Minimize2, Plus, Grid3X3, Circle } from 'lucide-react';
 import styles from './MesaLeftToolbar.module.scss';
 
 interface MesaLeftToolbarProps {
   backgroundImage: string | null;
   backgroundPattern: 'dots' | 'grid' | 'cork';
+  backgroundZoom?: number;
   onOpenBackgroundGallery: () => void;
   onRotateBackground: () => void;
   onZoomBackground: () => void;
@@ -14,12 +15,25 @@ interface MesaLeftToolbarProps {
 export function MesaLeftToolbar({
   backgroundImage,
   backgroundPattern,
+  backgroundZoom = 1,
   onOpenBackgroundGallery,
   onRotateBackground,
   onZoomBackground,
   onRemoveBackground,
   onSetBackgroundPattern
 }: MesaLeftToolbarProps) {
+  const getZoomIcon = () => {
+    if (backgroundZoom === 1) return <Maximize2 size={14} />;
+    if (backgroundZoom === 0) return <Minimize2 size={14} />;
+    return <ZoomOut size={14} />;
+  };
+
+  const getZoomTitle = () => {
+    if (backgroundZoom === 1) return "Ajuste: Preencher (Cover)";
+    if (backgroundZoom === 0) return "Ajuste: Caber (Contain)";
+    return `Zoom do Fundo: ${Math.round(backgroundZoom * 100)}%`;
+  };
+
   return (
     <div className={styles.leftToolbar}>
       <div className={styles.section}>
@@ -68,10 +82,10 @@ export function MesaLeftToolbar({
             </button>
             <button 
               className={styles.bgActionBtn} 
-              title="Zoom do Fundo"
+              title={getZoomTitle()}
               onClick={onZoomBackground}
             >
-              <ZoomOut size={14} />
+              {getZoomIcon()}
             </button>
             <button 
               className={styles.removeBgBtn} 

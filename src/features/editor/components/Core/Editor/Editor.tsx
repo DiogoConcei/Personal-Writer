@@ -25,7 +25,6 @@ import { EditorRuler } from "./EditorRuler";
 
 // Utils e Tipos
 import { useUIStore } from "@/store/uiStore";
-import { DEFAULT_TEMPLATES } from "@/features/templates/data/defaultTemplates";
 import {
   ImageIcon,
   FileText,

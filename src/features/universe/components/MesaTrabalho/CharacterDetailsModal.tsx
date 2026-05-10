@@ -103,7 +103,7 @@ export const CharacterDetailsModal: React.FC<Props> = ({ characterId, onClose })
       <div className={styles.detailsContent}>
         <div className={styles.characterProfile}>
           <div className={styles.profileImage}>
-            <img src={resolveAssetPath(character.path, rootPath) || ''} alt="Character" />
+            <img src={character.path ? resolveAssetPath(character.path, rootPath) : ''} alt="Character" />
           </div>
           <div className={styles.profileMain}>
             <input 
@@ -133,7 +133,7 @@ export const CharacterDetailsModal: React.FC<Props> = ({ characterId, onClose })
             <div className={styles.inventoryGrid}>
               {inventory.map(item => (
                 <div key={item.id} className={styles.inventoryItem} title={item.category || 'Item'}>
-                  <img src={resolveAssetPath(item.path, rootPath) || ''} alt="Inventory Item" />
+                  <img src={item.path ? resolveAssetPath(item.path, rootPath) : ''} alt="Inventory Item" />
                 </div>
               ))}
             </div>

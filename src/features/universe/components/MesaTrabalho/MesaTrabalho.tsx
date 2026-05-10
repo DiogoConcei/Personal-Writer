@@ -5,25 +5,34 @@ import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
 import { MesaItem } from './MesaItem';
 import { MesaGrupoContainer } from './MesaGrupoContainer';
 import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
-import { copyFileToWorkspace, resolveAssetPath } from '@/tauri-bridge/fs';
+import { resolveAssetPath } from '@/tauri-bridge/fs';
 import ImageGallery from '@/features/SlashMenu/components/ImageGallery/ImageGallery';
 import styles from './MesaTrabalho.module.scss';
-import { Image as ImageIcon, Plus, ImagePlus, Link, Map, Save, Type, Layers, Settings2, Layout, LayoutPanelLeft, Check, X, Pencil, Eraser, MousePointer2 } from 'lucide-react';
+import { Image as ImageIcon, Plus } from 'lucide-react';
 
 import { CharacterDetailsModal } from './CharacterDetailsModal';
 import { MesaLeftToolbar } from './MesaLeftToolbar';
+import { MesaToolbar } from './MesaToolbar';
 import { MesaConnectionsLayer } from './MesaConnectionsLayer';
-import { MesaDrawingLayer } from './MesaDrawingLayer';
-import { useMesaDrawing } from '@/shared/hooks/useMesaDrawing';
+import { CanvasDrawingLayer } from '@/shared/components/CanvasDrawingLayer/CanvasDrawingLayer';
+import { DrawingStylePanel } from '@/shared/components/DrawingStylePanel/DrawingStylePanel';
+import { useCanvasDrawing } from '@/shared/hooks/useCanvasDrawing';
+import { useDrawingStore } from '@/shared/store/useDrawingStore';
 
 const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+
+import { useCanvasEngine } from '@/shared/hooks/useCanvasEngine';
+import { useCanvasTools } from '@/shared/hooks/useCanvasTools';
+import { useMesaMarquee } from '../../hooks/useMesaMarquee';
+import { CanvasBase } from '@/shared/components/CanvasBase/CanvasBase';
+
+import { useCanvasInteraction } from '@/shared/hooks/useCanvasInteraction';
 
 export default function MesaTrabalho() {
   const { rootPath } = useWorkspaceStore();
   const { 
     items, 
     groups, 
-    selectedItems, 
     boardName,
     boardMode,
     backgroundPattern,
@@ -46,34 +55,121 @@ export default function MesaTrabalho() {
     setBackgroundRotation,
     setBackgroundZoom,
     addConnection,
-    toggleSelection
+    toggleSelection,
+    setSelectedItems,
+    removeItem,
+    selectedItems,
+    drawings: boardDrawings,
+    undo,
+    redo,
+    takeSnapshot
   } = useMesaTrabalhoStore();
 
   const setActivePanel = useUIStore((state) => state.setActivePanel);
-  
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // 1. Ferramentas Unificadas (ADR-018)
+  const { 
+    isPencilActive, isEraserActive, isTextActive: isTextToolActive, isConnectActive: isConnecting, 
+    isGroupActive: isGroupingMode, isPanActive: isPanModeActive, 
+    activateSelect: activateSelectTool, activatePan: activatePanTool, 
+    activatePencil: activatePencilTool, activateEraser: activateEraserTool, 
+    activateText: activateTextTool, activateConnect: activateConnectTool, 
+    activateGroup: activateGroupTool
+  } = useCanvasTools('select');
+
+  // 2. Motor Unificado (Substitui useMesaViewport)
+  const engine = useCanvasEngine({ containerRef });
+  const { 
+    zoom, viewState, isPanning, isSpacePressed, zoomIn, zoomOut,
+    handleMouseDown, screenToCanvas, resetView: handleResetView,
+    getVisibleItems
+  } = engine;
+
+  // Interações Unificadas (ADR-021)
+  const { addImage: addImageAtCenter, handleFileDrop } = useCanvasInteraction({
+    engine,
+    rootPath,
+    onAdd: (data) => {
+      addItem(data);
+    }
+  });
+
+  const { selectionStart, selectionCurrent, startMarquee } = useMesaMarquee({
+    items, groups, screenToCanvas, setSelectedItems
+  });
+
+  // Estados Locais
   const [isReady, setIsReady] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [galleryMode, setGalleryMode] = useState<'item' | 'background' | { type: 'attach', itemId: string } | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(boardName);
-
-  const [isConnecting, setIsConnecting] = useState(false);
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
-  const [isPencilActive, setIsPencilActive] = useState(false);
-  const [isEraserActive, setIsEraserActive] = useState(false);
-  const [isTextToolActive, setIsTextToolActive] = useState(false);
-  const [isGroupingMode, setIsGroupingMode] = useState(false);
 
-  // Hook de Desenho
-  const { startDrawing, draw, stopDrawing, isDrawing } = useMesaDrawing({
-    containerRef,
-    isEnabled: isPencilActive,
-    color: '#ef4444',
-    width: 3
+  // Estado para arrastar o menu lateral
+  const [sidebarPos, setSidebarPos] = useState<{ x: number, y: number } | null>(null);
+  const sidebarDraggingRef = useRef<{ startX: number, startY: number, startLeft: number, startTop: number } | null>(null);
+
+  const handleSidebarMouseDown = (e: React.MouseEvent) => {
+    // Não arrastar se clicar em controles
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input')) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    sidebarDraggingRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startLeft: rect.left,
+      startTop: rect.top
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!sidebarDraggingRef.current) return;
+      const dx = moveEvent.clientX - sidebarDraggingRef.current.startX;
+      const dy = moveEvent.clientY - sidebarDraggingRef.current.startY;
+      setSidebarPos({
+        x: sidebarDraggingRef.current.startLeft + dx,
+        y: sidebarDraggingRef.current.startTop + dy
+      });
+    };
+
+    const handleMouseUp = () => {
+      sidebarDraggingRef.current = null;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // Hook de Desenho Unificado
+  const { drawings: globalDrawings, setDrawings, addDrawing, addPointToDrawing, removeDrawing, strokeColor, strokeWidth } = useDrawingStore();
+
+  const { startDrawing, draw, stopDrawing } = useCanvasDrawing({
+    containerRef, 
+    isEnabled: isPencilActive, 
+    color: strokeColor, 
+    width: strokeWidth, 
+    zoom, 
+    viewState,
+    onAddDrawing: addDrawing,
+    onAddPoint: addPointToDrawing
   });
 
-  // Registrar eventos globais de desenho
+  // Sincronizar desenhos da board para a store global de desenho ao carregar
+  useEffect(() => {
+    if (boardDrawings && boardDrawings.length > 0) {
+      setDrawings(boardDrawings);
+    }
+  }, [boardDrawings, setDrawings]);
+
+  // Sincronizar de volta para a store do moodBoard para persistência
+  useEffect(() => {
+    useMesaTrabalhoStore.setState({ drawings: globalDrawings });
+  }, [globalDrawings]);
+
+  // Efeitos e Handlers
   useEffect(() => {
     if (isPencilActive) {
       window.addEventListener('mousemove', draw);
@@ -87,204 +183,113 @@ export default function MesaTrabalho() {
 
   useEffect(() => {
     if (rootPath && !isReady) {
-      loadBoard(rootPath).then(() => {
-        setIsReady(true);
-      });
+      loadBoard(rootPath).then(() => setIsReady(true));
     }
   }, [rootPath, loadBoard, isReady]);
 
-  // Sincronizar tempName quando boardName carregar
-  useEffect(() => {
-    setTempName(boardName);
-  }, [boardName]);
+  useEffect(() => { setTempName(boardName); }, [boardName]);
 
-  // Itens que não pertencem a nenhum grupo e não estão em inventários
   const independentItems = items.filter(i => !i.groupId && !i.ownerId);
 
   const handleGroupAction = () => {
     groupSelectedItems();
-    setIsGroupingMode(false);
+    activateSelectTool();
   };
 
   const handleToggleGroupingMode = () => {
     if (isGroupingMode) {
-      setIsGroupingMode(false);
+      activateSelectTool();
       clearSelection();
     } else {
-      setIsGroupingMode(true);
+      activateGroupTool();
       clearSelection();
     }
   };
 
-  const handleItemClickForGrouping = (itemId: string) => {
-    toggleSelection(itemId, true);
-  };
-
   const handleToggleConnectionMode = () => {
-    setIsConnecting(!isConnecting);
+    if (isConnecting) {
+      activateSelectTool();
+    } else {
+      activateConnectTool();
+    }
     setConnectionSourceId(null);
   };
 
   const handleItemClickForConnection = (itemId: string) => {
     if (!isConnecting) return;
-
     if (!connectionSourceId) {
       setConnectionSourceId(itemId);
     } else {
-      if (connectionSourceId !== itemId) {
-        addConnection(connectionSourceId, itemId);
-      }
+      if (connectionSourceId !== itemId) addConnection(connectionSourceId, itemId);
       setConnectionSourceId(null);
-      setIsConnecting(false);
+      activateSelectTool();
     }
   };
 
-  const handleRotateBackground = () => {
-    const newRotation = (backgroundRotation + 90) % 360;
-    setBackgroundRotation(newRotation);
-  };
+  const handleRotateBackground = () => setBackgroundRotation((backgroundRotation + 90) % 360);
 
   const handleZoomBackground = () => {
-    // Ciclar entre 1x, 0.75x, 0.5x
-    const newZoom = backgroundZoom === 1 ? 0.75 : backgroundZoom === 0.75 ? 0.5 : 1;
-    setBackgroundZoom(newZoom);
+    let nextZoom = 1;
+    if (backgroundZoom === 1) nextZoom = 0;
+    else if (backgroundZoom === 0) nextZoom = 0.75;
+    else if (backgroundZoom === 0.75) nextZoom = 0.5;
+    setBackgroundZoom(nextZoom);
   };
 
   const handleSaveName = () => {
     setIsEditingName(false);
-    if (tempName.trim() && tempName !== boardName) {
-      setBoardName(tempName);
-    }
+    if (tempName.trim() && tempName !== boardName) setBoardName(tempName);
   };
 
-  // Salvamento Automático a cada 20 minutos
+  // Salvamento Automático e Atalhos
   useEffect(() => {
     if (!rootPath) return;
-    const interval = setInterval(() => {
-      saveBoard(rootPath);
-    }, 1200000); // 20 minutos
-    
+    const interval = setInterval(() => saveBoard(rootPath), 1200000);
     return () => clearInterval(interval);
   }, [rootPath, saveBoard]);
 
-  // Atalho Ctrl+S para salvamento manual
   useEffect(() => {
-    const handleSaveShortcut = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        if (rootPath) {
-          saveBoard(rootPath);
+    const handleGlobalHotkeys = (e: KeyboardEvent) => {
+      // Ignorar atalhos globais se estiver digitando
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 's') {
+          e.preventDefault();
+          if (rootPath) saveBoard(rootPath);
+        } else if (e.key === 'z') {
+          e.preventDefault();
+          undo();
+        } else if (e.key === 'y' || (e.key === 'Z' && e.shiftKey)) {
+          e.preventDefault();
+          redo();
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Remover itens selecionados
+        if (selectedItems.length > 0) {
+          e.preventDefault();
+          takeSnapshot();
+          selectedItems.forEach(id => removeItem(id));
+          clearSelection();
         }
       }
     };
 
-    window.addEventListener('keydown', handleSaveShortcut);
-    return () => window.removeEventListener('keydown', handleSaveShortcut);
-  }, [rootPath, saveBoard]);
+    window.addEventListener('keydown', handleGlobalHotkeys);
+    return () => window.removeEventListener('keydown', handleGlobalHotkeys);
+  }, [rootPath, saveBoard, undo, redo, selectedItems, removeItem, clearSelection, takeSnapshot]);
 
-  useEffect(() => {
-    const handleMouseUp = (e: MouseEvent) => {
-      const { isDragging, sourcePath } = useUIStore.getState().dragInfo;
-
-      if (isDragging && sourcePath && rootPath && containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-
-        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-          const isImage = IMAGE_EXTENSIONS.some(ext => sourcePath.toLowerCase().endsWith(ext));
-
-          if (isImage) {
-            const dropX = e.clientX - rect.left;
-            const dropY = e.clientY - rect.top;
-
-            // Verificar se caiu sobre um item existente
-            const elements = document.elementsFromPoint(e.clientX, e.clientY);
-            const targetElement = elements.find(el => el.classList.contains(styles.boardItem));
-            
-            const relativePath = sourcePath
-              .replace(rootPath, '')
-              .replace(/^[\\/]/, './')
-              .replace(/\\/g, '/');
-
-            if (targetElement) {
-              const targetId = targetElement.getAttribute('data-item-id');
-              const targetItem = items.find(i => i.id === targetId);
-              if (targetItem) {
-                const extraPaths = [...(targetItem.extraPaths || []), relativePath];
-                updateItem(targetItem.id, { extraPaths });
-                return;
-              }
-            }
-
-            addItem({
-              path: relativePath,
-              x: dropX,
-              y: dropY,
-              scale: 1,
-              rotation: 0
-            });
-          }
-        }
-      }
-    };
-
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [rootPath, addItem, items, updateItem]);
-
-  // Efeito para Drag & Drop Externo
+  // Drag & Drop
   useNativeDragDrop({
     onDrop: async (paths, position) => {
-      if (!containerRef.current || !rootPath) return;
-
-      const rect = containerRef.current.getBoundingClientRect();
-      const dropX = position.x - rect.left;
-      const dropY = position.y - rect.top;
-
-      for (const path of paths) {
-        try {
-          const normalizedPath = path.replace(/\\/g, '/').toLowerCase();
-          const normalizedRoot = rootPath.replace(/\\/g, '/').toLowerCase();
-          const isInsideWorkspace = normalizedPath.startsWith(normalizedRoot);
-
-          let relativePath: string;
-
-          if (isInsideWorkspace) {
-            relativePath = path
-              .replace(rootPath, '')
-              .replace(/^[\\/]/, './')
-              .replace(/\\/g, '/');
-          } else {
-            relativePath = await copyFileToWorkspace(path, rootPath, 'assets/moodboard');
-          }
-
-          // Verificar se caiu sobre um item
-          const elements = document.elementsFromPoint(position.x, position.y);
-          const targetElement = elements.find(el => el.classList.contains(styles.boardItem));
-          
-          if (targetElement) {
-            const targetId = targetElement.getAttribute('data-item-id');
-            const targetItem = items.find(i => i.id === targetId);
-            if (targetItem) {
-              const extraPaths = [...(targetItem.extraPaths || []), relativePath];
-              updateItem(targetItem.id, { extraPaths });
-              continue;
-            }
-          }
-
-          const isDuplicate = items.some(i => i.path === relativePath && Math.abs(i.x - dropX) < 5 && Math.abs(i.y - dropY) < 5);
-          if (isDuplicate) continue;
-
-          addItem({
-            path: relativePath,
-            x: dropX,
-            y: dropY,
-            scale: 1,
-            rotation: 0
-          });
-        } catch (err) {
-          console.error('Erro ao adicionar imagem ao moodboard:', err);
-        }
-      }
+      if (!rootPath) return;
+      
+      // Processa múltiplos arquivos usando a lógica unificada
+      // Nota: O handleFileDrop já lida com a conversão de coordenadas e adição à store
+      await handleFileDrop(paths, position);
     },
     filters: IMAGE_EXTENSIONS,
     disabled: !rootPath
@@ -295,6 +300,7 @@ export default function MesaTrabalho() {
       <MesaLeftToolbar
         backgroundImage={backgroundImage}
         backgroundPattern={backgroundPattern}
+        backgroundZoom={backgroundZoom}
         onOpenBackgroundGallery={() => setGalleryMode('background')}
         onRotateBackground={handleRotateBackground}
         onZoomBackground={handleZoomBackground}
@@ -302,274 +308,119 @@ export default function MesaTrabalho() {
         onSetBackgroundPattern={setBackgroundPattern}
       />
 
-      <div className={styles.floatingToolbar}>
-        <div className={styles.toolbar}>
-          {isEditingName ? (
-            <input
-              autoFocus
-              className={styles.boardTitleInput}
-              value={tempName}
-              onChange={(e) => setTempName(e.target.value)}
-              onBlur={handleSaveName}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveName();
-                if (e.key === 'Escape') {
-                  setIsEditingName(false);
-                  setTempName(boardName);
-                }
-              }}
-            />
-          ) : (
-            <button 
-              className={styles.toolbarBtn} 
-              title="Renomear Mesa" 
-              onClick={() => setIsEditingName(true)}
-            >
-              <Type size={16} />
-              <span>{boardName}</span>
-            </button>
-          )}
-          <div className={styles.divider}></div>
-          <button 
-            className={`${styles.toolbarBtn} ${!isPencilActive && !isEraserActive && !isTextToolActive && !isConnecting && !isGroupingMode ? styles.active : ''}`} 
-            title="Selecionar / Mover"
-            onClick={() => {
-              setIsPencilActive(false);
-              setIsEraserActive(false);
-              setIsTextToolActive(false);
-              setIsConnecting(false);
-              setIsGroupingMode(false);
-            }}
-          >
-            <MousePointer2 size={16} />
-          </button>
-          <div className={styles.divider}></div>
-          <button className={styles.toolbarBtn} title="Adicionar Imagem" onClick={() => setGalleryMode('item')}><ImagePlus size={16} /></button>
-          
-          {boardMode === 'planning' && (
-            <>
-              <button 
-                className={`${styles.toolbarBtn} ${isPencilActive ? styles.active : ''}`} 
-                title="Desenhar (Lápis)"
-                onClick={() => {
-                  setIsPencilActive(!isPencilActive);
-                  setIsEraserActive(false);
-                  setIsConnecting(false);
-                  setIsGroupingMode(false);
-                }}
-              >
-                <Pencil size={16} />
-              </button>
-              <button 
-                className={`${styles.toolbarBtn} ${isEraserActive ? styles.active : ''}`} 
-                title="Borracha (Excluir Desenho)"
-                onClick={() => {
-                  setIsEraserActive(!isEraserActive);
-                  setIsPencilActive(false);
-                  setIsConnecting(false);
-                  setIsGroupingMode(false);
-                }}
-              >
-                <Eraser size={16} />
-              </button>
-              <button 
-                className={`${styles.toolbarBtn} ${isTextToolActive ? styles.active : ''}`} 
-                title="Adicionar Texto"
-                onClick={() => {
-                  setIsTextToolActive(!isTextToolActive);
-                  setIsPencilActive(false);
-                  setIsEraserActive(false);
-                  setIsConnecting(false);
-                  setIsGroupingMode(false);
-                }}
-              >
-                <Type size={16} />
-              </button>
-              <div className={styles.divider}></div>
-            </>
-          )}
+      <MesaToolbar 
+        boardName={boardName} boardMode={boardMode} isEditingName={isEditingName} 
+        tempName={tempName} isPencilActive={isPencilActive} isEraserActive={isEraserActive} 
+        isTextToolActive={isTextToolActive} isConnecting={isConnecting} 
+        isGroupingMode={isGroupingMode} isPanModeActive={isPanModeActive} 
+        isSettingsOpen={isSettingsOpen} onSetTempName={setTempName} 
+        onSaveName={handleSaveName} onSetIsEditingName={setIsEditingName} 
+        activateSelectTool={activateSelectTool} activatePanTool={activatePanTool} 
+        zoomIn={zoomIn} zoomOut={zoomOut} handleResetView={handleResetView} 
+        onOpenGallery={setGalleryMode} activatePencilTool={activatePencilTool} 
+        activateEraserTool={activateEraserTool} activateTextTool={activateTextTool} 
+        handleToggleConnectionMode={handleToggleConnectionMode} 
+        handleToggleGroupingMode={handleToggleGroupingMode} 
+        setActivePanel={setActivePanel} setIsSettingsOpen={setIsSettingsOpen} 
+        setBoardMode={setBoardMode} onSaveBoard={() => rootPath && saveBoard(rootPath)} 
+      />
 
-          {boardMode === 'planning' && (
-            <button 
-              className={`${styles.toolbarBtn} ${isConnecting ? styles.active : ''}`} 
-              title={isConnecting ? "Selecione o segundo item" : "Conectar Itens"} 
-              onClick={handleToggleConnectionMode}
-            >
-              <Link size={16} />
-            </button>
-          )}
+      <div className={styles.mainLayout}>
+        <aside 
+          className={`${styles.sidebar} ${isPencilActive ? styles.active : ''}`}
+          onMouseDown={handleSidebarMouseDown}
+          style={{
+            left: sidebarPos ? `${sidebarPos.x}px` : undefined,
+            top: sidebarPos ? `${sidebarPos.y}px` : undefined,
+            transform: sidebarPos ? 'none' : undefined,
+          } as React.CSSProperties}
+        >
+          <DrawingStylePanel />
+        </aside>
 
-          <div className={styles.divider}></div>
-          <button 
-            className={`${styles.toolbarBtn} ${isGroupingMode ? styles.active : ''}`} 
-            title={isGroupingMode ? "Cancelar Agrupamento" : "Iniciar Agrupamento"}
-            onClick={handleToggleGroupingMode}
-          >
-            <Layers size={16} />
-          </button>
-          
-          <div className={styles.divider}></div>
-          <button className={styles.toolbarBtn} title="Mapa" onClick={() => setActivePanel('moodboard-map')}><Map size={16} /></button>
-          
-          <div className={styles.divider}></div>
-          
-          <div className={styles.settingsWrapper}>
-            <button 
-              className={`${styles.toolbarBtn} ${isSettingsOpen ? styles.active : ''}`} 
-              title="Configurações da Mesa" 
-              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            >
-              <Settings2 size={16} />
-            </button>
-
-            {isSettingsOpen && (
-              <div className={styles.settingsPopover}>
-                <div className={styles.settingsHeader}>Configurações</div>
-                <div className={styles.settingsSection}>
-                  <label>Modelo da Mesa</label>
-                  <div className={styles.modeToggle}>
-                    <button 
-                      className={boardMode === 'free' ? styles.active : ''} 
-                      onClick={() => setBoardMode('free')}
-                    >
-                      <Layout size={14} />
-                      Livre
-                    </button>
-                    <button 
-                      className={boardMode === 'planning' ? styles.active : ''} 
-                      onClick={() => setBoardMode('planning')}
-                    >
-                      <LayoutPanelLeft size={14} />
-                      Planejamento
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.divider}></div>
-          <button className={styles.toolbarBtn} title="Salvar Mesa (Manual)" onClick={() => rootPath && saveBoard(rootPath)}><Save size={16} /></button>
-        </div>
-      </div>
-
-      <div
-        ref={containerRef}
-        className={`
-          ${styles.canvas} 
-          ${backgroundPattern === 'dots' ? styles['canvas--dots'] : backgroundPattern === 'cork' ? styles['canvas--cork'] : styles['canvas--grid']}
-          ${boardMode === 'planning' ? styles['canvas--planning'] : ''}
-        `}
-        onDragOver={(e) => e.preventDefault()}
-        onMouseDown={(e) => {
-          if (isPencilActive) {
-            startDrawing(e);
-          } else if (isTextToolActive) {
-            if (e.target === e.currentTarget && containerRef.current) {
-              const rect = containerRef.current.getBoundingClientRect();
-              const x = e.clientX - rect.left;
-              const y = e.clientY - rect.top;
-
-              addItem({
-                type: 'text',
-                text: '',
-                x,
-                y,
-                scale: 1,
-                rotation: 0
-              });
-              
-              // Opcional: Desativar ferramenta após adicionar
-              // setIsTextToolActive(false);
+        <CanvasBase
+          containerRef={containerRef}
+          zoom={zoom}
+          viewState={viewState}
+          isPanning={isPanning}
+          isSpacePressed={isSpacePressed}
+          isPanModeActive={isPanModeActive}
+          isPlanning={boardMode === 'planning'}
+          backgroundPattern={backgroundPattern}
+          onMouseDown={(e) => {
+            if (handleMouseDown(e, isPanModeActive)) return;
+            if (isPencilActive) { startDrawing(e); } 
+            else if (isTextToolActive) {
+              if ((e.target === e.currentTarget || (e.target as HTMLElement).classList.contains(styles.viewport)) && containerRef.current) {
+                const { x, y } = screenToCanvas(e.clientX, e.clientY);
+                addItem({ type: 'text', text: '', x, y, scale: 1, rotation: 0 });
+              }
+            } else if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains(styles.viewport)) {
+              if (!e.shiftKey) clearSelection();
+              startMarquee(...Object.values(screenToCanvas(e.clientX, e.clientY)) as [number, number]);
             }
-          } else if (e.target === e.currentTarget) {
-            clearSelection();
-          }
-        }}
-        style={{
-          backgroundImage: backgroundImage ? `url(${resolveAssetPath(backgroundImage, rootPath)})` : undefined,
-          backgroundSize: backgroundImage ? (backgroundZoom === 1 ? 'cover' : `${backgroundZoom * 100}%`) : undefined,
-          backgroundPosition: 'center',
-          backgroundRepeat: backgroundImage ? 'no-repeat' : 'repeat',
-          rotate: backgroundImage ? `${backgroundRotation}deg` : undefined,
-          cursor: isPencilActive ? 'crosshair' : isEraserActive ? 'cell' : isTextToolActive ? 'text' : undefined
-        } as React.CSSProperties}
-      >
-        <MesaConnectionsLayer />
-        <MesaDrawingLayer isEraserActive={isEraserActive} />
+          }}
+          style={{
+            rotate: backgroundImage ? `${backgroundRotation}deg` : undefined,
+            cursor: isPencilActive ? 'crosshair' : isEraserActive ? 'cell' : isTextToolActive ? 'text' : isPanModeActive ? 'grab' : (selectionStart ? 'crosshair' : undefined)
+          } as React.CSSProperties}
+          viewportStyle={{
+            backgroundImage: backgroundImage ? `url(${resolveAssetPath(backgroundImage, rootPath)})` : undefined,
+            backgroundSize: backgroundImage ? (backgroundZoom === 1 ? 'cover' : backgroundZoom === 0 ? 'contain' : `${backgroundZoom * 100}%`) : undefined,
+            backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+          }}
+        >
+          <MesaConnectionsLayer />
+          <CanvasDrawingLayer drawings={globalDrawings} removeDrawing={removeDrawing} isEraserActive={isEraserActive} />
 
-        {items.length === 0 && !isLoading && !backgroundImage && (
-          <div className={styles.canvasPlaceholder}>
-            <div className={styles.placeholderIcon}>
-              <Plus size={48} />
-              <ImageIcon size={32} className={styles.subIcon} />
+          {items.length === 0 && !isLoading && !backgroundImage && (
+            <div className={styles.canvasPlaceholder}>
+              <div className={styles.placeholderIcon}><Plus size={48} /><ImageIcon size={32} className={styles.subIcon} /></div>
+              <p>Sua mesa está vazia.</p>
+              <span>Arraste arquivos de imagem do seu computador diretamente para este espaço.</span>
             </div>
-            <p>Sua mesa está vazia.</p>
-            <span>Arraste arquivos de imagem do seu computador diretamente para este espaço.</span>
-          </div>
-        )}
+          )}
 
-        {/* Renderizar Grupos */}
-        {groups.map(group => (
-          <MesaGrupoContainer 
-            key={group.id}
-            group={group}
-            items={items.filter(i => i.groupId === group.id)}
-            onItemClick={isConnecting ? handleItemClickForConnection : isGroupingMode ? handleItemClickForGrouping : undefined}
-            connectionSourceId={connectionSourceId}
-            isGroupingMode={isGroupingMode}
-            onConfirmGroup={handleGroupAction}
-            onCancelGroup={handleToggleGroupingMode}
-          />
-        ))}
+          {groups.map(group => (
+            <MesaGrupoContainer 
+              key={group.id} group={group} zoom={zoom} items={items.filter(i => i.groupId === group.id)} 
+              onItemClick={isConnecting ? handleItemClickForConnection : isGroupingMode ? (id) => toggleSelection(id, true) : undefined} 
+              connectionSourceId={connectionSourceId} isGroupingMode={isGroupingMode} 
+              onConfirmGroup={handleGroupAction} onCancelGroup={handleToggleGroupingMode} 
+            />
+          ))}
 
-        {/* Renderizar Itens Independentes */}
-        {independentItems.map((item) => (
-          <MesaItem
-            key={item.id}
-            item={item}
-            onClick={isConnecting ? () => handleItemClickForConnection(item.id) : isGroupingMode ? () => handleItemClickForGrouping(item.id) : undefined}
-            onAddPhoto={() => setGalleryMode({ type: 'attach', itemId: item.id })}
-            isConnectingSource={connectionSourceId === item.id}
-            isGroupingMode={isGroupingMode}
-            onConfirmGroup={handleGroupAction}
-            onCancelGroup={handleToggleGroupingMode}
-          />
-        ))}
+          {getVisibleItems(independentItems).map((item) => (
+            <MesaItem
+              key={item.id} item={item} zoom={zoom} 
+              onClick={isConnecting ? () => handleItemClickForConnection(item.id) : isGroupingMode ? () => toggleSelection(item.id, true) : undefined} 
+              onAddPhoto={() => setGalleryMode({ type: 'attach', itemId: item.id })} 
+              isConnectingSource={connectionSourceId === item.id} isGroupingMode={isGroupingMode} 
+              onConfirmGroup={handleGroupAction} onCancelGroup={handleToggleGroupingMode} 
+            />
+          ))}
+          
+          {isLoading && items.length === 0 && (
+            <div className={styles.canvasLoading}><ImageIcon size={48} className={styles.spin} /><p>Organizando mesa...</p></div>
+          )}
 
-        {isLoading && items.length === 0 && (
-          <div className={styles.canvasLoading}>
-             <ImageIcon size={48} className={styles.spin} />
-             <p>Organizando mesa...</p>
-          </div>
-        )}
+          {selectionStart && selectionCurrent && (
+            <div className={styles.selectionBox} style={{ left: Math.min(selectionStart.x, selectionCurrent.x), top: Math.min(selectionStart.y, selectionCurrent.y), width: Math.abs(selectionStart.x - selectionCurrent.x), height: Math.abs(selectionStart.y - selectionCurrent.y) }} />
+          )}
+        </CanvasBase>
       </div>
 
       {galleryMode && (
         <ImageGallery
           onSelect={(src) => {
             const relativePath = src.replace(rootPath || '', '').replace(/^[\\/]/, './').replace(/\\/g, '/');
-            
             if (galleryMode === 'item') {
-              const container = containerRef.current;
-              const dropX = container ? container.scrollLeft + (container.clientWidth / 2) - 100 : 100;
-              const dropY = container ? container.scrollTop + (container.clientHeight / 2) - 100 : 100;
-
-              addItem({
-                path: relativePath,
-                x: dropX,
-                y: dropY,
-                scale: 1,
-                rotation: 0
-              });
-            } else if (galleryMode === 'background') {
-              setBackgroundImage(relativePath);
-            } else if (typeof galleryMode === 'object' && galleryMode.type === 'attach') {
+              // Usa a lógica unificada para adicionar no centro
+              addImageAtCenter(relativePath);
+            } else if (galleryMode === 'background') { setBackgroundImage(relativePath); } 
+            else if (typeof galleryMode === 'object' && galleryMode.type === 'attach') {
               const targetItem = items.find(i => i.id === galleryMode.itemId);
-              if (targetItem) {
-                const extraPaths = [...(targetItem.extraPaths || []), relativePath];
-                updateItem(targetItem.id, { extraPaths });
-              }
+              if (targetItem) updateItem(targetItem.id, { extraPaths: [...(targetItem.extraPaths || []), relativePath] });
             }
           }}
           onClose={() => setGalleryMode(null)}
@@ -577,11 +428,7 @@ export default function MesaTrabalho() {
       )}
 
       {activeDetailsIds.map(id => (
-        <CharacterDetailsModal 
-          key={id}
-          characterId={id} 
-          onClose={() => toggleDetailsId(id, true)} 
-        />
+        <CharacterDetailsModal key={id} characterId={id} onClose={() => toggleDetailsId(id, true)} />
       ))}
     </div>
   );

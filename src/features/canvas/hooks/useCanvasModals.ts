@@ -27,7 +27,7 @@ export function useCanvasModals() {
     }));
   }, []);
 
-  const setSideMenuMode = useCallback((mode: 'main' | 'notes') => {
+  const setSideMenuMode = useCallback((mode: 'main' | 'notes' | 'drawing' | 'postits') => {
     setState(prev => ({ ...prev, sideMenuMode: mode }));
   }, []);
 

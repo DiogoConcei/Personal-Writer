@@ -23,6 +23,10 @@ export interface PostItData {
   color: string;
 }
 
+export interface TextData {
+  text: string;
+}
+
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type Typography = 'sans' | 'serif';
 

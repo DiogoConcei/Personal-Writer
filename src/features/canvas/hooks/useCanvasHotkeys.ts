@@ -16,9 +16,7 @@ export function useCanvasHotkeys({
 }: UseCanvasHotkeysOptions) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedItemId) return;
-
-      // Não agir se o usuário estiver digitando em campos de texto
+      // Ignorar se o usuário estiver digitando em campos de texto
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
@@ -27,6 +25,19 @@ export function useCanvasHotkeys({
       ) {
         return;
       }
+
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "z") {
+          e.preventDefault();
+          // onUndo? (Precisa ser injetado se o InfiniteCanvas tiver store de histórico)
+        } else if (e.key === "y") {
+          e.preventDefault();
+          // onRedo?
+        }
+        return;
+      }
+
+      if (!selectedItemId) return;
 
       if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();

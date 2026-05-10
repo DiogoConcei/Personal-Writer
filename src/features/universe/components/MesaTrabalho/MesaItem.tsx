@@ -3,12 +3,15 @@ import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
 import { MesaItem as IMesaItem } from '@/shared/types';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { X, Tag, Check, Unlink, User, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { X, Tag, Check, Unlink, User, ChevronLeft, ChevronRight, Plus, Maximize2 } from 'lucide-react';
 import styles from './MesaTrabalho.module.scss';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
+import { useMesaItemResize } from '../../hooks/useMesaItemResize';
+import { useCanvasText } from '@/shared/hooks/useCanvasText';
 
 interface Props {
   item: IMesaItem;
+  zoom?: number;
   onClick?: () => void;
   onAddPhoto?: () => void;
   isConnectingSource?: boolean;
@@ -30,6 +33,7 @@ const getCategoryColor = (category?: string) => {
 
 export const MesaItem: React.FC<Props> = ({ 
   item, 
+  zoom = 1,
   onClick, 
   onAddPhoto, 
   isConnectingSource,
@@ -61,9 +65,30 @@ export const MesaItem: React.FC<Props> = ({
   const [customCategory, setCustomCategory] = useState('');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // Hook de Escrita Unificado
+  const { 
+    isEditing: isEditingText, 
+    editableRef, 
+    startEditing, 
+    stopEditing, 
+    handleKeyDown: handleTextKeyDown 
+  } = useCanvasText({
+    initialText: item.text || '',
+    onSave: (newText) => updateItem(item.id, { text: newText }),
+    isEnabled: !isGroupingMode && !onClick
+  });
+
+  const itemRef = useRef<HTMLDivElement>(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
   const itemStartPos = useRef({ x: 0, y: 0 });
   const groupStartPos = useRef({ x: 0, y: 0 });
+
+  // Hook de Redimensionamento (ADR-018)
+  const { isResizing, handleResizeStart } = useMesaItemResize({
+    item,
+    updateItem,
+    itemRef
+  });
 
   const isSelected = selectedItems.includes(item.id);
   const isInGroup = !!item.groupId;
@@ -90,6 +115,9 @@ export const MesaItem: React.FC<Props> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Se estiver editando texto, não arrasta
+    if (isEditingText) return;
+
     e.stopPropagation();
 
     if (onClick) {
@@ -97,13 +125,11 @@ export const MesaItem: React.FC<Props> = ({
       return;
     }
 
-    // Se estiver em modo de agrupamento, clique apenas seleciona/deseleciona
     if (isGroupingMode) {
       toggleSelection(item.id, true);
       return;
     }
 
-    // Seleção com Shift ou Ctrl
     if (e.shiftKey || e.ctrlKey || e.metaKey) {
       toggleSelection(item.id, true);
       return;
@@ -129,8 +155,8 @@ export const MesaItem: React.FC<Props> = ({
     if (!isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const dx = e.clientX - dragStartPos.current.x;
-      const dy = e.clientY - dragStartPos.current.y;
+      const dx = (e.clientX - dragStartPos.current.x) / zoom;
+      const dy = (e.clientY - dragStartPos.current.y) / zoom;
 
       if (isInGroup) {
         updateGroup(item.groupId!, {
@@ -148,7 +174,6 @@ export const MesaItem: React.FC<Props> = ({
     const handleMouseUp = (e: MouseEvent) => {
       setIsDragging(false);
 
-      // Detecção de colisão para agrupamento ou atrelamento automático ao soltar
       if (!isInGroup) {
         const elements = document.elementsFromPoint(e.clientX, e.clientY);
         const targetElement = elements.find(el => 
@@ -165,7 +190,6 @@ export const MesaItem: React.FC<Props> = ({
             const targetIsCharacter = targetItem.category?.toLowerCase() === 'personagens';
             const targetIsItem = targetItem.category?.toLowerCase() === 'itens';
 
-            // Regra 1 e 2: Itens não se agrupam com personagens, mas podem ser atrelados
             if ((isItem && targetIsCharacter) || (isCharacter && targetIsItem)) {
               if (isItem) {
                 attachItemToCharacter(item.id, targetId);
@@ -173,7 +197,6 @@ export const MesaItem: React.FC<Props> = ({
                 attachItemToCharacter(targetId, item.id);
               }
             } else {
-              // Agrupa qualquer outra combinação (incluindo personagem com personagem)
               mergeIntoGroup(item.id, targetId);
             }
           }
@@ -187,7 +210,7 @@ export const MesaItem: React.FC<Props> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, item.id, item.groupId, isInGroup, rootPath, updateItem, updateGroup, mergeIntoGroup, attachItemToCharacter, items]);
+  }, [isDragging, item.id, item.groupId, isInGroup, rootPath, updateItem, updateGroup, mergeIntoGroup, attachItemToCharacter, items, zoom]);
 
   const handleUngroup = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -204,6 +227,7 @@ export const MesaItem: React.FC<Props> = ({
   return (
     <>
       <div 
+        ref={itemRef}
         className={`
           ${styles.boardItem} 
           ${isDragging ? styles['boardItem--dragging'] : ''} 
@@ -213,6 +237,7 @@ export const MesaItem: React.FC<Props> = ({
           ${isInGroup ? styles['boardItem--grouped'] : ''}
           ${isConnectingSource ? styles['boardItem--connecting'] : ''}
           ${item.type === 'text' ? styles['boardItem--text'] : ''}
+          ${isResizing ? styles['boardItem--resizing'] : ''}
         `}
         data-item-id={item.id}
         style={{
@@ -229,6 +254,15 @@ export const MesaItem: React.FC<Props> = ({
         } as React.CSSProperties}
         onMouseDown={handleMouseDown}
       >
+        {isSelected && !isInGroup && !isDragging && !isGroupingMode && (
+          <div className={styles.resizeHandles}>
+            <div className={`${styles.resizeHandle} ${styles.tl}`} onMouseDown={handleResizeStart} />
+            <div className={`${styles.resizeHandle} ${styles.tr}`} onMouseDown={handleResizeStart} />
+            <div className={`${styles.resizeHandle} ${styles.bl}`} onMouseDown={handleResizeStart} />
+            <div className={`${styles.resizeHandle} ${styles.br}`} onMouseDown={handleResizeStart} />
+          </div>
+        )}
+
         {isConnected && (
           <div className={`
             ${styles.pushpin} 
@@ -243,23 +277,26 @@ export const MesaItem: React.FC<Props> = ({
 
         {item.type === 'text' ? (
           <div 
+            ref={editableRef}
             className={styles.textItemContent}
-            contentEditable
+            contentEditable={isEditingText && !isGroupingMode}
             suppressContentEditableWarning
-            onBlur={(e) => {
-              const newText = e.currentTarget.textContent || '';
-              if (newText !== item.text) {
-                updateItem(item.id, { text: newText });
-              }
+            onBlur={stopEditing}
+            onKeyDown={handleTextKeyDown}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              startEditing();
             }}
-            onMouseDown={(e) => e.stopPropagation()} // Permite focar sem arrastar
+            onMouseDown={(e) => {
+              if (isEditingText) e.stopPropagation();
+            }}
           >
-            {item.text || 'Digite seu texto...'}
+            {item.text}
           </div>
         ) : (
           <>
             <img 
-              src={resolveAssetPath(currentPath, rootPath) || undefined} 
+              src={currentPath ? resolveAssetPath(currentPath, rootPath) : undefined} 
               alt="Mood item" 
               draggable={false}
               className={`${isCharacter ? styles.characterImage : ''} ${isItem ? styles.itemImage : ''}`}
@@ -306,7 +343,7 @@ export const MesaItem: React.FC<Props> = ({
             </button>
           </div>
         ) : (
-          <div className={styles.itemActions} onMouseDown={(e) => e.stopPropagation()}>
+          <div className={styles.itemActions} style={{ opacity: isResizing ? 0 : undefined, pointerEvents: isResizing ? 'none' : undefined }} onMouseDown={(e) => e.stopPropagation()}>
             <button 
               onClick={(e) => { e.stopPropagation(); setShowCategoryMenu(!showCategoryMenu); }} 
               className={styles.actionBtn} 
@@ -328,6 +365,14 @@ export const MesaItem: React.FC<Props> = ({
                 <Unlink size={12} />
               </button>
             )}
+
+            <button 
+              onClick={(e) => { e.stopPropagation(); updateItem(item.id, { scale: 1 }); }} 
+              className={styles.actionBtn} 
+              title="Resetar Tamanho"
+            >
+              <Maximize2 size={12} />
+            </button>
 
             <button onClick={() => removeItem(item.id)} className={styles.actionBtn} title="Remover"><X size={12} /></button>
             

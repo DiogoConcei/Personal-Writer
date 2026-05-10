@@ -13,7 +13,7 @@ export interface CanvasModalsState {
   openModal: CanvasModalType | null;
   splittingItem: SplittingItem | null;
   focusItem: AnyCanvasEntity | null;
-  sideMenuMode: 'main' | 'notes';
+  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits';
 }
 
 export interface SplitActionData {
@@ -83,8 +83,8 @@ export interface CanvasImageItemProps {
 }
 
 export interface CanvasSidebarProps {
-  sideMenuMode: 'main' | 'notes';
-  setSideMenuMode: (mode: 'main' | 'notes') => void;
+  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits';
+  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits') => void;
   isSepararActive: boolean;
   setIsSepararActive: (active: boolean) => void;
   setIsNoteGalleryOpen: (open: boolean) => void;
@@ -99,10 +99,10 @@ export interface CanvasControlsContextValue {
   openModal: CanvasModalType | null;
   splittingItem: SplittingItem | null;
   focusItem: AnyCanvasEntity | null;
-  sideMenuMode: 'main' | 'notes';
+  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits';
   open: (type: CanvasModalType, data?: any) => void;
   close: () => void;
-  setSideMenuMode: (mode: 'main' | 'notes') => void;
+  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits') => void;
 }
 
 export interface CanvasActionMenuProps {

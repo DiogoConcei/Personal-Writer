@@ -2,7 +2,7 @@ import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
 import styles from './MesaTrabalho.module.scss';
 
 export function MesaConnectionsLayer() {
-  const { connections, items, removeConnection, boardMode } = useMesaTrabalhoStore();
+  const { connections, items } = useMesaTrabalhoStore();
 
   if (connections.length === 0) return null;
 

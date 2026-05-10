@@ -1,6 +1,6 @@
 import { useState, useCallback, RefObject } from 'react';
-import { AnyCanvasEntity, ImageData, PdfData, NoteData } from '@/shared/types';
-import { resolveAssetPath } from '@/tauri-bridge/fs';
+import { AnyCanvasEntity, ImageData, PdfData, NoteData, TextData } from '@/shared/types';
+import { useCanvasInteraction } from '@/shared/hooks/useCanvasInteraction';
 
 interface ViewState {
   x: number;
@@ -14,10 +14,6 @@ interface UseCanvasEntitiesOptions {
   rootPath: string | null;
 }
 
-/**
- * Hook para gerenciar a criação, atualização e posicionamento espacial
- * das entidades no Infinite Canvas.
- */
 export function useCanvasEntities({
   zoom,
   viewState,
@@ -26,92 +22,118 @@ export function useCanvasEntities({
 }: UseCanvasEntitiesOptions) {
   const [entities, setEntities] = useState<AnyCanvasEntity[]>([]);
 
-  // Auxiliar para calcular o centro do viewport no "espaço do mundo"
-  const getCanvasCenter = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return { x: 0, y: 0 };
-
-    const canvasWidth = container.clientWidth;
-    const canvasHeight = container.clientHeight;
-
-    return {
-      x: (canvasWidth / 2 - viewState.x) / zoom,
-      y: (canvasHeight / 2 - viewState.y) / zoom
-    };
-  }, [viewState, zoom, containerRef]);
-
-  const addNote = useCallback((path: string, name: string) => {
-    const center = getCanvasCenter();
-    // Tamanho A4 padrão definido nas configurações
-    const cardWidth = 420;
-    const cardHeight = 594;
-
-    const newEntity: AnyCanvasEntity = {
-      id: `note-${Math.random().toString(36).substring(2, 9)}`,
-      type: 'note',
-      x: center.x - (cardWidth / 2),
-      y: center.y - (cardHeight / 2),
-      width: cardWidth,
-      height: cardHeight,
-      rotation: 0,
-      zIndex: entities.length + 1,
-      style: {
-        fontSize: '14px',
-        padding: '24px',
-        color: 'var(--color-text-primary)',
-        backgroundColor: 'var(--color-bg-elevated)'
-      },
-      data: {
-        noteId: path,
-        title: name,
-        startPage: 1,
-        endPage: 0,
-        totalPages: 0
-      } as NoteData
-    };
-
-    setEntities(prev => [...prev, newEntity]);
-    return newEntity.id;
-  }, [entities.length, getCanvasCenter]);
-
-  const addImage = useCallback((path: string) => {
-    const img = new Image();
-    img.onload = () => {
-      const center = getCanvasCenter();
-      const defaultWidth = 300;
-      const ratio = defaultWidth / img.naturalWidth;
-      const finalHeight = img.naturalHeight * ratio;
-
-      const newEntity: AnyCanvasEntity = {
-        id: `img-${Math.random().toString(36).substring(2, 9)}`,
-        type: 'image',
-        x: center.x - (defaultWidth / 2),
-        y: center.y - (finalHeight / 2),
-        width: defaultWidth,
-        height: finalHeight,
-        rotation: 0,
-        zIndex: entities.length + 1,
-        data: { 
-          path, 
-          naturalWidth: img.naturalWidth, 
-          naturalHeight: img.naturalHeight 
-        } as ImageData
+  // Engine adapter para o useCanvasInteraction
+  const engine = {
+    zoom,
+    viewState,
+    containerRef,
+    screenToCanvas: (cx: number, cy: number) => {
+      if (!containerRef.current) return { x: cx, y: cy };
+      const rect = containerRef.current.getBoundingClientRect();
+      return {
+        x: (cx - rect.left - viewState.x) / zoom,
+        y: (cy - rect.top - viewState.y) / zoom
       };
+    }
+  };
+
+  const { addImage: internalAddImage, addText: internalAddText, getCanvasCenter } = useCanvasInteraction({
+    engine,
+    rootPath,
+    onAdd: (data) => {
+      const id = `${data.type}-${Math.random().toString(36).substring(2, 9)}`;
+      let newEntity: AnyCanvasEntity;
+
+      if (data.type === 'image') {
+        newEntity = {
+          id,
+          type: 'image',
+          x: data.x,
+          y: data.y,
+          width: data.width,
+          height: data.height,
+          rotation: 0,
+          zIndex: entities.length + 1,
+          data: { 
+            path: data.path, 
+            naturalWidth: data.naturalWidth, 
+            naturalHeight: data.naturalHeight 
+          } as ImageData
+        };
+      } else if (data.type === 'text') {
+        if (data.noteId) {
+          // Se tiver noteId, é uma nota vinculada a arquivo
+          newEntity = {
+            id,
+            type: 'note',
+            x: data.x,
+            y: data.y,
+            width: 420, // A4 ratio default
+            height: 594,
+            rotation: 0,
+            zIndex: entities.length + 1,
+            style: {
+              fontSize: '14px',
+              padding: '24px',
+              color: 'var(--color-text-primary)',
+              backgroundColor: 'var(--color-bg-elevated)'
+            },
+            data: {
+              noteId: data.noteId,
+              title: data.title || 'Nota',
+              startPage: 1,
+              endPage: 0,
+              totalPages: 0
+            } as NoteData
+          };
+        } else {
+          // Texto simples (mesmo comportamento do Universo)
+          newEntity = {
+            id,
+            type: 'text',
+            x: data.x,
+            y: data.y,
+            width: 200,
+            height: 60,
+            rotation: 0,
+            zIndex: entities.length + 1,
+            style: {
+              fontSize: '1.2rem',
+              color: 'var(--color-text-primary)',
+              fontWeight: '600',
+              textAlign: 'left'
+            },
+            data: {
+              text: data.text || ''
+            } as TextData
+          };
+        }
+      } else {
+        return '';
+      }
 
       setEntities(prev => [...prev, newEntity]);
-    };
-    img.src = resolveAssetPath(path, rootPath);
-  }, [entities.length, getCanvasCenter, rootPath]);
+      return id;
+    }
+  });
+
+  const addNote = useCallback((path: string, name: string) => {
+    // Reutiliza a lógica unificada passando os dados específicos de nota
+    return internalAddText({ title: name, noteId: path } as any) as string;
+  }, [internalAddText]);
+
+  const addImage = internalAddImage;
 
   const addPdf = useCallback((path: string) => {
     const center = getCanvasCenter();
     const cardWidth = 200;
+    const id = `pdf-${Math.random().toString(36).substring(2, 9)}`;
 
     const newEntity: AnyCanvasEntity = {
-      id: `pdf-${Math.random().toString(36).substring(2, 9)}`,
+      id,
       type: 'pdf',
       x: center.x - (cardWidth / 2),
-      y: center.y - 120,
+      y: center.y - 140,
       width: cardWidth,
       height: 280,
       rotation: 0,
@@ -125,6 +147,7 @@ export function useCanvasEntities({
     };
 
     setEntities(prev => [...prev, newEntity]);
+    return id;
   }, [entities.length, getCanvasCenter]);
 
   const updateEntity = useCallback((id: string, updates: Partial<AnyCanvasEntity>) => {
@@ -148,6 +171,7 @@ export function useCanvasEntities({
     addNote,
     addImage,
     addPdf,
+    addText: internalAddText,
     updateEntity,
     removeEntity,
     bringToFront

@@ -4,7 +4,6 @@ import { Markdown } from "tiptap-markdown";
 import BubbleMenu from "@tiptap/extension-bubble-menu";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { FontFamily } from "@tiptap/extension-font-family";
-import { Extension } from "@tiptap/core";
 
 // Extensões Locais/Customizadas
 import { WikiLink } from "../extensions/WikiLink/WikiLink";

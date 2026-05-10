@@ -6,6 +6,7 @@ import styles from './MesaTrabalho.module.scss';
 interface Props {
   group: MesaGrupo;
   items: IMesaItem[];
+  zoom?: number;
   onItemClick?: (id: string) => void;
   connectionSourceId?: string | null;
   isGroupingMode?: boolean;
@@ -16,6 +17,7 @@ interface Props {
 export const MesaGrupoContainer: React.FC<Props> = ({ 
   group, 
   items, 
+  zoom = 1,
   onItemClick, 
   connectionSourceId,
   isGroupingMode,
@@ -38,6 +40,7 @@ export const MesaGrupoContainer: React.FC<Props> = ({
           <div key={item.id} className={styles.groupedItemWrapper}>
             <MesaItem 
               item={item} 
+              zoom={zoom}
               onClick={onItemClick ? () => onItemClick(item.id) : undefined}
               isConnectingSource={connectionSourceId === item.id}
               isGroupingMode={isGroupingMode}

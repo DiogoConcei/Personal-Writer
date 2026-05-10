@@ -24,14 +24,18 @@ interface ActionProps {
   label: string;
   onClick: () => void;
   badge?: number;
+  active?: boolean;
 }
 
 /**
  * Botão de ação genérico para a Toolbar.
  */
-function Action({ icon: Icon, label, onClick, badge }: ActionProps) {
+function Action({ icon: Icon, label, onClick, badge, active }: ActionProps) {
   return (
-    <button className={styles.button} onClick={onClick}>
+    <button 
+      className={`${styles.button} ${active ? styles['button--active'] : ''}`} 
+      onClick={onClick}
+    >
       <Icon size={14} /> {label}
       {badge !== undefined && badge > 0 && (
         <span className={styles.badge}>{badge}</span>

@@ -33,6 +33,12 @@
     background-color: var(--color-bg-hover);
     color: var(--color-text-primary);
   }
+
+  &--active {
+    background-color: var(--color-bg-hover);
+    color: var(--color-accent) !important;
+    font-weight: 600;
+  }
 }
 
 .dropdown {

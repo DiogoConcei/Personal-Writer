@@ -1,8 +1,11 @@
+import { CutPatch } from './canvas';
+
 export interface PdfData {
   path: string;
   startPage: number;
   endPage: number;
   totalPages: number;
+  patches?: CutPatch[];
 }
 
 export interface ImageData {
@@ -11,6 +14,7 @@ export interface ImageData {
   naturalHeight?: number;
   isPending?: boolean; // Indica que o recorte está sendo carregado
   progress?: number;   // Progresso de 0 a 100
+  patches?: CutPatch[];
 }
 
 export type SplitMode = 'amount' | 'single' | 'range';

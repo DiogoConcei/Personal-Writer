@@ -1,0 +1,18 @@
+.cutPatch {
+  position: absolute;
+  z-index: 50;
+  pointer-events: none;
+  
+  // Efeito de buraco com profundidade 3D
+  box-shadow: 
+    inset 2px 2px 6px rgba(0, 0, 0, 0.4),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.1);
+  
+  // Borda "cortada" para destacar do papel
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-top-color: rgba(0, 0, 0, 0.3);
+  border-left-color: rgba(0, 0, 0, 0.3);
+
+  // Garantir que o conteúdo por baixo (texto) seja coberto visualmente pela cor de fundo
+  transition: background-color var(--transition-fast);
+}

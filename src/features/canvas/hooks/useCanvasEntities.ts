@@ -150,6 +150,28 @@ export function useCanvasEntities({
     return id;
   }, [entities.length, getCanvasCenter]);
 
+  const addPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => {
+    const id = `image-${Math.random().toString(36).substring(2, 9)}`;
+    const newEntity: AnyCanvasEntity = {
+      id,
+      type: 'image',
+      // Posiciona ao lado da entidade original
+      x: sourceEntity.x + (sourceEntity.width as number || 400) + 40, 
+      y: sourceEntity.y + boundingBox.y,
+      width: boundingBox.width,
+      height: boundingBox.height,
+      rotation: sourceEntity.rotation || 0,
+      zIndex: entities.length + 1,
+      data: {
+        path: '', 
+        isPending: true,
+        progress: 0
+      } as ImageData
+    };
+    setEntities(prev => [...prev, newEntity]);
+    return id;
+  }, [entities.length]);
+
   const updateEntity = useCallback((id: string, updates: Partial<AnyCanvasEntity>) => {
     setEntities(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
   }, []);
@@ -172,6 +194,7 @@ export function useCanvasEntities({
     addImage,
     addPdf,
     addText: internalAddText,
+    addPendingCollage,
     updateEntity,
     removeEntity,
     bringToFront

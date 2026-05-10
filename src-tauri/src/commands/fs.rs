@@ -309,18 +309,12 @@ pub async fn save_image_from_bytes(file_name: String, bytes: Vec<u8>, workspace_
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 #[tauri::command]
-pub async fn save_base64_image_to_workspace(
-    file_name: String,
+pub async fn save_base64_image(
     base64_data: String,
+    file_name: String,
     workspace_root: String,
-    folder_name: String,
-    sub_folder: Option<String>
 ) -> Result<String, String> {
-    let mut dest_dir = Path::new(&workspace_root).join(&folder_name);
-
-    if let Some(ref sub) = sub_folder {
-        dest_dir = dest_dir.join(sub);
-    }
+    let dest_dir = Path::new(&workspace_root).join("assets").join("collages");
 
     if !dest_dir.exists() {
         fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
@@ -332,13 +326,7 @@ pub async fn save_base64_image_to_workspace(
     let dest_path = dest_dir.join(&file_name);
     fs::write(dest_path, bytes).map_err(|e| e.to_string())?;
 
-    let relative_prefix = if let Some(sub) = sub_folder {
-        format!("./{}/{}/", folder_name, sub.replace("\\", "/"))
-    } else {
-        format!("./{}/", folder_name)
-    };
-
-    Ok(format!("{}{}", relative_prefix, file_name))
+    Ok(format!("./assets/collages/{}", file_name))
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

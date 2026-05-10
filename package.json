@@ -27,6 +27,8 @@
     "@tiptap/react": "^3.21.0",
     "@tiptap/starter-kit": "^3.21.0",
     "@tiptap/suggestion": "^3.21.0",
+    "html-to-image": "^1.11.13",
+    "html2canvas": "^1.4.1",
     "katex": "^0.16.9",
     "lucide-react": "^1.7.0",
     "react": "^19.1.0",

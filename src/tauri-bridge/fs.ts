@@ -109,8 +109,8 @@ export async function saveImageFromBytes(fileName: string, bytes: number[], work
   return invoke<string>('save_image_from_bytes', { fileName, bytes, workspaceRoot, subFolder });
 }
 
-export async function saveBase64Image(fileName: string, base64Data: string, workspaceRoot: string, folderName: string, subFolder?: string): Promise<string> {
-  return invoke<string>('save_base64_image_to_workspace', { fileName, base64Data, workspaceRoot, folderName, subFolder });
+export async function saveBase64Image(fileName: string, base64Data: string, workspaceRoot: string): Promise<string> {
+  return invoke<string>('save_base64_image', { fileName, base64Data, workspaceRoot });
 }
 
 export interface SnapshotInfo {

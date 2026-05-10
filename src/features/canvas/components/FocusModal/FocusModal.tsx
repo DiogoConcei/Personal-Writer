@@ -1,19 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import styles from './FocusModal.module.scss';
-import { X, MousePointer2, Square, Scissors, Check } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { AnyCanvasEntity } from '@/shared/types';
 import { CanvasNoteItem } from '../CanvasNoteItem/CanvasNoteItem';
 import { CanvasPdfItem } from '../CanvasPdfItem/CanvasPdfItem';
 import { CanvasImageItem } from '../CanvasImageItem/CanvasImageItem';
-import { useScissorsTrace } from '../../hooks/useScissorsTrace';
-import { processCanvasCrop } from '../../utils/canvasCropUtils';
+import { FocusToolbar, FocusTool } from './FocusToolbar';
+import { CutPatch } from '../CutPatch/CutPatch';
+import { CutPatch as CutPatchType } from '@/shared/types';
+import { useGalleryStore } from '@/features/image-manager/store/galleryStore';
+import { saveBase64Image } from '@/tauri-bridge/fs';
 
 interface FocusModalProps {
   isOpen: boolean;
   onClose: () => void;
   entity: AnyCanvasEntity | null;
   rootPath: string | null;
-  onExtractCrop?: (base64: string | null, status?: 'start' | 'finish', id?: string) => string | void;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onAddPendingCollage?: (sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => string | void;
 }
 
 export const FocusModal: React.FC<FocusModalProps> = ({
@@ -21,91 +25,253 @@ export const FocusModal: React.FC<FocusModalProps> = ({
   onClose,
   entity,
   rootPath,
-  onExtractCrop
+  onUpdate,
+  onAddPendingCollage
 }) => {
-  const [activeTool, setActiveTool] = useState<'select' | 'square' | 'scissors'>('select');
-  const [isProcessing, setIsProcessing] = useState(false);
-  
-  const { points, isDragging, containerRef, clearTrace, handlers } = useScissorsTrace({
-    isEnabled: (activeTool === 'scissors' || activeTool === 'square') && !isProcessing,
-    mode: activeTool === 'square' ? 'square' : 'path',
-    fadeDelay: -1 // Persiste até limpar manualmente
-  });
+  const [activeTool, setActiveTool] = useState<FocusTool>('select');
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSimulatingCut, setIsSimulatingCut] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [scale, setScale] = useState(1);
+  const [startPoint, setStartPoint] = useState<{ x: number, y: number } | null>(null);
+  const [currentPoint, setCurrentPoint] = useState<{ x: number, y: number } | null>(null);
+  const [boundingBox, setBoundingBox] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const registerCollage = useGalleryStore(state => state.registerCollage);
 
-  const boundingBox = useMemo(() => {
-    if (points.length < 2 || isDragging) return null;
+  const entityWidth = (entity?.width as number) || 400;
+  const entityHeight = (entity?.height as number) || 500;
 
-    const xs = points.map(p => p.x);
-    const ys = points.map(p => p.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
+  // Cálculo de escala dinâmica para preencher o modal sem alterar o layout interno da nota
+  React.useEffect(() => {
+    if (!isOpen) return;
 
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY
+    const handleResize = () => {
+      const padding = 160;
+      const availableWidth = window.innerWidth - padding;
+      const availableHeight = window.innerHeight - padding;
+      
+      const scaleX = availableWidth / entityWidth;
+      const scaleY = availableHeight / entityHeight;
+      const optimalScale = Math.min(scaleX, scaleY, 2.5); // Zoom máximo de 2.5x para não pixelizar demais
+      
+      setScale(optimalScale);
     };
-  }, [points, isDragging]);
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isOpen, entityWidth, entityHeight]);
 
   if (!isOpen || !entity) return null;
 
-  const handleConfirmCut = async () => {
-    if (!boundingBox || !containerRef.current || isProcessing) return;
+  const handleConfirmSelection = async () => {
+    if (!boundingBox || !entity || !containerRef.current) return;
+    
+    setIsSimulatingCut(true);
+    const pendingId = onAddPendingCollage?.(entity, boundingBox);
 
-    // Validação de tamanho mínimo (10x10 pixels)
-    if (boundingBox.width < 10 || boundingBox.height < 10) {
-      if (onExtractCrop) onExtractCrop(null, 'finish');
-      clearTrace();
-      return;
-    }
+    // Registrar o "remendo" na entidade original (o buraco)
+    const newPatch: CutPatchType = {
+      id: `patch-${Math.random().toString(36).substring(2, 9)}`,
+      ...boundingBox,
+      page: currentPage
+    };
+    
+    const entityData = entity.data as { patches?: CutPatchType[] };
+    const currentPatches = entityData.patches || [];
 
-    setIsProcessing(true);
+    const processExtraction = async () => {
+      try {
+        if (!containerRef.current || !rootPath || !pendingId) return;
 
-    // Sinaliza o início do processo para criar o placeholder no canvas de fundo
-    let pendingId: string | undefined;
-    if (onExtractCrop) {
-      const result = onExtractCrop(null, 'start');
-      if (typeof result === 'string') pendingId = result;
-    }
+        const { default: html2canvas } = await import('html2canvas');
 
-    const base64 = await processCanvasCrop({
-      points,
-      boundingBox,
-      container: containerRef.current
-    });
+        // 1. Capturamos o elemento INTEIRO ignorando a escala do CSS.
+        // O truque 'onclone' permite modificar o DOM clonado antes da renderização.
+        const fullCanvas = await html2canvas(containerRef.current, {
+          useCORS: true,
+          allowTaint: true,
+          scale: 1, // Garantir 1:1 pixels
+          backgroundColor: null,
+          logging: false,
+          onclone: (clonedDoc) => {
+            const el = clonedDoc.querySelector(`.${styles.focusArea}`) as HTMLElement;
+            if (el) {
+              // Removemos a escala do clone para que o html2canvas 
+              // renderize as coordenadas reais (1:1)
+              el.style.transform = 'none';
+            }
+          }
+        });
 
-    // Fecha o modal conforme solicitado
-    onClose();
+        // 2. Criamos o canvas final apenas para a região do recorte (crop manual)
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = boundingBox.width;
+        cropCanvas.height = boundingBox.height;
+        const cropCtx = cropCanvas.getContext('2d');
 
-    if (base64 && onExtractCrop) {
-      // Executa a finalização após o fechamento
-      setTimeout(() => {
-        onExtractCrop(base64, 'finish', pendingId);
-        setIsProcessing(false);
-        clearTrace();
-      }, 300);
-    } else {
-      setIsProcessing(false);
-      clearTrace();
+        if (!cropCtx) throw new Error('Could not get crop canvas context');
+
+        // Copiamos apenas a região selecionada do canvas grande para o pequeno
+        cropCtx.drawImage(
+          fullCanvas,
+          boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height, // Source (1:1)
+          0, 0, boundingBox.width, boundingBox.height // Destination
+        );
+
+        const base64Data = cropCanvas.toDataURL('image/png').split(',')[1];
+        const fileName = `collage_${Date.now()}.png`;
+
+        // 3. Salvar via Bridge (que já lida com o invoke correto)
+        const savedPath = await saveBase64Image(
+          fileName,
+          base64Data,
+          rootPath
+        );
+
+        await registerCollage(savedPath);
+
+        onUpdate(pendingId as string, {
+          data: {
+            path: savedPath,
+            isPending: false,
+            progress: 100
+          }
+        });
+
+      } catch (err) {
+        console.error('Erro na extração html2canvas:', err);
+        if (pendingId) {
+          onUpdate(pendingId as string, { 
+            data: { 
+              isPending: false, 
+              error: true 
+            } as unknown as AnyCanvasEntity['data']
+          });
+        }
+      }
+    };
+
+    processExtraction();
+
+    setTimeout(() => {
+      onUpdate(entity.id, {
+        data: {
+          ...entity.data as object,
+          patches: [...currentPatches, newPatch]
+        }
+      });
+      setIsSimulatingCut(false);
+      setStartPoint(null);
+      setCurrentPoint(null);
+      setBoundingBox(null);
+    }, 600);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    if (activeTool !== 'square' || !containerRef.current || isSimulatingCut) return;
+    
+    // Intercepta o evento para que a nota não inicie um arraste (stopPropagation)
+    e.stopPropagation();
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / (rect.width / entityWidth);
+    const y = (e.clientY - rect.top) / (rect.height / entityHeight);
+    
+    setIsDragging(true);
+    setStartPoint({ x, y });
+    setCurrentPoint({ x, y });
+    setBoundingBox(null);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(entityWidth, (e.clientX - rect.left) / (rect.width / entityWidth)));
+    const y = Math.max(0, Math.min(entityHeight, (e.clientY - rect.top) / (rect.height / entityHeight)));
+    
+    setCurrentPoint({ x, y });
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+
+    if (startPoint && currentPoint) {
+      const x = Math.min(startPoint.x, currentPoint.x);
+      const y = Math.min(startPoint.y, currentPoint.y);
+      const width = Math.abs(currentPoint.x - startPoint.x);
+      const height = Math.abs(currentPoint.y - startPoint.y);
+
+      if (width >= 10 && height >= 10) {
+        setBoundingBox({ x, y, width, height });
+      } else {
+        setStartPoint(null);
+        setCurrentPoint(null);
+      }
     }
   };
 
-  const handleCancelCut = () => {
-    clearTrace();
+  const handleCancelSelection = () => {
+    setStartPoint(null);
+    setCurrentPoint(null);
+    setBoundingBox(null);
+  };
+
+  const renderSelection = () => {
+    if (!startPoint || !currentPoint) return null;
+
+    const x = Math.min(startPoint.x, currentPoint.x);
+    const y = Math.min(startPoint.y, currentPoint.y);
+    const width = Math.abs(currentPoint.x - startPoint.x);
+    const height = Math.abs(currentPoint.y - startPoint.y);
+
+    return (
+      <svg className={styles.selectionLayer}>
+        <rect 
+          x={x} 
+          y={y} 
+          width={width} 
+          height={height} 
+          className={`${styles.selectionRect} ${isSimulatingCut ? styles.simulatingCut : ''}`}
+        />
+      </svg>
+    );
+  };
+
+  const renderActionMenu = () => {
+    if (!boundingBox || isDragging || isSimulatingCut) return null;
+
+    return (
+      <div 
+        className={styles.cutActionMenu}
+        style={{
+          left: boundingBox.x + boundingBox.width,
+          top: boundingBox.y,
+          // Contra-escala para os botões não ficarem gigantes no zoom
+          transform: `translate(-100%, -100%) scale(${1 / scale})`,
+          transformOrigin: 'bottom right'
+        }}
+      >
+        <button className={styles.confirmBtn} onClick={handleConfirmSelection}>
+          <Check size={18} />
+        </button>
+        <button className={styles.cancelBtn} onClick={handleCancelSelection}>
+          <X size={18} />
+        </button>
+      </div>
+    );
   };
 
   const renderFocusedEntity = () => {
-    // Criamos uma versão da entidade para o foco com dimensões maiores e posição 0,0
     const focusedEntity: AnyCanvasEntity = {
       ...entity,
       x: 0,
       y: 0,
       rotation: 0,
-      width: 800, // Largura maior para o foco
-      height: 1000, // Altura maior para o foco
       zIndex: 10,
     };
 
@@ -118,6 +284,7 @@ export const FocusModal: React.FC<FocusModalProps> = ({
       onUpdate: () => {},
       onRemove: () => {},
       onFocus: () => {},
+      onPageChange: setCurrentPage
     };
 
     switch (entity.type) {
@@ -146,85 +313,50 @@ export const FocusModal: React.FC<FocusModalProps> = ({
           <X size={24} />
         </button>
 
-        <div className={styles.focusToolbar}>
-          <button 
-            className={`${styles.toolBtn} ${activeTool === 'select' ? styles.active : ''}`} 
-            onClick={() => setActiveTool('select')}
-            title="Selecionar"
-          >
-            <MousePointer2 size={20} />
-          </button>
-          <button 
-            className={`${styles.toolBtn} ${activeTool === 'square' ? styles.active : ''}`} 
-            onClick={() => setActiveTool('square')}
-            title="Quadrado"
-          >
-            <Square size={20} />
-          </button>
-          <button 
-            className={`${styles.toolBtn} ${activeTool === 'scissors' ? styles.active : ''}`} 
-            onClick={() => setActiveTool('scissors')}
-            title="Tesoura (Corte Livre)"
-          >
-            <Scissors size={20} />
-          </button>
-        </div>
+        <FocusToolbar 
+          activeTool={activeTool} 
+          onToolChange={setActiveTool} 
+        />
 
-        <div 
-          ref={containerRef}
-          className={styles.content}
-          onMouseDownCapture={(e) => {
-            const isTraceTool = activeTool === 'scissors' || activeTool === 'square';
-            if (isTraceTool && !(e.target as HTMLElement).closest('button')) {
-              handlers.onMouseDown(e);
-              e.stopPropagation();
-            }
-          }}
-          onMouseMove={handlers.onMouseMove}
-          onMouseUp={handlers.onMouseUp}
-          onMouseLeave={handlers.onMouseUp}
-          style={{ cursor: activeTool !== 'select' ? 'crosshair' : 'default' }}
-        >
-          {renderFocusedEntity()}
+        <div className={styles.content}>
+          <div 
+            ref={containerRef}
+            className={styles.focusArea}
+            style={{ 
+              width: entityWidth, 
+              height: entityHeight, 
+              position: 'relative',
+              transform: `scale(${scale})`,
+              transformOrigin: 'center center'
+            }}
+          >
+            {renderFocusedEntity()}
 
-          {/* Camada do Rastro (Tesoura ou Quadrado) */}
-          {points.length > 1 && points[0] && (
-            <svg className={styles.scissorsLayer}>
-              {activeTool === 'square' && points[1] ? (
-                <rect
-                  x={Math.min(points[0].x, points[1].x)}
-                  y={Math.min(points[0].y, points[1].y)}
-                  width={Math.abs(points[1].x - points[0].x)}
-                  height={Math.abs(points[1].y - points[0].y)}
-                  className={styles.scissorsPath}
+            {/* Renderizar os remendos (Patches) da página atual */}
+            {((entity.data as { patches?: CutPatchType[] }).patches || [])
+              .filter((p: CutPatchType) => p.page === currentPage)
+              .map((patch: CutPatchType) => (
+                <CutPatch 
+                  key={patch.id} 
+                  patch={patch} 
+                  backgroundColor="var(--color-bg-base)"
                 />
-              ) : activeTool === 'scissors' ? (
-                <polyline
-                  points={points.filter(p => !!p).map(p => `${p.x},${p.y}`).join(' ')}
-                  className={styles.scissorsPath}
-                />
-              ) : null}
-            </svg>
-          )}
+              ))}
+            
+            {activeTool === 'square' && (
+              <div 
+                className={styles.activeOverlay}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                style={{ cursor: 'crosshair' }}
+              />
+            )}
 
-          {/* Menu de Ação do Recorte */}
-          {boundingBox && !isProcessing && (
-            <div 
-              className={styles.cutActionMenu}
-              style={{
-                left: boundingBox.x + boundingBox.width,
-                top: boundingBox.y
-              }}
-              onMouseDown={e => e.stopPropagation()} // Evita iniciar novo rastro ao clicar nos botões
-            >
-              <button className={styles.confirmBtn} onClick={handleConfirmCut} title="Confirmar Recorte">
-                <Check size={18} />
-              </button>
-              <button className={styles.cancelBtn} onClick={handleCancelCut} title="Cancelar">
-                <X size={18} />
-              </button>
-            </div>
-          )}
+            {renderSelection()}
+            {renderActionMenu()}
+          </div>
         </div>
       </div>
     </div>

@@ -45,13 +45,6 @@
   height: 100%;
 }
 
-.progressText {
-  color: var(--color-accent);
-  font-size: 0.9rem;
-  font-weight: 600;
-  font-family: var(--font-mono);
-}
-
 .spinner {
   color: var(--color-accent);
   animation: spin 1s linear infinite;
@@ -60,6 +53,13 @@
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.progressText {
+  color: var(--color-accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
 }
 
 .handle {

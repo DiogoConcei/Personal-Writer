@@ -4,25 +4,32 @@ import { PdfGallery } from "../../../references/components/PdfGallery/PdfGallery
 import { NoteSelectionModal } from "../NoteSelectionModal/NoteSelectionModal";
 import { SplitModal } from "../SplitModal/SplitModal";
 import { FocusModal } from "../FocusModal/FocusModal";
+import { AnyCanvasEntity } from '@/shared/types';
 
 interface ModalsProps {
+  entities: AnyCanvasEntity[];
   onNoteSelect: (path: string, name: string) => void;
   onImageSelect: (path: string) => void;
   onPdfSelect: (path: string) => void;
   onConfirmSplit: (data: any) => void;
-  onExtractCrop?: (base64: string | null, status?: 'start' | 'finish', id?: string) => string | void;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onAddPendingCollage?: (sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => void;
   rootPath?: string | null;
 }
 
 export function Modals({
+  entities,
   onNoteSelect,
   onImageSelect,
   onPdfSelect,
   onConfirmSplit,
-  onExtractCrop,
+  onUpdate,
+  onAddPendingCollage,
   rootPath = null
 }: ModalsProps) {
   const { openModal, splittingItem, focusItem, close } = useCanvasControls();
+
+  const activeFocusItem = focusItem ? (entities.find(e => e.id === focusItem.id) || focusItem) : null;
 
   return (
     <>
@@ -50,9 +57,10 @@ export function Modals({
       <FocusModal
         isOpen={openModal === 'focus'}
         onClose={close}
-        entity={focusItem}
+        entity={activeFocusItem}
         rootPath={rootPath}
-        onExtractCrop={onExtractCrop}
+        onUpdate={onUpdate}
+        onAddPendingCollage={onAddPendingCollage}
       />
 
       {openModal === 'image' && (

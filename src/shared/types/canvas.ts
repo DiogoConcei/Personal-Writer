@@ -28,3 +28,12 @@ export interface CanvasEntity<T = unknown> {
 }
 
 export type AnyCanvasEntity = CanvasEntity<PdfData | ImageData | NoteData | PostItData | TextData | unknown>;
+
+export interface CutPatch {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  page: number;
+}

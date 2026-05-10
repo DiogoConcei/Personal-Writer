@@ -53,20 +53,35 @@
   padding: 0;
   overflow: visible;
   position: relative; // Referência para elementos absolutos internos
+}
 
+.focusArea {
+  position: relative;
+  
   // Target the rendered component root directly, bypassing CSS Modules mangled names
   > div:first-child {
     position: relative !important;
     left: 0 !important;
     top: 0 !important;
     transform: none !important;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
     margin: 0 !important;
     z-index: 1;
   }
 }
 
-.scissorsLayer {
+.activeOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.selectionLayer {
   position: absolute;
   top: 0;
   left: 0;
@@ -76,27 +91,48 @@
   z-index: 200;
 }
 
-.scissorsPath {
-  fill: rgba(168, 85, 247, 0.15); // Preenchimento leve para a área selecionada
-  stroke: var(--color-accent); // Amethyst
-  stroke-width: 2.5;
-  stroke-dasharray: 6, 4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 2px rgba(168, 85, 247, 0.5));
+.selectionRect {
+  fill: rgba(168, 85, 247, 0.1);
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-dasharray: 5, 5;
+  filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.3));
+  transition: fill 0.3s ease, stroke 0.3s ease;
+
+  &.simulatingCut {
+    fill: white;
+    stroke: white;
+    stroke-dasharray: none;
+    animation: cutFlash 0.6s forwards;
+  }
+}
+
+@keyframes cutFlash {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 }
 
 .cutActionMenu {
   position: absolute;
-  transform: translate(-100%, -100%); // Alinha a direita do menu com o ponto de referência e sobe
+  transform: translate(-100%, -100%);
   display: flex;
   gap: 8px;
   z-index: 300;
-  margin-top: -10px; // Espaço acima da borda
+  margin-top: -10px;
 
   button {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     border: none;
     display: flex;
@@ -112,13 +148,17 @@
   }
 
   .confirmBtn {
-    background: #10b981; // Emerald 500
-    &:hover { background: #059669; }
+    background: #10b981;
+    &:hover {
+      background: #059669;
+    }
   }
 
   .cancelBtn {
-    background: #ef4444; // Red 500
-    &:hover { background: #dc2626; }
+    background: #ef4444;
+    &:hover {
+      background: #dc2626;
+    }
   }
 }
 
@@ -129,35 +169,37 @@
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  z-index: 100;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .toolBtn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.4);
   cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  padding: 10px;
+  border-radius: 12px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     color: white;
-    transform: scale(1.1);
+    transform: translateX(4px);
   }
 
   &.active {
-    background: var(--color-accent);
+    background: var(--color-accent); // Amethyst
     color: white;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
   }
 }

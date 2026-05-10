@@ -3,6 +3,7 @@ import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { PdfThumbnail } from '@/features/docs-manager/components/PdfThumbnail/PdfThumbnail';
 import { useCanvasEntity } from '../../hooks/useCanvasEntity';
 import { CanvasPdfItemProps, PdfData } from '@/shared/types';
+import { CutPatch } from '../CutPatch/CutPatch';
 import styles from './CanvasPdfItem.module.scss';
 
 /**
@@ -19,6 +20,7 @@ export function CanvasPdfItem({
   onStart,
   onSplit,
   onFocus,
+  onPageChange,
   rootPath 
 }: CanvasPdfItemProps) {
   const data = entity.data as PdfData;
@@ -57,9 +59,19 @@ export function CanvasPdfItem({
 
   const navigatePage = (e: React.MouseEvent, dir: 'prev' | 'next') => {
     e.stopPropagation();
-    if (dir === 'prev' && currentPage > startPage) setCurrentPage(currentPage - 1);
-    if (dir === 'next' && currentPage < endPage) setCurrentPage(currentPage + 1);
+    let nextPage = currentPage;
+    if (dir === 'prev' && currentPage > startPage) nextPage = currentPage - 1;
+    if (dir === 'next' && currentPage < endPage) nextPage = currentPage + 1;
+    
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage);
+      onPageChange?.(nextPage);
+    }
   };
+
+  useEffect(() => {
+    onPageChange?.(currentPage);
+  }, []);
 
   return (
     <div 
@@ -112,6 +124,17 @@ export function CanvasPdfItem({
           </div>
         )}
       </div>
+
+      {/* Renderizar os remendos (Patches) da página atual no nível da entidade para bater com as coordenadas do FocusModal */}
+      {(data.patches || [])
+        .filter(p => p.page === currentPage)
+        .map(patch => (
+          <CutPatch 
+            key={patch.id} 
+            patch={patch} 
+            backgroundColor="var(--color-bg-base)"
+          />
+        ))}
 
       {isSelected && !isSepararActive && (
         <>

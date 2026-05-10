@@ -3,6 +3,7 @@ import MarkdownIt from 'markdown-it';
 import { readFile } from '@/tauri-bridge';
 import { useCanvasEntity } from '../../hooks/useCanvasEntity';
 import { CanvasNoteItemProps, NoteData } from '@/shared/types';
+import { CutPatch } from '../CutPatch/CutPatch';
 import styles from './CanvasNoteItem.module.scss';
 
 const md = new MarkdownIt({
@@ -25,7 +26,8 @@ export function CanvasNoteItem({
   onRemove,
   onStart,
   onSplit,
-  onFocus
+  onFocus,
+  onPageChange
 }: CanvasNoteItemProps) {
   const data = entity.data as NoteData;
   const [html, setHtml] = useState('');
@@ -122,9 +124,19 @@ export function CanvasNoteItem({
 
   const navigatePage = (e: React.MouseEvent, dir: 'prev' | 'next') => {
     e.stopPropagation();
-    if (dir === 'prev' && currentPage > startPage) setCurrentPage(currentPage - 1);
-    if (dir === 'next' && currentPage < effectiveEndPage) setCurrentPage(currentPage + 1);
+    let nextPage = currentPage;
+    if (dir === 'prev' && currentPage > startPage) nextPage = currentPage - 1;
+    if (dir === 'next' && currentPage < effectiveEndPage) nextPage = currentPage + 1;
+    
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage);
+      onPageChange?.(nextPage);
+    }
   };
+
+  useEffect(() => {
+    onPageChange?.(currentPage);
+  }, []);
 
   return (
     <div 
@@ -188,6 +200,17 @@ export function CanvasNoteItem({
           </div>
         )}
       </div>
+
+      {/* Renderizar os remendos (Patches) da página atual no nível da nota para bater com as coordenadas do FocusModal */}
+      {(data.patches || [])
+        .filter(p => p.page === currentPage)
+        .map(patch => (
+          <CutPatch 
+            key={patch.id} 
+            patch={patch} 
+            backgroundColor="var(--color-bg-base)"
+          />
+        ))}
 
       {isSelected && !isSepararActive && canResize && (
         <>

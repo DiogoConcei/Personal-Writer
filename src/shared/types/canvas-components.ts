@@ -57,6 +57,7 @@ export interface CanvasPdfItemProps {
   onStart?: () => void;
   onSplit: (page?: number) => void;
   onFocus: () => void;
+  onPageChange?: (page: number) => void;
   rootPath: string | null;
 }
 
@@ -71,6 +72,7 @@ export interface CanvasNoteItemProps {
   onStart?: () => void;
   onSplit: (page?: number) => void;
   onFocus: () => void;
+  onPageChange?: (page: number) => void;
 }
 
 export interface CanvasImageItemProps {

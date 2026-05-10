@@ -60,7 +60,12 @@ export function CanvasImageItem({
           <span className={styles.progressText}>{data.progress || 0}%</span>
         </div>
       ) : (
-        <img src={resolveAssetPath(data.path, rootPath)} alt="" draggable={false} />
+        <img 
+          src={resolveAssetPath(data.path, rootPath)} 
+          alt="" 
+          draggable={false} 
+          crossOrigin="anonymous" 
+        />
       )}
 
       {isSelected && !isPending && (

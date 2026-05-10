@@ -14,6 +14,7 @@ interface GalleryState {
   deleteCollection: (id: string) => Promise<void>;
   addToCollection: (id: string, imagePaths: string[]) => Promise<void>;
   removeFromCollection: (id: string, imagePath: string) => Promise<void>;
+  registerCollage: (imagePath: string) => Promise<void>;
 }
 
 const CONFIG_FILE = '.gallery.json';
@@ -112,6 +113,19 @@ export const useGalleryStore = create<GalleryState>((set, get) => ({
       })
     }));
     await get().saveCollections();
+  },
+
+  registerCollage: async (imagePath: string) => {
+    const { collections, createCollection, addToCollection } = get();
+    
+    // Buscar ou criar a coleção de colagens
+    const collageCollection = collections.find(c => c.name === 'Colagens');
+    
+    if (collageCollection) {
+      await addToCollection(collageCollection.id, [imagePath]);
+    } else {
+      await createCollection('Colagens', [imagePath]);
+    }
   },
 
   removeImageFromAllCollections: async (imagePath: string) => {

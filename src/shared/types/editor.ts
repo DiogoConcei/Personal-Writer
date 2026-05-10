@@ -2,6 +2,8 @@ import { ReactNode } from 'react';
 import { PluginKey } from '@tiptap/pm/state';
 import { DecorationSet } from '@tiptap/pm/view';
 
+import { CutPatch } from './canvas';
+
 export interface CommandItem {
   title: string;
   icon: ReactNode;
@@ -16,6 +18,7 @@ export interface NoteData {
   startPage?: number;
   endPage?: number;
   totalPages?: number;
+  patches?: CutPatch[];
 }
 
 export interface PostItData {

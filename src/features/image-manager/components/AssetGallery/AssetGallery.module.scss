@@ -20,11 +20,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 2rem;
 
   &__title {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    min-width: 200px;
 
     .breadcrumbs {
       display: flex;

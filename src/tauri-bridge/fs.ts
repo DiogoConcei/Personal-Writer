@@ -20,7 +20,7 @@ export async function exportWorkspaceZip(workspaceRoot: string): Promise<void> {
 }
 
 export function resolveAssetPath(path: string, workspaceRoot: string | null): string {
-  if (path.startsWith('http')) return path;
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
 
   const isAbsolute = /^[a-zA-Z]:[\\/]/.test(path) || path.startsWith('/');
   if (isAbsolute) {
@@ -107,6 +107,10 @@ export async function copyImageToAssets(sourcePath: String, workspaceRoot: strin
 
 export async function saveImageFromBytes(fileName: string, bytes: number[], workspaceRoot: string, subFolder?: string): Promise<string> {
   return invoke<string>('save_image_from_bytes', { fileName, bytes, workspaceRoot, subFolder });
+}
+
+export async function saveBase64Image(fileName: string, base64Data: string, workspaceRoot: string, folderName: string, subFolder?: string): Promise<string> {
+  return invoke<string>('save_base64_image_to_workspace', { fileName, base64Data, workspaceRoot, folderName, subFolder });
 }
 
 export interface SnapshotInfo {

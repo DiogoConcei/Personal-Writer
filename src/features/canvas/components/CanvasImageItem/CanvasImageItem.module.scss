@@ -18,6 +18,13 @@
     box-shadow: 0 0 0 2px var(--color-accent-glow);
   }
 
+  &.pending {
+    background: rgba(168, 85, 247, 0.05);
+    border: 1px dashed var(--color-accent);
+    min-width: 100px;
+    min-height: 100px;
+  }
+
   img {
     width: 100%;
     height: 100%;
@@ -26,6 +33,33 @@
     pointer-events: none;
     border-radius: var(--radius-sm);
   }
+}
+
+.loaderContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.progressText {
+  color: var(--color-accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.spinner {
+  color: var(--color-accent);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .handle {

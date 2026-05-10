@@ -197,6 +197,10 @@ export default function ImageGallery({
           onClose={onClose}
         />
 
+        <div className={styles.sectionTabsContainer}>
+          <SectionTabs activeSection={activeSection} onSectionChange={handleSectionChange} />
+        </div>
+
         <div className={styles.searchBar}>
           <div className={styles.searchBar__input}>
             <Search size={16} />

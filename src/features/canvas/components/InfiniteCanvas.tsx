@@ -38,16 +38,19 @@ import { CanvasBase } from "@/shared/components/CanvasBase/CanvasBase";
 import { CanvasDrawingLayer } from "@/shared/components/CanvasDrawingLayer/CanvasDrawingLayer";
 import { useCanvasDrawing } from "@/shared/hooks/useCanvasDrawing";
 import { useDrawingStore } from "@/shared/store/useDrawingStore";
+import { saveBase64Image } from "@/tauri-bridge/fs";
 
 export default function InfiniteCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { rootPath } = useWorkspaceStore();
+  const { rootPath, invalidateImageCache, scanImages } = useWorkspaceStore();
   const setActivePanel = useUIStore((state) => state.setActivePanel);
 
   const [isSplitModeActive, setIsSplitModeActive] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   const { drawings, addDrawing, addPointToDrawing, removeDrawing, setDrawings, strokeColor, strokeWidth } = useDrawingStore();
+
+  const cropIntervalsRef = useRef<Record<string, any>>({});
 
   // 1. Orquestração de UI e Modais
   const modalControl = useCanvasModals();
@@ -228,6 +231,111 @@ export default function InfiniteCanvas() {
     performSplit(splittingItem, data);
     setIsSplitModeActive(false);
   };
+
+  const handleExtractCrop = useCallback((base64: string | null, status: 'start' | 'finish' = 'finish', pendingIdParam?: string) => {
+    if (status === 'start') {
+      const id = `crop-pending-${Math.random().toString(36).substring(2, 9)}`;
+      const canvasPos = screenToCanvas(window.innerWidth / 2, window.innerHeight / 2);
+      
+      const newEntity: AnyCanvasEntity = {
+        id,
+        type: 'image',
+        x: canvasPos.x - 100,
+        y: canvasPos.y - 100,
+        width: 200,
+        height: 200,
+        rotation: 0,
+        zIndex: entities.length + 100, // No topo
+        data: { 
+          path: '', 
+          isPending: true,
+          progress: 0
+        } as any
+      };
+      
+      setEntities(prev => [...prev, newEntity]);
+
+      // Simular progresso
+      let currentProgress = 0;
+      cropIntervalsRef.current[id] = setInterval(() => {
+        currentProgress += 10 + Math.random() * 10;
+        if (currentProgress >= 95) {
+          clearInterval(cropIntervalsRef.current[id]);
+          currentProgress = 95;
+        }
+        setEntities(prev => prev.map(e => e.id === id ? {
+          ...e,
+          data: { ...e.data as any, progress: Math.floor(currentProgress) }
+        } : e));
+      }, 80);
+
+      return id;
+    }
+
+    if (status === 'finish' && pendingIdParam) {
+      // Limpar o intervalo de progresso se ainda existir
+      if (cropIntervalsRef.current[pendingIdParam]) {
+        clearInterval(cropIntervalsRef.current[pendingIdParam]);
+        delete cropIntervalsRef.current[pendingIdParam];
+      }
+
+      // Se não houver base64 (cancelado ou erro), removemos o placeholder
+      if (!base64) {
+        setEntities(prev => prev.filter(e => e.id !== pendingIdParam));
+        return;
+      }
+
+      // Processar a imagem final fora do setEntities para evitar side-effects
+      const img = new Image();
+      img.onload = async () => {
+        let finalPath = base64;
+
+        // Persistir no disco se houver rootPath
+        if (rootPath) {
+          try {
+            // Remove prefixo "data:image/png;base64,"
+            const base64Data = base64.split(',')[1];
+            
+            const timestamp = new Date().getTime();
+            const fileName = `recorte_${timestamp}.png`;
+            
+            // Salva na pasta colagens usando a nova ponte de alta performance
+            finalPath = await saveBase64Image(fileName, base64Data, rootPath, 'assets', 'colagens');
+            
+            // Notificar a galeria
+            invalidateImageCache();
+            scanImages();
+          } catch (err) {
+            console.error('[InfiniteCanvas] Erro ao persistir recorte:', err);
+            // Fallback: Se falhar o salvamento físico, removemos a entidade para não travar em 95%
+            setEntities(prev => prev.filter(e => e.id !== pendingIdParam));
+            return;
+          }
+        }
+
+        setEntities(current => current.map(e => e.id === pendingIdParam ? {
+          ...e,
+          width: img.width / 2,
+          height: img.height / 2,
+          data: { 
+            ...e.data as any, 
+            path: finalPath, 
+            isPending: false,
+            progress: 100,
+            naturalWidth: img.width,
+            naturalHeight: img.height
+          }
+        } : e));
+      };
+
+      img.onerror = () => {
+        console.error('[InfiniteCanvas] Erro ao carregar imagem do recorte');
+        setEntities(prev => prev.filter(e => e.id !== pendingIdParam));
+      };
+
+      img.src = base64;
+    }
+  }, [entities.length, screenToCanvas, setEntities]);
 
   const handleSelectItem = (id: string) => {
     setSelectedItemId(id);
@@ -443,6 +551,7 @@ export default function InfiniteCanvas() {
             addPdf(path);
           }}
           onConfirmSplit={handleConfirmSplit}
+          onExtractCrop={handleExtractCrop}
           rootPath={rootPath}
         />
       </CanvasControls>

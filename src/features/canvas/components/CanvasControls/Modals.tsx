@@ -10,6 +10,7 @@ interface ModalsProps {
   onImageSelect: (path: string) => void;
   onPdfSelect: (path: string) => void;
   onConfirmSplit: (data: any) => void;
+  onExtractCrop?: (base64: string | null, status?: 'start' | 'finish', id?: string) => string | void;
   rootPath?: string | null;
 }
 
@@ -18,6 +19,7 @@ export function Modals({
   onImageSelect,
   onPdfSelect,
   onConfirmSplit,
+  onExtractCrop,
   rootPath = null
 }: ModalsProps) {
   const { openModal, splittingItem, focusItem, close } = useCanvasControls();
@@ -50,6 +52,7 @@ export function Modals({
         onClose={close}
         entity={focusItem}
         rootPath={rootPath}
+        onExtractCrop={onExtractCrop}
       />
 
       {openModal === 'image' && (

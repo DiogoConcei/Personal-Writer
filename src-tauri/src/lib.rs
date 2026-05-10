@@ -37,6 +37,7 @@ pub fn run() {
             commands::fs::rename_item,
             commands::fs::copy_image_to_assets,
             commands::fs::save_image_from_bytes,
+            commands::fs::save_base64_image_to_workspace,
             commands::fs::copy_file_to_workspace,
             commands::fs::save_file_from_bytes_to_workspace,
             commands::fs::create_snapshot,

@@ -9,7 +9,7 @@ import {
   ImageAsset,
   scanWorkspaceImages
 } from '@/tauri-bridge/fs';
-import { GalleryNavTarget, GalleryBreadcrumb } from '@/shared/types';
+import { GalleryNavTarget, GalleryBreadcrumb, GallerySection } from '@/shared/types';
 import { open } from '@tauri-apps/plugin-dialog';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
@@ -60,6 +60,7 @@ export function useImageManager() {
 
   // --- Lógica de Navegação Híbrida ---
   const [activeTarget, setActiveTarget] = useState<GalleryNavTarget>(null);
+  const [activeSection, setActiveSection] = useState<GallerySection>('geral');
   const [filter, setFilter] = useState('');
   const [isPickingExisting, setIsPickingExisting] = useState(false);
 
@@ -97,20 +98,37 @@ export function useImageManager() {
           let relPath = img.path;
           if (relPath.startsWith('./')) relPath = relPath.substring(2);
           const virtualRelPath = relPath.replace(/^(assets|moodboard)\//, '');
+          
+          // --- Lógica de Seção (Silos) ---
+          if (activeSection === 'collages') {
+            return virtualRelPath.startsWith('colagens/') || virtualRelPath.startsWith('collages/');
+          }
+          if (activeSection === 'editions') {
+            return virtualRelPath.startsWith('edicoes/') || virtualRelPath.startsWith('editions/');
+          }
+
+          // Seção Geral: Esconde pastas reservadas da raiz
+          const isSpecialFolder = virtualRelPath.startsWith('colagens/') || 
+                                 virtualRelPath.startsWith('collages/') || 
+                                 virtualRelPath.startsWith('edicoes/') || 
+                                 virtualRelPath.startsWith('editions/');
+          
+          if (isSpecialFolder) return false;
+
           return !virtualRelPath.includes('/') && !allAssignedVirtualPaths.has(img.path);
         });
       }
     }
 
     return baseList.filter(img => img.name.toLowerCase().includes(filter.toLowerCase()));
-  }, [cachedImages, filter, activeTarget, collections, isPickingExisting]);
+  }, [cachedImages, filter, activeTarget, collections, isPickingExisting, activeSection]);
 
   const filteredCollections = useMemo(() => {
-    if (isPickingExisting || activeTarget?.type === 'physical') return [];
+    if (isPickingExisting || activeTarget?.type === 'physical' || activeSection !== 'geral') return [];
     
     const parentId = activeTarget?.type === 'virtual' ? activeTarget.id : undefined;
     return collections.filter(c => c.parentId === parentId && c.name.toLowerCase().includes(filter.toLowerCase()));
-  }, [collections, filter, activeTarget, isPickingExisting]);
+  }, [collections, filter, activeTarget, isPickingExisting, activeSection]);
 
   const filteredPhysicalFolders = useMemo(() => {
     if (isPickingExisting || activeTarget?.type === 'virtual') return [];
@@ -129,6 +147,17 @@ export function useImageManager() {
       parts.pop(); // Remove arquivo
       const imgFolder = parts.join('/');
 
+      // Filtra pastas especiais na raiz do Geral
+      if (activeSection === 'geral' && currentPath === '') {
+        if (['colagens', 'collages', 'edicoes', 'editions'].includes(parts[0])) return;
+      }
+
+      // Filtra por seção se estiver na raiz
+      if (currentPath === '') {
+        if (activeSection === 'collages' && !['colagens', 'collages'].includes(parts[0])) return;
+        if (activeSection === 'editions' && !['edicoes', 'editions'].includes(parts[0])) return;
+      }
+
       if (currentPath === '') {
         if (parts.length > 0 && parts[0] !== '') foldersSet.add(parts[0]);
       } else {
@@ -141,7 +170,7 @@ export function useImageManager() {
     });
 
     return Array.from(foldersSet).sort();
-  }, [cachedImages, activeTarget, isPickingExisting]);
+  }, [cachedImages, activeTarget, isPickingExisting, activeSection]);
 
   const handleTargetClick = (target: GalleryNavTarget, onNavigate?: () => void) => {
     setActiveTarget(target);
@@ -150,7 +179,8 @@ export function useImageManager() {
   };
 
   const getBreadcrumbs = (): GalleryBreadcrumb[] => {
-    const crumbs: GalleryBreadcrumb[] = [{ label: 'Galeria', target: null }];
+    const rootLabel = activeSection === 'geral' ? 'Galeria' : activeSection === 'collages' ? 'Colagens' : 'Edições';
+    const crumbs: GalleryBreadcrumb[] = [{ label: rootLabel, target: null }];
     
     if (activeTarget?.type === 'virtual') {
       const buildVirtual = (id: string) => {
@@ -172,6 +202,13 @@ export function useImageManager() {
     
     return crumbs;
   };
+
+  const handleSectionChange = (section: GallerySection) => {
+    setActiveSection(section);
+    setActiveTarget(null);
+    setFilter('');
+  };
+
   // -------------------------------------------------
 
   /**
@@ -352,6 +389,8 @@ export function useImageManager() {
     // Navegação Híbrida
     activeTarget,
     setActiveTarget,
+    activeSection,
+    handleSectionChange,
     filter,
     setFilter,
     isPickingExisting,

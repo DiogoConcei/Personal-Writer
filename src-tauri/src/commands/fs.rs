@@ -306,6 +306,41 @@ pub async fn save_image_from_bytes(file_name: String, bytes: Vec<u8>, workspace_
     save_file_from_bytes_to_workspace(file_name, bytes, workspace_root, "assets".to_string(), sub_folder).await
 }
 
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+
+#[tauri::command]
+pub async fn save_base64_image_to_workspace(
+    file_name: String,
+    base64_data: String,
+    workspace_root: String,
+    folder_name: String,
+    sub_folder: Option<String>
+) -> Result<String, String> {
+    let mut dest_dir = Path::new(&workspace_root).join(&folder_name);
+
+    if let Some(ref sub) = sub_folder {
+        dest_dir = dest_dir.join(sub);
+    }
+
+    if !dest_dir.exists() {
+        fs::create_dir_all(&dest_dir).map_err(|e| e.to_string())?;
+    }
+
+    // Decodificar Base64
+    let bytes = BASE64.decode(base64_data).map_err(|e| e.to_string())?;
+    
+    let dest_path = dest_dir.join(&file_name);
+    fs::write(dest_path, bytes).map_err(|e| e.to_string())?;
+
+    let relative_prefix = if let Some(sub) = sub_folder {
+        format!("./{}/{}/", folder_name, sub.replace("\\", "/"))
+    } else {
+        format!("./{}/", folder_name)
+    };
+
+    Ok(format!("{}{}", relative_prefix, file_name))
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SnapshotInfo {
     pub id: String,

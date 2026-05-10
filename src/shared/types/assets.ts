@@ -9,9 +9,13 @@ export interface ImageData {
   path: string;
   naturalWidth?: number;
   naturalHeight?: number;
+  isPending?: boolean; // Indica que o recorte está sendo carregado
+  progress?: number;   // Progresso de 0 a 100
 }
 
 export type SplitMode = 'amount' | 'single' | 'range';
+
+export type GallerySection = 'geral' | 'collages' | 'editions';
 
 /**
  * Representa uma coleção/pasta de imagens na galeria.

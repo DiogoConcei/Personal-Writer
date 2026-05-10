@@ -9,6 +9,7 @@ import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDra
 import ImageViewer from '../ImageViewer/ImageViewer';
 import InputModal from '@/shared/components/Modal/InputModal/InputModal';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
+import { SectionTabs } from './components/SectionTabs/SectionTabs';
 import styles from './AssetGallery.module.scss';
 import {
   Search, RefreshCw, FolderPlus,
@@ -33,6 +34,8 @@ export default function AssetGallery() {
     uploadImages, 
     handleImageDrop,
     activeTarget,
+    activeSection,
+    handleSectionChange,
     filter,
     setFilter,
     isPickingExisting,
@@ -183,6 +186,8 @@ export default function AssetGallery() {
           </div>
           <span className={styles.count}>{filteredImages.length} imagens</span>
         </div>
+
+        <SectionTabs activeSection={activeSection} onSectionChange={handleSectionChange} />
 
         <div className={styles.actions}>
           <div className={styles.collectionActions}>

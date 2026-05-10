@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './FocusModal.module.scss';
-import { X } from 'lucide-react';
+import { X, MousePointer2, Square } from 'lucide-react';
 import { AnyCanvasEntity } from '@/shared/types';
 import { CanvasNoteItem } from '../CanvasNoteItem/CanvasNoteItem';
 import { CanvasPdfItem } from '../CanvasPdfItem/CanvasPdfItem';
@@ -19,6 +19,8 @@ export const FocusModal: React.FC<FocusModalProps> = ({
   entity,
   rootPath
 }) => {
+  const [activeTool, setActiveTool] = useState<'select' | 'square'>('select');
+
   if (!isOpen || !entity) return null;
 
   const renderFocusedEntity = () => {
@@ -62,6 +64,24 @@ export const FocusModal: React.FC<FocusModalProps> = ({
         <button className={styles.closeBtn} onClick={onClose}>
           <X size={24} />
         </button>
+
+        <div className={styles.focusToolbar}>
+          <button 
+            className={`${styles.toolBtn} ${activeTool === 'select' ? styles.active : ''}`} 
+            onClick={() => setActiveTool('select')}
+            title="Selecionar"
+          >
+            <MousePointer2 size={20} />
+          </button>
+          <button 
+            className={`${styles.toolBtn} ${activeTool === 'square' ? styles.active : ''}`} 
+            onClick={() => setActiveTool('square')}
+            title="Quadrado"
+          >
+            <Square size={20} />
+          </button>
+        </div>
+
         <div className={styles.content}>
           {renderFocusedEntity()}
         </div>

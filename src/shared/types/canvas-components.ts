@@ -13,7 +13,7 @@ export interface CanvasModalsState {
   openModal: CanvasModalType | null;
   splittingItem: SplittingItem | null;
   focusItem: AnyCanvasEntity | null;
-  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits';
+  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
 }
 
 export interface SplitActionData {
@@ -54,6 +54,7 @@ export interface CanvasPdfItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
+  onStart?: () => void;
   onSplit: (page?: number) => void;
   onFocus: () => void;
   rootPath: string | null;
@@ -67,6 +68,7 @@ export interface CanvasNoteItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
+  onStart?: () => void;
   onSplit: (page?: number) => void;
   onFocus: () => void;
 }
@@ -78,13 +80,23 @@ export interface CanvasImageItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
+  onStart?: () => void;
   onFocus: () => void;
   rootPath: string | null;
 }
 
+export interface CanvasTextItemProps {
+  entity: AnyCanvasEntity;
+  isSelected: boolean;
+  onSelect: () => void;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onRemove: (id: string) => void;
+  onStart?: () => void;
+}
+
 export interface CanvasSidebarProps {
-  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits';
-  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits') => void;
+  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
+  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => void;
   isSepararActive: boolean;
   setIsSepararActive: (active: boolean) => void;
   setIsNoteGalleryOpen: (open: boolean) => void;
@@ -99,10 +111,10 @@ export interface CanvasControlsContextValue {
   openModal: CanvasModalType | null;
   splittingItem: SplittingItem | null;
   focusItem: AnyCanvasEntity | null;
-  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits';
+  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
   open: (type: CanvasModalType, data?: any) => void;
   close: () => void;
-  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits') => void;
+  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => void;
 }
 
 export interface CanvasActionMenuProps {

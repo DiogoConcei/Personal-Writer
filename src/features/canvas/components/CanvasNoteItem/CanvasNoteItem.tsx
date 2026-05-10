@@ -23,18 +23,22 @@ export function CanvasNoteItem({
   onSelect, 
   onUpdate,
   onRemove,
+  onStart,
   onSplit,
   onFocus
 }: CanvasNoteItemProps) {
   const data = entity.data as NoteData;
   const [html, setHtml] = useState('');
+  const [localTotalPages, setLocalTotalPages] = useState(data.totalPages || 1);
   const [currentPage, setCurrentPage] = useState(data.startPage || 1);
   const [columnWidth, setColumnWidth] = useState<number>(0);
   const contentRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const startPage = data.startPage || 1;
-  const endPage = data.endPage || data.totalPages || 1;
+  const effectiveEndPage = (data.endPage === 0 || !data.endPage || data.endPage > localTotalPages) 
+                           ? localTotalPages 
+                           : data.endPage;
   const paddingValue = 24;
 
   const handleEntityInteraction = () => {
@@ -52,14 +56,15 @@ export function CanvasNoteItem({
     minWidth: 200,
     onSelect: handleEntityInteraction,
     onUpdate,
-    onRemove
+    onRemove,
+    onStart
   });
 
   // Sincroniza a página atual se os limites do bloco mudarem
   useEffect(() => {
     if (currentPage < startPage) setCurrentPage(startPage);
-    if (currentPage > endPage) setCurrentPage(endPage);
-  }, [startPage, endPage, currentPage]);
+    if (currentPage > effectiveEndPage) setCurrentPage(effectiveEndPage);
+  }, [startPage, effectiveEndPage, currentPage]);
 
   useEffect(() => {
     readFile(data.noteId).then(text => {
@@ -90,6 +95,10 @@ export function CanvasNoteItem({
           if (clientWidth > 0) {
             // No modo colunas, scrollWidth / (width + gap) dá o número de páginas
             const pages = Math.ceil(scrollWidth / (clientWidth + paddingValue));
+            
+            // Atualiza o estado local para garantir que a UI reflita a realidade imediatamente (especialmente no modo foco)
+            setLocalTotalPages(pages);
+
             if (pages !== data.totalPages && pages > 0) {
               onUpdate(entity.id, { 
                 data: { 
@@ -108,13 +117,13 @@ export function CanvasNoteItem({
     return () => observer.disconnect();
   }, [html, entity.id, data, onUpdate]);
 
-  const numPagesInBlock = endPage - startPage + 1;
+  const numPagesInBlock = effectiveEndPage - startPage + 1;
   const canResize = numPagesInBlock > 1;
 
   const navigatePage = (e: React.MouseEvent, dir: 'prev' | 'next') => {
     e.stopPropagation();
     if (dir === 'prev' && currentPage > startPage) setCurrentPage(currentPage - 1);
-    if (dir === 'next' && currentPage < endPage) setCurrentPage(currentPage + 1);
+    if (dir === 'next' && currentPage < effectiveEndPage) setCurrentPage(currentPage + 1);
   };
 
   return (
@@ -157,7 +166,7 @@ export function CanvasNoteItem({
           />
         </div>
         
-        {data.totalPages && data.totalPages > 1 && (
+        {localTotalPages && localTotalPages > 1 && (
           <div className={styles.noteFooter}>
             <button 
               className={styles.navBtn} 
@@ -166,13 +175,13 @@ export function CanvasNoteItem({
             >
               &lt;
             </button>
-            <div className={styles.noteBadge} title={`Página ${currentPage} de ${data.totalPages}`}>
-              {startPage === endPage ? `Pág ${startPage}` : `Pág ${currentPage} (${startPage}-${endPage})`}
+            <div className={styles.noteBadge} title={`Página ${currentPage} de ${localTotalPages}`}>
+              {startPage === effectiveEndPage ? `Pág ${startPage}` : `Pág ${currentPage} (${startPage}-${effectiveEndPage})`}
             </div>
             <button 
               className={styles.navBtn} 
               onClick={(e) => navigatePage(e, 'next')}
-              disabled={currentPage >= endPage}
+              disabled={currentPage >= effectiveEndPage}
             >
               &gt;
             </button>

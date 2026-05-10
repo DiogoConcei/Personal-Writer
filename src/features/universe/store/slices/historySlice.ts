@@ -1,52 +1,45 @@
 import { StateCreator } from 'zustand';
 import { MesaTrabalhoState } from '../moodBoardStore.types';
+import * as HistoryUtils from '@/shared/utils/history';
 
 export const createHistorySlice: StateCreator<MesaTrabalhoState, [], [], Partial<MesaTrabalhoState>> = (set, get) => ({
   past: [],
   future: [],
 
   takeSnapshot: () => {
-    const { items, groups, drawings, connections, past } = get();
-    const newSnapshot = JSON.parse(JSON.stringify({ items, groups, drawings, connections }));
+    const { items, groups, drawings, connections, past, future } = get();
+    const currentState = { items, groups, drawings, connections };
+    const history = { past, future };
     
-    // Limitar o histórico para as últimas 30 ações
-    const newPast = [...past, newSnapshot].slice(-30);
-    set({ past: newPast, future: [] });
+    const newHistory = HistoryUtils.takeSnapshot(currentState, history);
+    set(newHistory);
   },
 
   undo: () => {
-    const { past, future, items, groups, drawings, connections } = get();
-    if (past.length === 0) return;
+    const { items, groups, drawings, connections, past, future } = get();
+    const currentState = { items, groups, drawings, connections };
+    const history = { past, future };
 
-    const previous = past[past.length - 1];
-    const newPast = past.slice(0, past.length - 1);
-    const current = JSON.parse(JSON.stringify({ items, groups, drawings, connections }));
+    const result = HistoryUtils.undo(currentState, history);
+    if (!result) return;
 
     set({
-      items: previous.items,
-      groups: previous.groups,
-      drawings: previous.drawings,
-      connections: previous.connections,
-      past: newPast,
-      future: [current, ...future].slice(0, 30)
+      ...result.state,
+      ...result.history
     });
   },
 
   redo: () => {
-    const { past, future, items, groups, drawings, connections } = get();
-    if (future.length === 0) return;
+    const { items, groups, drawings, connections, past, future } = get();
+    const currentState = { items, groups, drawings, connections };
+    const history = { past, future };
 
-    const next = future[0];
-    const newFuture = future.slice(1);
-    const current = JSON.parse(JSON.stringify({ items, groups, drawings, connections }));
+    const result = HistoryUtils.redo(currentState, history);
+    if (!result) return;
 
     set({
-      items: next.items,
-      groups: next.groups,
-      drawings: next.drawings,
-      connections: next.connections,
-      past: [...past, current].slice(-30),
-      future: newFuture
+      ...result.state,
+      ...result.history
     });
   }
 });

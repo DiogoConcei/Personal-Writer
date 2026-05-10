@@ -4,6 +4,8 @@ interface UseCanvasHotkeysOptions {
   selectedItemId: string | null;
   onRemove: (id: string) => void;
   onDeselect: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 /**
@@ -12,7 +14,9 @@ interface UseCanvasHotkeysOptions {
 export function useCanvasHotkeys({
   selectedItemId,
   onRemove,
-  onDeselect
+  onDeselect,
+  onUndo,
+  onRedo
 }: UseCanvasHotkeysOptions) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -29,10 +33,10 @@ export function useCanvasHotkeys({
       if (e.ctrlKey || e.metaKey) {
         if (e.key === "z") {
           e.preventDefault();
-          // onUndo? (Precisa ser injetado se o InfiniteCanvas tiver store de histórico)
-        } else if (e.key === "y") {
+          onUndo?.();
+        } else if (e.key === "y" || (e.key === 'Z' && e.shiftKey)) {
           e.preventDefault();
-          // onRedo?
+          onRedo?.();
         }
         return;
       }

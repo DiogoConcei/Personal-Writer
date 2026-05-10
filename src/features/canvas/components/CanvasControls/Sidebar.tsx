@@ -1,9 +1,9 @@
 import { useCanvasControls } from './CanvasControls';
 import { NoteConfigPanel } from '../NoteConfigPanel/NoteConfigPanel';
 import { DrawingStylePanel } from '@/shared/components/DrawingStylePanel/DrawingStylePanel';
+import { TextStylePanel } from '../TextStylePanel/TextStylePanel';
 import styles from './CanvasControls.module.scss';
 import { AnyCanvasEntity } from '@/shared/types';
-import { useEffect } from 'react';
 
 interface SidebarProps {
   isSepararActive: boolean;
@@ -11,7 +11,10 @@ interface SidebarProps {
   selectedNoteEntity: AnyCanvasEntity | undefined;
   handleFontSizeChange: (increment: number) => void;
   updateSelectedNoteStyle: (styleUpdates: Record<string, string | number>) => void;
-  isPencilActive?: boolean;
+  selectedTextEntity?: AnyCanvasEntity;
+  handleTextFontSizeChange?: (newSize: number) => void;
+  handleTextFontFamilyChange?: (fontFamily: string) => void;
+  toggleTextBold?: () => void;
 }
 
 export function Sidebar({
@@ -20,18 +23,12 @@ export function Sidebar({
   selectedNoteEntity,
   handleFontSizeChange,
   updateSelectedNoteStyle,
-  isPencilActive,
+  selectedTextEntity,
+  handleTextFontSizeChange,
+  handleTextFontFamilyChange,
+  toggleTextBold,
 }: SidebarProps) {
   const { sideMenuMode, setSideMenuMode, open } = useCanvasControls();
-
-  // Sincroniza o modo do menu com o estado da ferramenta de lápis
-  useEffect(() => {
-    if (isPencilActive) {
-      setSideMenuMode("drawing");
-    } else if (sideMenuMode === "drawing") {
-      setSideMenuMode("main");
-    }
-  }, [isPencilActive, setSideMenuMode]);
 
   const renderContent = () => {
     if (sideMenuMode === "drawing") {
@@ -41,6 +38,22 @@ export function Sidebar({
             <h2>Ferramenta de Desenho</h2>
           </header>
           <DrawingStylePanel />
+        </>
+      );
+    }
+
+    if (sideMenuMode === "text") {
+      return (
+        <>
+          <header className={styles.subHeader}>
+            <h2>Ferramenta de Texto</h2>
+          </header>
+          <TextStylePanel 
+            selectedTextEntity={selectedTextEntity}
+            handleFontSizeChange={handleTextFontSizeChange || (() => {})}
+            handleFontFamilyChange={handleTextFontFamilyChange || (() => {})}
+            toggleBold={toggleTextBold || (() => {})}
+          />
         </>
       );
     }

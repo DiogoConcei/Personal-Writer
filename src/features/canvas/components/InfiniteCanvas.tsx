@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import styles from "./InfiniteCanvas.module.scss";
 import { useUIStore } from "../../../store/uiStore";
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
@@ -23,7 +23,9 @@ import { useCanvasModals } from "../hooks/useCanvasModals";
 import { useCanvasSplit } from "../hooks/useCanvasSplit";
 import { useCanvasHotkeys } from "../hooks/useCanvasHotkeys";
 import { useCanvasNoteStyle } from "../hooks/useCanvasNoteStyle";
-import { NoteData, PdfData, SplitActionData } from "@/shared/types";
+import { useCanvasTextStyle } from "../hooks/useCanvasTextStyle";
+import { useHistory } from "@/shared/hooks/useHistory";
+import { NoteData, PdfData, SplitActionData, AnyCanvasEntity, MesaDrawing } from "@/shared/types";
 
 // Componentes
 import { CanvasActionMenu } from "./CanvasActionMenu/CanvasActionMenu";
@@ -45,7 +47,7 @@ export default function InfiniteCanvas() {
   const [isSplitModeActive, setIsSplitModeActive] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-  const { drawings, addDrawing, addPointToDrawing, removeDrawing, strokeColor, strokeWidth } = useDrawingStore();
+  const { drawings, addDrawing, addPointToDrawing, removeDrawing, setDrawings, strokeColor, strokeWidth } = useDrawingStore();
 
   // 1. Orquestração de UI e Modais
   const modalControl = useCanvasModals();
@@ -88,6 +90,48 @@ export default function InfiniteCanvas() {
     activateText,
   } = useCanvasTools('select');
 
+  // 4. Gestão de Dados e Entidades
+  const {
+    entities,
+    setEntities,
+    addNote,
+    addImage,
+    addPdf,
+    addText,
+    updateEntity: handleUpdateEntity,
+    removeEntity: handleRemoveEntity,
+    bringToFront,
+  } = useCanvasEntities({ zoom, viewState, containerRef, rootPath });
+
+  // 5. Histórico (Undo/Redo)
+  const { takeSnapshot, undo, redo } = useHistory<{ entities: AnyCanvasEntity[], drawings: MesaDrawing[] }>();
+
+  const handleUpdateWithSnapshot = useCallback((id: string, updates: Partial<AnyCanvasEntity>) => {
+    takeSnapshot({ entities, drawings });
+    handleUpdateEntity(id, updates);
+  }, [takeSnapshot, entities, drawings, handleUpdateEntity]);
+
+  const handleRemoveWithSnapshot = useCallback((id: string) => {
+    takeSnapshot({ entities, drawings });
+    handleRemoveEntity(id);
+  }, [takeSnapshot, entities, drawings, handleRemoveEntity]);
+
+  const handleUndo = useCallback(() => {
+    const previous = undo({ entities, drawings });
+    if (previous) {
+      setEntities(previous.entities);
+      setDrawings(previous.drawings);
+    }
+  }, [undo, entities, drawings, setEntities, setDrawings]);
+
+  const handleRedo = useCallback(() => {
+    const next = redo({ entities, drawings });
+    if (next) {
+      setEntities(next.entities);
+      setDrawings(next.drawings);
+    }
+  }, [redo, entities, drawings, setEntities, setDrawings]);
+
   // Hook de Desenho Unificado
   const { startDrawing, draw, stopDrawing } = useCanvasDrawing({
     containerRef,
@@ -96,7 +140,10 @@ export default function InfiniteCanvas() {
     width: strokeWidth,
     zoom,
     viewState,
-    onAddDrawing: addDrawing,
+    onAddDrawing: (drawing) => {
+      takeSnapshot({ entities, drawings });
+      addDrawing(drawing);
+    },
     onAddPoint: addPointToDrawing
   });
 
@@ -112,40 +159,50 @@ export default function InfiniteCanvas() {
     }
   }, [isPencilActive, draw, stopDrawing]);
 
-  // 4. Gestão de Dados e Entidades
-  const {
-    entities,
-    setEntities,
-    addNote,
-    addImage,
-    addPdf,
-    addText,
-    updateEntity: handleUpdateEntity,
-    removeEntity: handleRemoveEntity,
-    bringToFront,
-  } = useCanvasEntities({ zoom, viewState, containerRef, rootPath });
-
   const { performSplit } = useCanvasSplit({ entities, setEntities });
 
-  // 5. Customização Visual e Hotkeys
+  // 6. Customização Visual e Hotkeys
   const { selectedNoteEntity, updateSelectedNoteStyle, handleFontSizeChange } =
     useCanvasNoteStyle({
       selectedItemId,
       entities,
-      onUpdate: handleUpdateEntity,
+      onUpdate: handleUpdateWithSnapshot,
     });
+
+  const { 
+    selectedTextEntity, 
+    handleFontSizeChange: handleTextFontSizeChange, 
+    handleFontFamilyChange: handleTextFontFamilyChange, 
+    toggleBold: toggleTextBold 
+  } = useCanvasTextStyle({
+    selectedItemId,
+    entities,
+    onUpdate: handleUpdateWithSnapshot,
+  });
 
   useCanvasHotkeys({
     selectedItemId,
-    onRemove: handleRemoveEntity,
+    onRemove: handleRemoveWithSnapshot,
     onDeselect: () => setSelectedItemId(null),
+    onUndo: handleUndo,
+    onRedo: handleRedo
   });
 
-  // Sincronizar painel lateral com seleção
+  // Sincronizar painel lateral com ferramentas e seleção
   useEffect(() => {
-    const selectedEntity = entities.find((e) => e.id === selectedItemId);
-    setSideMenuMode(selectedEntity?.type === "note" ? "notes" : "main");
-  }, [selectedItemId, entities, setSideMenuMode]);
+    if (isPencilActive) {
+      setSideMenuMode("drawing");
+    } else if (isTextActive) {
+      setSideMenuMode("text");
+    } else {
+      const selectedEntity = entities.find((e) => e.id === selectedItemId);
+      if (selectedEntity?.type === "note") {
+        setSideMenuMode("notes");
+      } else {
+        setSideMenuMode("main");
+      }
+    }
+  }, [isPencilActive, isTextActive, selectedItemId, entities, setSideMenuMode]);
 
   // Handlers
   const handleToggleSplitMode = (active: boolean) => {
@@ -167,6 +224,7 @@ export default function InfiniteCanvas() {
   };
 
   const handleConfirmSplit = (data: SplitActionData) => {
+    takeSnapshot({ entities, drawings });
     performSplit(splittingItem, data);
     setIsSplitModeActive(false);
   };
@@ -181,8 +239,12 @@ export default function InfiniteCanvas() {
   const { handleRotateStart } = useTransformable({
     x: selectedEntity?.x || 0,
     y: selectedEntity?.y || 0,
-    onUpdate: (updates) =>
-      selectedItemId && handleUpdateEntity(selectedItemId, updates),
+    onStart: () => takeSnapshot({ entities, drawings }),
+    onUpdate: (updates) => {
+      if (selectedItemId) {
+        handleUpdateEntity(selectedItemId, updates);
+      }
+    },
   });
 
   /**
@@ -197,8 +259,9 @@ export default function InfiniteCanvas() {
       isSepararActive: isSplitModeActive,
       isScissorsActive,
       onSelect: () => handleSelectItem(entity.id),
-      onUpdate: handleUpdateEntity,
-      onRemove: handleRemoveEntity,
+      onUpdate: handleUpdateWithSnapshot,
+      onRemove: handleRemoveWithSnapshot,
+      onStart: () => takeSnapshot({ entities, drawings }),
       onFocus: () => open("focus", entity),
     };
 
@@ -352,19 +415,33 @@ export default function InfiniteCanvas() {
       </div>
 
       <CanvasControls value={modalControl}>
-        <CanvasControls.Sidebar
-          isSepararActive={isSplitModeActive}
-          setIsSepararActive={handleToggleSplitMode}
-          selectedNoteEntity={selectedNoteEntity}
-          handleFontSizeChange={handleFontSizeChange}
-          updateSelectedNoteStyle={updateSelectedNoteStyle}
-          isPencilActive={isPencilActive}
-        />
+        {!isScissorsActive && (
+          <CanvasControls.Sidebar
+            isSepararActive={isSplitModeActive}
+            setIsSepararActive={handleToggleSplitMode}
+            selectedNoteEntity={selectedNoteEntity}
+            handleFontSizeChange={handleFontSizeChange}
+            updateSelectedNoteStyle={updateSelectedNoteStyle}
+            selectedTextEntity={selectedTextEntity}
+            handleTextFontSizeChange={handleTextFontSizeChange}
+            handleTextFontFamilyChange={handleTextFontFamilyChange}
+            toggleTextBold={toggleTextBold}
+          />
+        )}
 
         <CanvasControls.Modals
-          onNoteSelect={(path, name) => handleSelectItem(addNote(path, name))}
-          onImageSelect={addImage}
-          onPdfSelect={addPdf}
+          onNoteSelect={(path, name) => {
+            takeSnapshot({ entities, drawings });
+            handleSelectItem(addNote(path, name));
+          }}
+          onImageSelect={(path) => {
+            takeSnapshot({ entities, drawings });
+            addImage(path);
+          }}
+          onPdfSelect={(path) => {
+            takeSnapshot({ entities, drawings });
+            addPdf(path);
+          }}
           onConfirmSplit={handleConfirmSplit}
           rootPath={rootPath}
         />
@@ -384,8 +461,10 @@ export default function InfiniteCanvas() {
             startDrawing(e);
           } else if (isTextActive) {
             if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('canvas-viewport')) {
+              takeSnapshot({ entities, drawings });
               const pos = screenToCanvas(e.clientX, e.clientY);
-              addText({ text: '' }, pos);
+              const id = addText({ text: '' }, pos);
+              if (id) setSelectedItemId(id as string);
             }
           } else {
             setSelectedItemId(null);
@@ -413,8 +492,8 @@ export default function InfiniteCanvas() {
             {selectedItemId === entity.id && (
               <CanvasActionMenu
                 entity={entity}
-                onRemove={handleRemoveEntity}
-                onUpdate={handleUpdateEntity}
+                onRemove={handleRemoveWithSnapshot}
+                onUpdate={handleUpdateWithSnapshot}
                 handleRotateStart={handleRotateStart}
               />
             )}

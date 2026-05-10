@@ -10,6 +10,7 @@ interface TransformOptions {
   minHeight?: number;
   onUpdate: (updates: { x?: number; y?: number; width?: number; height?: number; rotation?: number }) => void;
   onSelect?: () => void;
+  onStart?: () => void;
   ignoreSelectors?: string[];
 }
 
@@ -26,6 +27,7 @@ export function useTransformable({
   minHeight = 50,
   onUpdate,
   onSelect,
+  onStart,
   ignoreSelectors = ['button', '.handle']
 }: TransformOptions) {
   
@@ -42,6 +44,8 @@ export function useTransformable({
     });
 
     if (shouldIgnore) return;
+
+    if (onStart) onStart();
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -68,6 +72,7 @@ export function useTransformable({
     e.stopPropagation();
     
     if (onSelect) onSelect();
+    if (onStart) onStart();
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -101,6 +106,7 @@ export function useTransformable({
     e.stopPropagation();
 
     if (onSelect) onSelect();
+    if (onStart) onStart();
 
     const rect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;

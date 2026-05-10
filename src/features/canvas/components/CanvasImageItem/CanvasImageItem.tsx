@@ -13,6 +13,7 @@ export function CanvasImageItem({
   onSelect, 
   onUpdate,
   onRemove,
+  onStart,
   onFocus,
   rootPath 
 }: CanvasImageItemProps) {
@@ -31,7 +32,8 @@ export function CanvasImageItem({
     minWidth: 100,
     onSelect: handleEntityInteraction,
     onUpdate,
-    onRemove
+    onRemove,
+    onStart
   });
 
   return (

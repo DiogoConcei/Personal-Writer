@@ -1,16 +1,8 @@
 import React from 'react';
 import { useCanvasEntity } from '../../hooks/useCanvasEntity';
 import { useCanvasText } from '@/shared/hooks/useCanvasText';
-import { AnyCanvasEntity, TextData } from '@/shared/types';
+import { TextData, CanvasTextItemProps } from '@/shared/types';
 import styles from './CanvasTextItem.module.scss';
-
-interface CanvasTextItemProps {
-  entity: AnyCanvasEntity;
-  isSelected: boolean;
-  onSelect: () => void;
-  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
-  onRemove: (id: string) => void;
-}
 
 /**
  * Componente para representar blocos de texto editáveis no Infinite Canvas.
@@ -21,7 +13,8 @@ export function CanvasTextItem({
   isSelected,
   onSelect,
   onUpdate,
-  onRemove
+  onRemove,
+  onStart
 }: CanvasTextItemProps) {
   const data = entity.data as TextData;
 
@@ -34,7 +27,10 @@ export function CanvasTextItem({
     handleKeyDown: handleTextKeyDown 
   } = useCanvasText({
     initialText: data.text || '',
-    onSave: (newText) => onUpdate(entity.id, { data: { ...data, text: newText } }),
+    onSave: (newText) => {
+      onStart?.();
+      onUpdate(entity.id, { data: { ...data, text: newText } });
+    },
     isEnabled: isSelected
   });
 
@@ -43,6 +39,7 @@ export function CanvasTextItem({
     onSelect,
     onUpdate,
     onRemove,
+    onStart,
     minWidth: 50,
     minHeight: 30
   });

@@ -12,7 +12,8 @@ export function CanvasPageItem({
   onSelect,
   onUpdate,
   onRemove,
-  onStart
+  onStart,
+  onEnd
 }: CanvasPageItemProps) {
   const data = entity.data as PageData;
 
@@ -23,7 +24,8 @@ export function CanvasPageItem({
     onSelect,
     onUpdate,
     onRemove,
-    onStart
+    onStart,
+    onEnd
   });
 
   return (

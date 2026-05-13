@@ -25,6 +25,7 @@ export function CanvasNoteItem({
   onUpdate,
   onRemove,
   onStart,
+  onEnd,
   onSplit,
   onFocus,
   onPageChange
@@ -59,7 +60,8 @@ export function CanvasNoteItem({
     onSelect: handleEntityInteraction,
     onUpdate,
     onRemove,
-    onStart
+    onStart,
+    onEnd
   });
 
   // Sincroniza a página atual se os limites do bloco mudarem

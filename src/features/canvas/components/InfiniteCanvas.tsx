@@ -28,6 +28,7 @@ import { useCanvasPostItStyle } from "../hooks/useCanvasPostItStyle";
 import { useCanvasTextStyle } from "../hooks/useCanvasTextStyle";
 import { useHistory } from "@/shared/hooks/useHistory";
 import { NoteData, PdfData, SplitActionData, AnyCanvasEntity, MesaDrawing } from "@/shared/types";
+import { doRectanglesOverlap } from "@/shared/utils/ui";
 
 // Componentes
 import { CanvasActionMenu } from "./CanvasActionMenu/CanvasActionMenu";
@@ -122,7 +123,9 @@ export default function InfiniteCanvas() {
   const handleUpdateWithSnapshot = useCallback((id: string, updates: Partial<AnyCanvasEntity>) => {
     const draggingEntity = entities.find(e => e.id === id);
     
-    if (draggingEntity?.groupId && (updates.x !== undefined || updates.y !== undefined)) {
+    // Mover o grupo INTEIRO apenas se NÃO estivermos em modo de edição de colagem
+    // No modo colagem, queremos ajustes individuais para "colar" um item no outro
+    if (!isCollageConfirmed && draggingEntity?.groupId && (updates.x !== undefined || updates.y !== undefined)) {
       setEntities(prev => {
         const currentEntity = prev.find(e => e.id === id);
         if (!currentEntity) return prev;
@@ -163,7 +166,7 @@ export default function InfiniteCanvas() {
     } else {
       handleUpdateEntity(id, updates);
     }
-  }, [entities, drawings, handleUpdateEntity, setEntities, updateDrawing]);
+  }, [entities, drawings, handleUpdateEntity, setEntities, updateDrawing, isCollageConfirmed]);
 
   const handleRemoveWithSnapshot = useCallback((id: string) => {
     takeSnapshot({ entities, drawings });
@@ -174,6 +177,50 @@ export default function InfiniteCanvas() {
     takeSnapshot({ entities, drawings });
     return addPendingCollage(sourceEntity, boundingBox);
   }, [takeSnapshot, entities, drawings, addPendingCollage]);
+
+  // Handler para finalização de movimento (Drop)
+  const handleTransformEnd = useCallback((entityId: string) => {
+    if (isCollageConfirmed) {
+      // Lógica de "Colar em cima": se soltar um item sobre outro, ele entra no grupo
+      const movedItem = entities.find(e => e.id === entityId);
+      if (!movedItem) return;
+
+      const itemRect = { 
+        x: movedItem.x, 
+        y: movedItem.y, 
+        width: (movedItem as any).width || 100, 
+        height: (movedItem as any).height || 100 
+      };
+
+      const overlappingItem = entities.find(other => {
+        if (other.id === movedItem.id) return false;
+        // Páginas não servem para "colar" outras coisas nelas como grupo de colagem
+        if (other.type === 'page') return false; 
+        
+        const otherRect = { 
+          x: other.x, 
+          y: other.y, 
+          width: (other as any).width || 100, 
+          height: (other as any).height || 100 
+        };
+        return doRectanglesOverlap(itemRect, otherRect);
+      });
+
+      if (overlappingItem) {
+        takeSnapshot({ entities, drawings });
+        const targetGroupId = overlappingItem.groupId || activeCollageGroupId || `collage-${Math.random().toString(36).substring(2, 9)}`;
+        
+        if (!overlappingItem.groupId) {
+          handleUpdateEntity(overlappingItem.id, { groupId: targetGroupId });
+        }
+        handleUpdateEntity(movedItem.id, { groupId: targetGroupId });
+      } else if (movedItem.groupId) {
+        // Se soltou fora de qualquer item, ele sai do grupo de colagem
+        takeSnapshot({ entities, drawings });
+        handleUpdateEntity(movedItem.id, { groupId: undefined });
+      }
+    }
+  }, [entities, isCollageConfirmed, activeCollageGroupId, handleUpdateEntity, takeSnapshot, drawings]);
 
 
   const handleUndo = useCallback(() => {
@@ -321,7 +368,7 @@ export default function InfiniteCanvas() {
         return [...prev, id];
       });
       setSelectedItemId(id);
-    } else if (!isCollageConfirmed) {
+    } else {
       setSelectedItemIds([id]);
       setSelectedItemId(id);
     }
@@ -336,17 +383,54 @@ export default function InfiniteCanvas() {
     if (selectedItemIds.length > 0) {
       takeSnapshot({ entities, drawings });
       
-      const existingGroupItem = [...entities, ...drawings].find(e => selectedItemIds.includes(e.id) && e.groupId);
+      // Filtrar apenas entidades e desenhos que se sobrepõem a pelo menos um outro item selecionado
+      const itemsToGroup = selectedItemIds.filter(id => {
+        const item = [...entities, ...drawings].find(e => e.id === id);
+        if (!item) return false;
+
+        const itemRect = { 
+          x: item.x || 0, 
+          y: item.y || 0, 
+          width: (item as any).width || 100, 
+          height: (item as any).height || 100 
+        };
+
+        return selectedItemIds.some(otherId => {
+          if (id === otherId) return false;
+          const otherItem = [...entities, ...drawings].find(e => e.id === otherId);
+          if (!otherItem) return false;
+
+          const otherRect = { 
+            x: otherItem.x || 0, 
+            y: otherItem.y || 0, 
+            width: (otherItem as any).width || 100, 
+            height: (otherItem as any).height || 100 
+          };
+
+          return doRectanglesOverlap(itemRect, otherRect);
+        });
+      });
+
+      if (itemsToGroup.length < 2) {
+        // Se nada se sobrepõe, não criamos grupo
+        setIsCollageConfirmed(true);
+        setSelectedItemIds([]);
+        setSelectedItemId(null);
+        activateSelect();
+        return;
+      }
+
+      const existingGroupItem = [...entities, ...drawings].find(e => itemsToGroup.includes(e.id) && e.groupId);
       const groupId = existingGroupItem?.groupId || `collage-${Math.random().toString(36).substring(2, 9)}`;
 
       setActiveCollageGroupId(groupId);
 
       setEntities(prev => prev.map(e => 
-        selectedItemIds.includes(e.id) ? { ...e, groupId } : e
+        itemsToGroup.includes(e.id) ? { ...e, groupId } : e
       ));
 
       drawings.forEach(d => {
-        if (selectedItemIds.includes(d.id)) {
+        if (itemsToGroup.includes(d.id)) {
           updateDrawing(d.id, { groupId });
         }
       });
@@ -402,6 +486,7 @@ export default function InfiniteCanvas() {
       onUpdate: handleUpdateWithSnapshot,
       onRemove: handleRemoveWithSnapshot,
       onStart: () => takeSnapshot({ entities, drawings }),
+      onEnd: () => handleTransformEnd(entity.id),
       onFocus: () => open("focus", entity),
     };
 
@@ -710,21 +795,12 @@ export default function InfiniteCanvas() {
           <div
             className={styles.grid}
             style={{
-              transform: `translate(${viewState.x % (40 * zoom)}px, ${viewState.y % (40 * zoom)}px) scale(${zoom})`,
-              backgroundSize: `${40}px ${40}px`,
+              backgroundPosition: `${viewState.x}px ${viewState.y}px`,
+              backgroundSize: `${40 * zoom}px ${40 * zoom}px`,
             }}
           />
         }
       >
-        <CanvasDrawingLayer 
-          drawings={drawings} 
-          removeDrawing={removeDrawing} 
-          isEraserActive={isEraserActive} 
-          isCollageActive={isCollageActive}
-          selectedItemIds={selectedItemIds}
-          onSelect={handleSelectItem}
-        />
-
         {getVisibleItems(entities).map((entity) => (
           <div key={entity.id}>
             {renderEntity(entity)}
@@ -741,6 +817,15 @@ export default function InfiniteCanvas() {
             )}
           </div>
         ))}
+
+        <CanvasDrawingLayer 
+          drawings={drawings} 
+          removeDrawing={removeDrawing} 
+          isEraserActive={isEraserActive} 
+          isCollageActive={isCollageActive}
+          selectedItemIds={selectedItemIds}
+          onSelect={handleSelectItem}
+        />
       </CanvasBase>
     </div>
   );

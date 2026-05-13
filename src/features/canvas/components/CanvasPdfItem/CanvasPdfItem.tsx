@@ -18,6 +18,7 @@ export function CanvasPdfItem({
   onUpdate,
   onRemove,
   onStart,
+  onEnd,
   onSplit,
   onFocus,
   onPageChange,
@@ -52,7 +53,8 @@ export function CanvasPdfItem({
     onSelect: handleEntityInteraction,
     onUpdate,
     onRemove,
-    onStart
+    onStart,
+    onEnd
   });
 
   const isSinglePage = startPage === endPage;

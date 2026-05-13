@@ -57,6 +57,7 @@ export interface CanvasPdfItemProps {
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
   onStart?: () => void;
+  onEnd?: () => void;
   onSplit: (page?: number) => void;
   onFocus: () => void;
   onPageChange?: (page: number) => void;
@@ -72,6 +73,7 @@ export interface CanvasNoteItemProps {
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
   onStart?: () => void;
+  onEnd?: () => void;
   onSplit: (page?: number) => void;
   onFocus: () => void;
   onPageChange?: (page: number) => void;
@@ -85,6 +87,7 @@ export interface CanvasImageItemProps {
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
   onStart?: () => void;
+  onEnd?: () => void;
   onFocus: () => void;
   rootPath: string | null;
 }
@@ -96,6 +99,7 @@ export interface CanvasTextItemProps {
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
   onStart?: () => void;
+  onEnd?: () => void;
 }
 
 export interface CanvasPostItItemProps {
@@ -106,6 +110,7 @@ export interface CanvasPostItItemProps {
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
   onStart?: () => void;
+  onEnd?: () => void;
   onFocus: () => void;
 }
 
@@ -116,6 +121,7 @@ export interface CanvasPageItemProps {
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
   onStart?: () => void;
+  onEnd?: () => void;
 }
 
 export interface PostItConfigPanelProps {

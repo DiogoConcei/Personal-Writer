@@ -15,6 +15,7 @@ export function CanvasPostItItem({
   onUpdate,
   onRemove,
   onStart,
+  onEnd,
   onFocus
 }: CanvasPostItItemProps) {
   const data = entity.data as PostItData;
@@ -47,7 +48,8 @@ export function CanvasPostItItem({
     onSelect: handleEntityInteraction,
     onUpdate,
     onRemove,
-    onStart
+    onStart,
+    onEnd
   });
 
   const handleContainerMouseDown = (e: React.MouseEvent) => {

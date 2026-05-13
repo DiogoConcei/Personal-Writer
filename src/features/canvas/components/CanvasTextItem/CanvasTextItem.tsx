@@ -14,7 +14,8 @@ export function CanvasTextItem({
   onSelect,
   onUpdate,
   onRemove,
-  onStart
+  onStart,
+  onEnd
 }: CanvasTextItemProps) {
   const data = entity.data as TextData;
 
@@ -40,6 +41,7 @@ export function CanvasTextItem({
     onUpdate,
     onRemove,
     onStart,
+    onEnd,
     minWidth: 50,
     minHeight: 30
   });

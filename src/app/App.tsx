@@ -149,6 +149,23 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // KI-034: Bloqueia a interceptação do Windows Shell Overlay ("Drop here to share")
+    // e garante que o drop chegue ao aplicativo.
+    const handleGlobalDrag = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    window.addEventListener("dragenter", handleGlobalDrag);
+    window.addEventListener("dragover", handleGlobalDrag);
+
+    return () => {
+      window.removeEventListener("dragenter", handleGlobalDrag);
+      window.removeEventListener("dragover", handleGlobalDrag);
+    };
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === "\\") {
         e.preventDefault();

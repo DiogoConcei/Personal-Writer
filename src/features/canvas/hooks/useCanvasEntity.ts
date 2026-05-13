@@ -8,6 +8,7 @@ interface UseCanvasEntityOptions {
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
   onStart?: () => void;
+  onEnd?: () => void;
   minWidth?: number;
   minHeight?: number;
 }
@@ -22,6 +23,7 @@ export function useCanvasEntity({
   onUpdate,
   onRemove,
   onStart,
+  onEnd,
   minWidth = 150,
   minHeight = 150,
 }: UseCanvasEntityOptions) {
@@ -44,6 +46,7 @@ export function useCanvasEntity({
     minHeight,
     onSelect,
     onStart,
+    onEnd,
     onUpdate: handleUpdate,
   });
 

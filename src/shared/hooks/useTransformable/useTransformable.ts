@@ -11,6 +11,7 @@ interface TransformOptions {
   onUpdate: (updates: { x?: number; y?: number; width?: number; height?: number; rotation?: number }) => void;
   onSelect?: () => void;
   onStart?: () => void;
+  onEnd?: () => void;
   ignoreSelectors?: string[];
 }
 
@@ -28,6 +29,7 @@ export function useTransformable({
   onUpdate,
   onSelect,
   onStart,
+  onEnd,
   ignoreSelectors = ['button', '.handle']
 }: TransformOptions) {
   
@@ -61,11 +63,12 @@ export function useTransformable({
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      if (onEnd) onEnd();
     };
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, [x, y, onUpdate, onSelect, ignoreSelectors]);
+  }, [x, y, onUpdate, onSelect, onEnd, ignoreSelectors]);
 
   const handleResizeStart = useCallback((direction: 'tl' | 'tr' | 'bl' | 'br', e: React.MouseEvent) => {
     e.preventDefault();
@@ -95,11 +98,12 @@ export function useTransformable({
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      if (onEnd) onEnd();
     };
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, [width, height, minWidth, minHeight, onUpdate, onSelect]);
+  }, [width, height, minWidth, minHeight, onUpdate, onSelect, onEnd]);
 
   const handleRotateStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -122,11 +126,12 @@ export function useTransformable({
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      if (onEnd) onEnd();
     };
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, [onUpdate, onSelect]);
+  }, [onUpdate, onSelect, onEnd]);
 
   return { handleMouseDown, handleResizeStart, handleRotateStart };
 }

@@ -25,6 +25,7 @@ import { MetadataHeader } from "../../Headers/MetadataHeader/MetadataHeader";
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
 import styles from './VersionHistory.module.scss';
 import editorStyles from "../../Core/Editor/Editor.module.scss";
+import typographyStyles from "../../Core/Editor/EditorTypography.module.scss";
 import {
   History,
   RotateCcw,
@@ -87,7 +88,7 @@ export default function VersionHistory({ onClose, editor: mainEditor }: VersionH
     editable: false,
     editorProps: {
       attributes: {
-        class: `${editorStyles.prose} ${styles.previewProse}`,
+        class: `${typographyStyles.prose} ${styles.previewProse}`,
         spellcheck: 'false'
       },
     },

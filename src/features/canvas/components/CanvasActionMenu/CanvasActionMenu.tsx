@@ -1,4 +1,4 @@
-import { RotateCw, RefreshCcw, Trash2 } from 'lucide-react';
+import { RotateCw, RefreshCcw, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { CanvasActionMenuProps } from '@/shared/types';
 import styles from './CanvasActionMenu.module.scss';
 
@@ -9,6 +9,8 @@ export function CanvasActionMenu({
   entity, 
   onRemove, 
   onUpdate,
+  onBringToFront,
+  onSendToBack,
   handleRotateStart
 }: CanvasActionMenuProps) {
   const width = entity.width || 200;
@@ -42,6 +44,24 @@ export function CanvasActionMenu({
         title="Resetar Rotação"
       >
         <RefreshCcw size={14} />
+      </button>
+
+      <div className={styles.actionSeparator} />
+
+      <button 
+        className={styles.actionButton} 
+        onClick={() => onBringToFront(entity.id)}
+        title="Trazer para Frente"
+      >
+        <ChevronUp size={16} />
+      </button>
+
+      <button 
+        className={styles.actionButton} 
+        onClick={() => onSendToBack(entity.id)}
+        title="Trazer para Trás"
+      >
+        <ChevronDown size={16} />
       </button>
 
       <div className={styles.actionSeparator} />

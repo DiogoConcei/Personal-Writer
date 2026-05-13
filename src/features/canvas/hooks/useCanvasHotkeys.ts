@@ -52,5 +52,5 @@ export function useCanvasHotkeys({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedItemId, onRemove, onDeselect]);
+  }, [selectedItemId, onRemove, onDeselect, onUndo, onRedo]);
 }

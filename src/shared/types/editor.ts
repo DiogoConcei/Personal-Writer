@@ -30,6 +30,11 @@ export interface TextData {
   text: string;
 }
 
+export interface PageData {
+  title?: string;
+  backgroundColor?: string;
+}
+
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type Typography = 'sans' | 'serif';
 

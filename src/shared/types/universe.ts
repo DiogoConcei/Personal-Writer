@@ -64,6 +64,7 @@ export interface MesaDrawing {
   color: string;
   width: number;
   opacity?: number;
+  groupId?: string;
 }
 
 /**

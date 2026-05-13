@@ -1,5 +1,6 @@
 import { useCanvasControls } from './CanvasControls';
 import { NoteConfigPanel } from '../NoteConfigPanel/NoteConfigPanel';
+import { PostItConfigPanel } from '../PostItConfigPanel/PostItConfigPanel';
 import { DrawingStylePanel } from '@/shared/components/DrawingStylePanel/DrawingStylePanel';
 import { TextStylePanel } from '../TextStylePanel/TextStylePanel';
 import styles from './CanvasControls.module.scss';
@@ -15,6 +16,18 @@ interface SidebarProps {
   handleTextFontSizeChange?: (newSize: number) => void;
   handleTextFontFamilyChange?: (fontFamily: string) => void;
   toggleTextBold?: () => void;
+  onAddPostIt: () => void;
+  selectedPostItEntity?: AnyCanvasEntity;
+  handlePostItFontSizeChange?: (increment: number) => void;
+  updateSelectedPostItStyle?: (styleUpdates: Record<string, string | number>) => void;
+  togglePostItBold?: () => void;
+  handlePostItFontFamilyChange?: (fontFamily: string) => void;
+  onAddPage?: () => void;
+  isCollageActive?: boolean;
+  activateCollage?: () => void;
+  selectedItemIds?: string[];
+  canConfirmCollage?: boolean;
+  onConfirmCollage?: () => void;
 }
 
 export function Sidebar({
@@ -27,7 +40,20 @@ export function Sidebar({
   handleTextFontSizeChange,
   handleTextFontFamilyChange,
   toggleTextBold,
+  onAddPostIt,
+  selectedPostItEntity,
+  handlePostItFontSizeChange,
+  updateSelectedPostItStyle,
+  togglePostItBold,
+  handlePostItFontFamilyChange,
+  onAddPage,
+  isCollageActive,
+  activateCollage,
+  selectedItemIds = [],
+  canConfirmCollage,
+  onConfirmCollage,
 }: SidebarProps) {
+
   const { sideMenuMode, setSideMenuMode, open } = useCanvasControls();
 
   const renderContent = () => {
@@ -58,7 +84,7 @@ export function Sidebar({
       );
     }
 
-    if (sideMenuMode === "notes" || sideMenuMode === "postits") {
+    if (sideMenuMode === "notes") {
       return (
         <>
           <header className={styles.subHeader}>
@@ -86,6 +112,41 @@ export function Sidebar({
               handleFontSizeChange={handleFontSizeChange}
               updateSelectedNoteStyle={updateSelectedNoteStyle}
               setIsNoteGalleryOpen={(isOpen) => isOpen ? open('note') : undefined}
+            />
+          )}
+        </>
+      );
+    }
+
+    if (sideMenuMode === "postits") {
+      return (
+        <>
+          <header className={styles.subHeader}>
+            <button
+              className={styles.subBackButton}
+              onClick={() => setSideMenuMode("main")}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h2>Configurar Post-it</h2>
+          </header>
+
+          {selectedPostItEntity && (
+            <PostItConfigPanel
+              selectedPostItEntity={selectedPostItEntity}
+              handleFontSizeChange={handlePostItFontSizeChange || (() => {})}
+              updateSelectedPostItStyle={updateSelectedPostItStyle || (() => {})}
+              toggleBold={togglePostItBold || (() => {})}
+              handleFontFamilyChange={handlePostItFontFamilyChange || (() => {})}
             />
           )}
         </>
@@ -138,7 +199,7 @@ export function Sidebar({
             PDF
           </button>
 
-          <button className={styles.menuButton}>
+          <button className={styles.menuButton} onClick={onAddPostIt}>
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -151,6 +212,22 @@ export function Sidebar({
               <path d="M15 3v6h6" />
             </svg>
             Post-it
+          </button>
+
+          <button className={styles.menuButton} onClick={onAddPage}>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="3" y1="9" x2="21" y2="9" />
+              <line x1="9" y1="21" x2="9" y2="9" />
+            </svg>
+            Página
           </button>
 
           <button
@@ -229,7 +306,10 @@ export function Sidebar({
             Separar
           </button>
 
-          <button className={styles.menuButton}>
+          <button 
+            className={`${styles.menuButton} ${isCollageActive ? styles.active : ""}`}
+            onClick={activateCollage}
+          >
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -238,12 +318,26 @@ export function Sidebar({
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <path d="M3 9h18" />
-              <path d="M9 21V9" />
+              <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/>
+              <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/>
+              <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>
             </svg>
-            Agrupar
+            Colagem
           </button>
+
+          {isCollageActive && (
+            <div className={styles.collageSelectionStatus}>
+              <p>Selecionados: {selectedItemIds.length}/10</p>
+              {canConfirmCollage && (
+                <button 
+                  className={`${styles.menuButton} ${styles.confirmButton}`}
+                  onClick={onConfirmCollage}
+                >
+                  Confirmar Seleção
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </>
     );

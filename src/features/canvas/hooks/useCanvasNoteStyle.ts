@@ -17,7 +17,7 @@ export function useCanvasNoteStyle({
 }: UseCanvasNoteStyleOptions) {
   
   const selectedNoteEntity = useMemo(() => 
-    entities.find((e) => e.id === selectedItemId && e.type === "note"),
+    entities.find((e) => e.id === selectedItemId && (e.type === "note" || e.type === "page")),
   [entities, selectedItemId]);
 
   const updateSelectedNoteStyle = useCallback((

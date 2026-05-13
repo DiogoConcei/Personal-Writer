@@ -14,6 +14,8 @@ export interface CanvasModalsState {
   splittingItem: SplittingItem | null;
   focusItem: AnyCanvasEntity | null;
   sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
+  isGroupingActive: boolean;
+  groupingSourceId: string | null;
 }
 
 export interface SplitActionData {
@@ -96,11 +98,41 @@ export interface CanvasTextItemProps {
   onStart?: () => void;
 }
 
+export interface CanvasPostItItemProps {
+  entity: AnyCanvasEntity;
+  isSelected: boolean;
+  isScissorsActive: boolean;
+  onSelect: () => void;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onRemove: (id: string) => void;
+  onStart?: () => void;
+  onFocus: () => void;
+}
+
+export interface CanvasPageItemProps {
+  entity: AnyCanvasEntity;
+  isSelected: boolean;
+  onSelect: () => void;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onRemove: (id: string) => void;
+  onStart?: () => void;
+}
+
+export interface PostItConfigPanelProps {
+  selectedPostItEntity: AnyCanvasEntity;
+  handleFontSizeChange: (increment: number) => void;
+  updateSelectedPostItStyle: (styleUpdates: Record<string, string | number>) => void;
+  toggleBold: () => void;
+  handleFontFamilyChange: (fontFamily: string) => void;
+}
+
 export interface CanvasSidebarProps {
   sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
   setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => void;
   isSepararActive: boolean;
   setIsSepararActive: (active: boolean) => void;
+  isGroupingActive: boolean;
+  setIsGroupingActive: (active: boolean) => void;
   setIsNoteGalleryOpen: (open: boolean) => void;
   setIsPdfGalleryOpen: (open: boolean) => void;
   setIsImageGalleryOpen: (open: boolean) => void;
@@ -114,14 +146,20 @@ export interface CanvasControlsContextValue {
   splittingItem: SplittingItem | null;
   focusItem: AnyCanvasEntity | null;
   sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
+  isGroupingActive: boolean;
+  groupingSourceId: string | null;
   open: (type: CanvasModalType, data?: any) => void;
   close: () => void;
   setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => void;
+  startGrouping: (id: string) => void;
+  cancelGrouping: () => void;
 }
 
 export interface CanvasActionMenuProps {
   entity: AnyCanvasEntity;
   onRemove: (id: string) => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onBringToFront: (id: string) => void;
+  onSendToBack: (id: string) => void;
   handleRotateStart: (e: React.MouseEvent) => void;
 }

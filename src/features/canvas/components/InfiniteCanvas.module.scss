@@ -583,6 +583,63 @@
   font-family: monospace;
 }
 
+.collageEditingControls {
+  position: absolute;
+  top: var(--spacing-md);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  background-color: var(--color-bg-elevated);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xl);
+}
+
+.collageToolsGroup, .collageActionsGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.collageToolsGroup {
+  padding-right: var(--spacing-md);
+  border-right: 1px solid var(--color-border);
+}
+
+.cancelCollageButton, .confirmCollageButton {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+.cancelCollageButton {
+  background-color: var(--color-danger);
+  &:hover {
+    background-color: var(--color-danger-strong);
+  }
+}
+
+.confirmCollageButton {
+  background-color: var(--color-accent);
+  &:hover {
+    background-color: var(--color-accent-strong);
+  }
+}
+
 .viewport {
   position: absolute;
   top: 0;

@@ -7,6 +7,8 @@ export function useCanvasModals() {
     splittingItem: null,
     focusItem: null,
     sideMenuMode: 'main',
+    isGroupingActive: false,
+    groupingSourceId: null,
   });
 
   const open = useCallback((type: CanvasModalType, data?: any) => {
@@ -24,6 +26,8 @@ export function useCanvasModals() {
       openModal: null,
       splittingItem: null,
       focusItem: null,
+      isGroupingActive: false,
+      groupingSourceId: null,
     }));
   }, []);
 
@@ -31,10 +35,20 @@ export function useCanvasModals() {
     setState(prev => ({ ...prev, sideMenuMode: mode }));
   }, []);
 
+  const startGrouping = useCallback((id: string) => {
+    setState(prev => ({ ...prev, isGroupingActive: true, groupingSourceId: id }));
+  }, []);
+
+  const cancelGrouping = useCallback(() => {
+    setState(prev => ({ ...prev, isGroupingActive: false, groupingSourceId: null }));
+  }, []);
+
   return {
     ...state,
     open,
     close,
     setSideMenuMode,
+    startGrouping,
+    cancelGrouping,
   };
 }

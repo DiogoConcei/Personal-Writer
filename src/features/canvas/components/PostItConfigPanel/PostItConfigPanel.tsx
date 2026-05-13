@@ -1,6 +1,6 @@
 import { PostItConfigPanelProps } from '@/shared/types';
 import styles from './PostItConfigPanel.module.scss';
-import { Bold, Type } from 'lucide-react';
+import { Bold } from 'lucide-react';
 
 const POST_IT_COLORS = [
   { bg: '#fffb91', text: '#5f5c00', label: 'Canário' },

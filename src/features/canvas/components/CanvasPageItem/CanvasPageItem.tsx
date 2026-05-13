@@ -1,4 +1,3 @@
-import React from 'react';
 import { useCanvasEntity } from '../../hooks/useCanvasEntity';
 import { CanvasPageItemProps, PageData } from '@/shared/types';
 import styles from './CanvasPageItem.module.scss';

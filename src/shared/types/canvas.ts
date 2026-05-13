@@ -1,12 +1,23 @@
 import { PdfData, ImageData } from './assets';
-import { NoteData, PostItData, TextData } from './editor';
+import { NoteData, PostItData, TextData, PageData } from './editor';
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface CropOptions {
+  points: Point[];
+  boundingBox: { x: number; y: number; width: number; height: number };
+  container: HTMLElement;
+}
 
 /**
  * Arquitetura de Entidades Genéricas para o Infinite Canvas.
  */
 export interface CanvasEntity<T = unknown> {
   id: string;
-  type: string; // Ex: 'pdf', 'image', 'note', 'postit', 'text'
+  type: string; // Ex: 'pdf', 'image', 'note', 'postit', 'text', 'page'
   
   // Transformações Universais
   x: number;
@@ -27,7 +38,8 @@ export interface CanvasEntity<T = unknown> {
   data: T;
 }
 
-export type AnyCanvasEntity = CanvasEntity<PdfData | ImageData | NoteData | PostItData | TextData | unknown>;
+export type AnyCanvasEntity = CanvasEntity<PdfData | ImageData | NoteData | PostItData | TextData | PageData | unknown>;
+
 
 export interface CutPatch {
   id: string;
@@ -36,4 +48,5 @@ export interface CutPatch {
   width: number;
   height: number;
   page: number;
+  points?: Point[];
 }

@@ -15,6 +15,7 @@ export interface ImageData {
   isPending?: boolean; // Indica que o recorte está sendo carregado
   progress?: number;   // Progresso de 0 a 100
   patches?: CutPatch[];
+  isCrop?: boolean; // Indica se é uma imagem originada de um recorte/colagem
 }
 
 export type SplitMode = 'amount' | 'single' | 'range';

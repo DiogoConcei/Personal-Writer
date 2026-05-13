@@ -11,7 +11,8 @@ import {
   RotateCcw,
   MousePointer2,
   Hand,
-  Type
+  Type,
+  Image as ImageIcon
 } from "lucide-react";
 
 // Hooks
@@ -23,6 +24,7 @@ import { useCanvasModals } from "../hooks/useCanvasModals";
 import { useCanvasSplit } from "../hooks/useCanvasSplit";
 import { useCanvasHotkeys } from "../hooks/useCanvasHotkeys";
 import { useCanvasNoteStyle } from "../hooks/useCanvasNoteStyle";
+import { useCanvasPostItStyle } from "../hooks/useCanvasPostItStyle";
 import { useCanvasTextStyle } from "../hooks/useCanvasTextStyle";
 import { useHistory } from "@/shared/hooks/useHistory";
 import { NoteData, PdfData, SplitActionData, AnyCanvasEntity, MesaDrawing } from "@/shared/types";
@@ -33,6 +35,8 @@ import { CanvasNoteItem } from "./CanvasNoteItem/CanvasNoteItem";
 import { CanvasImageItem } from "./CanvasImageItem/CanvasImageItem";
 import { CanvasPdfItem } from "./CanvasPdfItem/CanvasPdfItem";
 import { CanvasTextItem } from "./CanvasTextItem/CanvasTextItem";
+import { CanvasPostItItem } from "./CanvasPostItItem/CanvasPostItItem";
+import { CanvasPageItem } from "./CanvasPageItem/CanvasPageItem";
 import { CanvasControls } from "./CanvasControls/CanvasControls";
 import { CanvasBase } from "@/shared/components/CanvasBase/CanvasBase";
 import { CanvasDrawingLayer } from "@/shared/components/CanvasDrawingLayer/CanvasDrawingLayer";
@@ -45,9 +49,12 @@ export default function InfiniteCanvas() {
   const setActivePanel = useUIStore((state) => state.setActivePanel);
 
   const [isSplitModeActive, setIsSplitModeActive] = useState(false);
+  const [isCollageConfirmed, setIsCollageConfirmed] = useState(false);
+  const [activeCollageGroupId, setActiveCollageGroupId] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
 
-  const { drawings, addDrawing, addPointToDrawing, removeDrawing, setDrawings, strokeColor, strokeWidth } = useDrawingStore();
+  const { drawings, addDrawing, addPointToDrawing, removeDrawing, updateDrawing, setDrawings, strokeColor, strokeWidth } = useDrawingStore();
 
   // 1. Orquestração de UI e Modais
   const modalControl = useCanvasModals();
@@ -82,12 +89,14 @@ export default function InfiniteCanvas() {
     isScissorsActive,
     isTextActive,
     isPanActive,
+    isCollageActive,
     activateSelect,
     activatePan,
     activatePencil,
     activateEraser,
     activateScissors,
     activateText,
+    activateCollage,
   } = useCanvasTools('select');
 
   // 4. Gestão de Dados e Entidades
@@ -98,28 +107,73 @@ export default function InfiniteCanvas() {
     addImage,
     addPdf,
     addText,
+    addPostIt,
+    addPage,
     updateEntity: handleUpdateEntity,
     removeEntity: handleRemoveEntity,
     bringToFront,
+    sendToBack,
     addPendingCollage,
-  } = useCanvasEntities({ zoom, viewState, containerRef, rootPath });
+  } = useCanvasEntities({ zoom, viewState, containerRef, rootPath, activeGroupId: activeCollageGroupId });
 
   // 5. Histórico (Undo/Redo)
   const { takeSnapshot, undo, redo } = useHistory<{ entities: AnyCanvasEntity[], drawings: MesaDrawing[] }>();
 
   const handleUpdateWithSnapshot = useCallback((id: string, updates: Partial<AnyCanvasEntity>) => {
-    takeSnapshot({ entities, drawings });
-    handleUpdateEntity(id, updates);
-  }, [takeSnapshot, entities, drawings, handleUpdateEntity]);
+    const draggingEntity = entities.find(e => e.id === id);
+    
+    if (draggingEntity?.groupId && (updates.x !== undefined || updates.y !== undefined)) {
+      setEntities(prev => {
+        const currentEntity = prev.find(e => e.id === id);
+        if (!currentEntity) return prev;
+
+        // Calculamos o delta baseando-se no estado MAIS RECENTE (prev)
+        const dx = updates.x !== undefined ? updates.x - currentEntity.x : 0;
+        const dy = updates.y !== undefined ? updates.y - currentEntity.y : 0;
+        
+        // 2. Aplicamos a atualização completa na entidade alvo e apenas movemos as outras do grupo
+        const nextEntities = prev.map(e => {
+          if (e.id === id) {
+            return { ...e, ...updates };
+          } else if (e.groupId === draggingEntity.groupId) {
+            return {
+              ...e,
+              x: e.x + dx,
+              y: e.y + dy
+            };
+          }
+          return e;
+        });
+
+        // 3. Movemos todos os desenhos do mesmo grupo (translação de pontos)
+        if (dx !== 0 || dy !== 0) {
+          drawings.forEach(d => {
+            if (d.groupId === draggingEntity.groupId) {
+              const newPoints = d.points.map(p => ({
+                x: p.x + dx,
+                y: p.y + dy
+              }));
+              updateDrawing(d.id, { points: newPoints });
+            }
+          });
+        }
+
+        return nextEntities;
+      });
+    } else {
+      handleUpdateEntity(id, updates);
+    }
+  }, [entities, drawings, handleUpdateEntity, setEntities, updateDrawing]);
 
   const handleRemoveWithSnapshot = useCallback((id: string) => {
     takeSnapshot({ entities, drawings });
     handleRemoveEntity(id);
   }, [takeSnapshot, entities, drawings, handleRemoveEntity]);
-const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => {
-  takeSnapshot({ entities, drawings });
-  return addPendingCollage(sourceEntity, boundingBox);
-}, [takeSnapshot, entities, drawings, addPendingCollage]);
+
+  const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => {
+    takeSnapshot({ entities, drawings });
+    return addPendingCollage(sourceEntity, boundingBox);
+  }, [takeSnapshot, entities, drawings, addPendingCollage]);
 
 
   const handleUndo = useCallback(() => {
@@ -175,6 +229,18 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
       onUpdate: handleUpdateWithSnapshot,
     });
 
+  const {
+    selectedPostItEntity,
+    updateSelectedPostItStyle,
+    handleFontSizeChange: handlePostItFontSizeChange,
+    handleFontFamilyChange: handlePostItFontFamilyChange,
+    toggleBold: togglePostItBold
+  } = useCanvasPostItStyle({
+    selectedItemId,
+    entities,
+    onUpdate: handleUpdateWithSnapshot,
+  });
+
   const { 
     selectedTextEntity, 
     handleFontSizeChange: handleTextFontSizeChange, 
@@ -189,7 +255,10 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
   useCanvasHotkeys({
     selectedItemId,
     onRemove: handleRemoveWithSnapshot,
-    onDeselect: () => setSelectedItemId(null),
+    onDeselect: () => {
+      setSelectedItemId(null);
+      setSelectedItemIds([]);
+    },
     onUndo: handleUndo,
     onRedo: handleRedo
   });
@@ -200,21 +269,26 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
       setSideMenuMode("drawing");
     } else if (isTextActive) {
       setSideMenuMode("text");
+    } else if (isCollageActive) {
+      setSideMenuMode("main");
     } else {
       const selectedEntity = entities.find((e) => e.id === selectedItemId);
-      if (selectedEntity?.type === "note") {
+      if (selectedEntity?.type === "note" || selectedEntity?.type === "page") {
         setSideMenuMode("notes");
+      } else if (selectedEntity?.type === "postit") {
+        setSideMenuMode("postits");
       } else {
         setSideMenuMode("main");
       }
     }
-  }, [isPencilActive, isTextActive, selectedItemId, entities, setSideMenuMode]);
+  }, [isPencilActive, isTextActive, isCollageActive, selectedItemId, entities, setSideMenuMode]);
 
   // Handlers
   const handleToggleSplitMode = (active: boolean) => {
     setIsSplitModeActive(active);
     if (active) {
       setSelectedItemId(null);
+      setSelectedItemIds([]);
       if (isScissorsActive) activateSelect();
     }
   };
@@ -225,6 +299,7 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
     } else {
       activateScissors();
       setSelectedItemId(null);
+      setSelectedItemIds([]);
       setIsSplitModeActive(false);
     }
   };
@@ -236,8 +311,67 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
   };
 
   const handleSelectItem = (id: string) => {
-    setSelectedItemId(id);
-    bringToFront(id);
+    const entity = entities.find(e => e.id === id);
+    if (isCollageActive && !isCollageConfirmed) {
+      setSelectedItemIds(prev => {
+        if (prev.includes(id)) {
+          return prev.filter(itemId => itemId !== id);
+        }
+        if (prev.length >= 10) return prev;
+        return [...prev, id];
+      });
+      setSelectedItemId(id);
+    } else if (!isCollageConfirmed) {
+      setSelectedItemIds([id]);
+      setSelectedItemId(id);
+    }
+    
+    // Só traz para frente automaticamente se NÃO for uma página
+    if (entity?.type !== 'page') {
+      bringToFront(id);
+    }
+  };
+
+  const handleConfirmCollage = () => {
+    if (selectedItemIds.length > 0) {
+      takeSnapshot({ entities, drawings });
+      
+      const existingGroupItem = [...entities, ...drawings].find(e => selectedItemIds.includes(e.id) && e.groupId);
+      const groupId = existingGroupItem?.groupId || `collage-${Math.random().toString(36).substring(2, 9)}`;
+
+      setActiveCollageGroupId(groupId);
+
+      setEntities(prev => prev.map(e => 
+        selectedItemIds.includes(e.id) ? { ...e, groupId } : e
+      ));
+
+      drawings.forEach(d => {
+        if (selectedItemIds.includes(d.id)) {
+          updateDrawing(d.id, { groupId });
+        }
+      });
+
+      setIsCollageConfirmed(true);
+      setSelectedItemIds([]);
+      setSelectedItemId(null);
+      activateSelect();
+    }
+  };
+
+  const handleFinalizeCollage = () => {
+    setIsCollageConfirmed(false);
+    setActiveCollageGroupId(null);
+    setSelectedItemIds([]);
+    setSelectedItemId(null);
+    activateSelect();
+  };
+
+  const handleCancelCollage = () => {
+    setIsCollageConfirmed(false);
+    setActiveCollageGroupId(null);
+    setSelectedItemIds([]);
+    setSelectedItemId(null);
+    activateSelect();
   };
 
   // Rotação via ActionMenu
@@ -248,7 +382,7 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
     onStart: () => takeSnapshot({ entities, drawings }),
     onUpdate: (updates) => {
       if (selectedItemId) {
-        handleUpdateEntity(selectedItemId, updates);
+        handleUpdateWithSnapshot(selectedItemId, updates);
       }
     },
   });
@@ -257,7 +391,7 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
    * Helper para renderizar entidades de forma DRY.
    */
   const renderEntity = (entity: any) => {
-    const isSelected = selectedItemId === entity.id;
+    const isSelected = selectedItemIds.includes(entity.id);
 
     const commonProps = {
       entity,
@@ -315,10 +449,28 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
             {...commonProps}
           />
         );
+      case "postit":
+        return (
+          <CanvasPostItItem
+            {...commonProps}
+          />
+        );
+      case "page":
+        return (
+          <CanvasPageItem
+            {...commonProps}
+          />
+        );
       default:
         return null;
     }
   };
+
+  const canConfirmCollage = selectedItemIds.length >= 2 || selectedItemIds.some(id => {
+    const entity = entities.find(e => e.id === id);
+    const drawing = drawings.find(d => d.id === id);
+    return !!(entity?.groupId || drawing?.groupId);
+  });
 
   return (
     <div
@@ -342,86 +494,141 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
         </svg>
       </button>
 
-      <div className={styles.toolbar}>
-        <button 
-          className={`${styles.toolButton} ${activeTool === 'select' ? styles.active : ''}`} 
-          title="Selecionar"
-          onClick={activateSelect}
-        >
-          <MousePointer2 size={18} />
-        </button>
+      {!isCollageConfirmed && (
+        <div className={styles.toolbar}>
+          <button 
+            className={`${styles.toolButton} ${activeTool === 'select' ? styles.active : ''}`} 
+            title="Selecionar"
+            onClick={activateSelect}
+          >
+            <MousePointer2 size={18} />
+          </button>
 
-        <button 
-          className={`${styles.toolButton} ${activeTool === 'pan' ? styles.active : ''}`} 
-          title="Mover Tela (H)"
-          onClick={activatePan}
-        >
-          <Hand size={18} />
-        </button>
+          <button 
+            className={`${styles.toolButton} ${activeTool === 'pan' ? styles.active : ''}`} 
+            title="Mover Tela (H)"
+            onClick={activatePan}
+          >
+            <Hand size={18} />
+          </button>
 
-        <div className={styles.separator} />
+          <div className={styles.separator} />
 
-        <button 
-          className={`${styles.toolButton} ${activeTool === 'pencil' ? styles.active : ''}`} 
-          title="Desenhar (Lápis)"
-          onClick={activatePencil}
-        >
-          <Pencil size={18} />
-        </button>
+          <button 
+            className={`${styles.toolButton} ${activeTool === 'pencil' ? styles.active : ''}`} 
+            title="Desenhar (Lápis)"
+            onClick={activatePencil}
+          >
+            <Pencil size={18} />
+          </button>
 
-        <button 
-          className={`${styles.toolButton} ${activeTool === 'eraser' ? styles.active : ''}`} 
-          title="Borracha (Excluir Desenho)"
-          onClick={activateEraser}
-        >
-          <Eraser size={18} />
-        </button>
+          <button 
+            className={`${styles.toolButton} ${activeTool === 'eraser' ? styles.active : ''}`} 
+            title="Borracha (Excluir Desenho)"
+            onClick={activateEraser}
+          >
+            <Eraser size={18} />
+          </button>
 
-        <button 
-          className={`${styles.toolButton} ${activeTool === 'scissors' ? styles.active : ''}`} 
-          onClick={handleToggleScissors}
-          title="Tesoura (Focar Entidade)"
-        >
-          <Scissors size={18} />
-        </button>
+          <button 
+            className={`${styles.toolButton} ${activeTool === 'scissors' ? styles.active : ''}`} 
+            onClick={handleToggleScissors}
+            title="Tesoura (Focar Entidade)"
+          >
+            <Scissors size={18} />
+          </button>
 
-        <button 
-          className={`${styles.toolButton} ${activeTool === 'text' ? styles.active : ''}`} 
-          title="Adicionar Texto"
-          onClick={activateText}
-        >
-          <Type size={18} />
-        </button>
+          <button 
+            className={`${styles.toolButton} ${activeTool === 'text' ? styles.active : ''}`} 
+            title="Adicionar Texto"
+            onClick={activateText}
+          >
+            <Type size={18} />
+          </button>
 
-        <div className={styles.separator} />
+          <div className={styles.separator} />
 
-        <button
-          className={styles.toolButton}
-          onClick={zoomIn}
-          title="Aumentar Zoom"
-        >
-          <ZoomIn size={18} />
-        </button>
-        
-        <button
-          className={styles.toolButton}
-          onClick={zoomOut}
-          title="Diminuir Zoom"
-        >
-          <ZoomOut size={18} />
-        </button>
+          <button
+            className={styles.toolButton}
+            onClick={zoomIn}
+            title="Aumentar Zoom"
+          >
+            <ZoomIn size={18} />
+          </button>
+          
+          <button
+            className={styles.toolButton}
+            onClick={zoomOut}
+            title="Diminuir Zoom"
+          >
+            <ZoomOut size={18} />
+          </button>
 
-        <button
-          className={styles.toolButton}
-          onClick={resetView}
-          title="Resetar Visualização"
-        >
-          <RotateCcw size={18} />
-        </button>
-      </div>
+          <button
+            className={styles.toolButton}
+            onClick={resetView}
+            title="Resetar Visualização"
+          >
+            <RotateCcw size={18} />
+          </button>
+        </div>
+      )}
+
+      {isCollageConfirmed && (
+        <div className={styles.collageEditingControls}>
+          <div className={styles.collageToolsGroup}>
+            <button 
+              className={`${styles.toolButton} ${activeTool === 'pencil' ? styles.active : ''}`} 
+              title="Desenhar (Lápis)"
+              onClick={activatePencil}
+            >
+              <Pencil size={18} />
+            </button>
+
+            <button 
+              className={`${styles.toolButton} ${activeTool === 'eraser' ? styles.active : ''}`} 
+              title="Borracha"
+              onClick={activateEraser}
+            >
+              <Eraser size={18} />
+            </button>
+
+            <button 
+              className={`${styles.toolButton} ${activeTool === 'text' ? styles.active : ''}`} 
+              title="Adicionar Texto"
+              onClick={activateText}
+            >
+              <Type size={18} />
+            </button>
+
+            <button 
+              className={styles.toolButton} 
+              title="Galeria de Imagens"
+              onClick={() => open('image')}
+            >
+              <ImageIcon size={18} />
+            </button>
+          </div>
+
+          <div className={styles.collageActionsGroup}>
+            <button 
+              className={styles.confirmCollageButton}
+              onClick={handleFinalizeCollage}
+            >
+              Finalizar Colagem
+            </button>
+            <button 
+              className={styles.cancelCollageButton}
+              onClick={handleCancelCollage}
+            >
+              Cancelar Colagem
+            </button>
+          </div>
+        </div>
+      )}
 
       <CanvasControls value={modalControl}>
-        {!isScissorsActive && (
+        {!isScissorsActive && !isCollageConfirmed && (
           <CanvasControls.Sidebar
             isSepararActive={isSplitModeActive}
             setIsSepararActive={handleToggleSplitMode}
@@ -432,6 +639,26 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
             handleTextFontSizeChange={handleTextFontSizeChange}
             handleTextFontFamilyChange={handleTextFontFamilyChange}
             toggleTextBold={toggleTextBold}
+            onAddPostIt={() => {
+              takeSnapshot({ entities, drawings });
+              const id = addPostIt();
+              if (id) handleSelectItem(id);
+            }}
+            selectedPostItEntity={selectedPostItEntity}
+            handlePostItFontSizeChange={handlePostItFontSizeChange}
+            updateSelectedPostItStyle={updateSelectedPostItStyle}
+            togglePostItBold={togglePostItBold}
+            handlePostItFontFamilyChange={handlePostItFontFamilyChange}
+            onAddPage={() => {
+              takeSnapshot({ entities, drawings });
+              const id = addPage();
+              if (id) handleSelectItem(id);
+            }}
+            isCollageActive={isCollageActive}
+            activateCollage={activateCollage}
+            selectedItemIds={selectedItemIds}
+            canConfirmCollage={canConfirmCollage}
+            onConfirmCollage={handleConfirmCollage}
           />
         )}
 
@@ -493,7 +720,11 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
           drawings={drawings} 
           removeDrawing={removeDrawing} 
           isEraserActive={isEraserActive} 
+          isCollageActive={isCollageActive}
+          selectedItemIds={selectedItemIds}
+          onSelect={handleSelectItem}
         />
+
         {getVisibleItems(entities).map((entity) => (
           <div key={entity.id}>
             {renderEntity(entity)}
@@ -503,6 +734,8 @@ const handleAddPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boun
                 entity={entity}
                 onRemove={handleRemoveWithSnapshot}
                 onUpdate={handleUpdateWithSnapshot}
+                onBringToFront={bringToFront}
+                onSendToBack={sendToBack}
                 handleRotateStart={handleRotateStart}
               />
             )}

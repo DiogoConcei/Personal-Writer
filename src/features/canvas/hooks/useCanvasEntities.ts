@@ -1,5 +1,5 @@
 import { useState, useCallback, RefObject } from 'react';
-import { AnyCanvasEntity, ImageData, PdfData, NoteData, TextData } from '@/shared/types';
+import { AnyCanvasEntity, ImageData, PdfData, NoteData, TextData, PostItData, PageData } from '@/shared/types';
 import { useCanvasInteraction } from '@/shared/hooks/useCanvasInteraction';
 
 interface ViewState {
@@ -12,13 +12,15 @@ interface UseCanvasEntitiesOptions {
   viewState: ViewState;
   containerRef: RefObject<HTMLDivElement | null>;
   rootPath: string | null;
+  activeGroupId?: string | null;
 }
 
 export function useCanvasEntities({
   zoom,
   viewState,
   containerRef,
-  rootPath
+  rootPath,
+  activeGroupId
 }: UseCanvasEntitiesOptions) {
   const [entities, setEntities] = useState<AnyCanvasEntity[]>([]);
 
@@ -54,6 +56,7 @@ export function useCanvasEntities({
           height: data.height,
           rotation: 0,
           zIndex: entities.length + 1,
+          groupId: activeGroupId || undefined,
           data: { 
             path: data.path, 
             naturalWidth: data.naturalWidth, 
@@ -72,6 +75,7 @@ export function useCanvasEntities({
             height: 594,
             rotation: 0,
             zIndex: entities.length + 1,
+            groupId: activeGroupId || undefined,
             style: {
               fontSize: '14px',
               padding: '24px',
@@ -97,6 +101,7 @@ export function useCanvasEntities({
             height: 60,
             rotation: 0,
             zIndex: entities.length + 1,
+            groupId: activeGroupId || undefined,
             style: {
               fontSize: '1.2rem',
               color: 'var(--color-text-primary)',
@@ -138,6 +143,7 @@ export function useCanvasEntities({
       height: 280,
       rotation: 0,
       zIndex: entities.length + 1,
+      groupId: activeGroupId || undefined,
       data: {
         path,
         startPage: 1,
@@ -148,7 +154,49 @@ export function useCanvasEntities({
 
     setEntities(prev => [...prev, newEntity]);
     return id;
-  }, [entities.length, getCanvasCenter]);
+  }, [entities.length, getCanvasCenter, activeGroupId]);
+
+  const addPostIt = useCallback(() => {
+    const center = getCanvasCenter();
+    const id = `postit-${Math.random().toString(36).substring(2, 9)}`;
+    const newEntity: AnyCanvasEntity = {
+      id,
+      type: 'postit',
+      x: center.x - 100,
+      y: center.y - 100,
+      width: 200,
+      height: 200,
+      rotation: 0,
+      zIndex: entities.length + 1,
+      groupId: activeGroupId || undefined,
+      data: {
+        text: '',
+        color: '#fef3c7'
+      } as PostItData
+    };
+    setEntities(prev => [...prev, newEntity]);
+    return id;
+  }, [entities.length, getCanvasCenter, activeGroupId]);
+
+  const addPage = useCallback(() => {
+    const center = getCanvasCenter();
+    const id = `page-${Math.random().toString(36).substring(2, 9)}`;
+    const newEntity: AnyCanvasEntity = {
+      id,
+      type: 'page',
+      x: center.x - 400,
+      y: center.y - 300,
+      width: 800,
+      height: 600,
+      rotation: 0,
+      zIndex: 0, // Páginas ficam atrás por padrão
+      data: {
+        title: 'Nova Página'
+      } as PageData
+    };
+    setEntities(prev => [...prev, newEntity]);
+    return id;
+  }, [getCanvasCenter]);
 
   const addPendingCollage = useCallback((sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => {
     const id = `image-${Math.random().toString(36).substring(2, 9)}`;
@@ -162,15 +210,17 @@ export function useCanvasEntities({
       height: boundingBox.height,
       rotation: sourceEntity.rotation || 0,
       zIndex: entities.length + 1,
+      groupId: activeGroupId || undefined,
       data: {
         path: '', 
         isPending: true,
-        progress: 0
+        progress: 0,
+        isCrop: true
       } as ImageData
     };
     setEntities(prev => [...prev, newEntity]);
     return id;
-  }, [entities.length]);
+  }, [entities.length, activeGroupId]);
 
   const updateEntity = useCallback((id: string, updates: Partial<AnyCanvasEntity>) => {
     setEntities(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
@@ -187,6 +237,13 @@ export function useCanvasEntities({
     });
   }, []);
 
+  const sendToBack = useCallback((id: string) => {
+    setEntities(prev => {
+      const minZ = Math.min(0, ...prev.map(e => e.zIndex || 0));
+      return prev.map(e => e.id === id ? { ...e, zIndex: minZ - 1 } : e);
+    });
+  }, []);
+
   return {
     entities,
     setEntities,
@@ -194,9 +251,13 @@ export function useCanvasEntities({
     addImage,
     addPdf,
     addText: internalAddText,
+    addPostIt,
+    addPage,
     addPendingCollage,
     updateEntity,
     removeEntity,
-    bringToFront
+    bringToFront,
+    sendToBack
   };
 }
+

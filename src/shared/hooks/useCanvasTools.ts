@@ -8,7 +8,8 @@ export type CanvasTool =
   | 'scissors' 
   | 'text' 
   | 'connect' 
-  | 'collage';
+  | 'collage'
+  | 'group';
 
 /**
  * Hook compartilhado para gestão de estado de ferramentas em superfícies de Canvas.
@@ -25,6 +26,7 @@ export function useCanvasTools(initialTool: CanvasTool = 'select') {
   const isTextActive = activeTool === 'text';
   const isConnectActive = activeTool === 'connect';
   const isCollageActive = activeTool === 'collage';
+  const isGroupActive = activeTool === 'group';
 
   const activateSelect = useCallback(() => setActiveTool('select'), []);
   const activatePan = useCallback(() => setActiveTool('pan'), []);
@@ -34,6 +36,7 @@ export function useCanvasTools(initialTool: CanvasTool = 'select') {
   const activateText = useCallback(() => setActiveTool(prev => prev === 'text' ? 'select' : 'text'), []);
   const activateConnect = useCallback(() => setActiveTool(prev => prev === 'connect' ? 'select' : 'connect'), []);
   const activateCollage = useCallback(() => setActiveTool(prev => prev === 'collage' ? 'select' : 'collage'), []);
+  const activateGroup = useCallback(() => setActiveTool(prev => prev === 'group' ? 'select' : 'group'), []);
 
   return {
     activeTool,
@@ -47,6 +50,7 @@ export function useCanvasTools(initialTool: CanvasTool = 'select') {
     isTextActive,
     isConnectActive,
     isCollageActive,
+    isGroupActive,
     // Setters
     activateSelect,
     activatePan,
@@ -55,6 +59,7 @@ export function useCanvasTools(initialTool: CanvasTool = 'select') {
     activateScissors,
     activateText,
     activateConnect,
-    activateCollage
+    activateCollage,
+    activateGroup
   };
 }

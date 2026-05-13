@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import styles from './FocusModal.module.scss';
 import { X, Check } from 'lucide-react';
-import { AnyCanvasEntity } from '@/shared/types';
+import { AnyCanvasEntity, Point } from '@/shared/types';
 import { CanvasNoteItem } from '../CanvasNoteItem/CanvasNoteItem';
 import { CanvasPdfItem } from '../CanvasPdfItem/CanvasPdfItem';
 import { CanvasImageItem } from '../CanvasImageItem/CanvasImageItem';
 import { FocusToolbar, FocusTool } from './FocusToolbar';
 import { CutPatch } from '../CutPatch/CutPatch';
 import { CutPatch as CutPatchType } from '@/shared/types';
-import { useGalleryStore } from '@/features/image-manager/store/galleryStore';
-import { saveBase64Image } from '@/tauri-bridge/fs';
+import { useCanvasCropPersistence } from '../../hooks/useCanvasCropPersistence';
 
 interface FocusModalProps {
   isOpen: boolean;
@@ -35,9 +34,10 @@ export const FocusModal: React.FC<FocusModalProps> = ({
   const [scale, setScale] = useState(1);
   const [startPoint, setStartPoint] = useState<{ x: number, y: number } | null>(null);
   const [currentPoint, setCurrentPoint] = useState<{ x: number, y: number } | null>(null);
+  const [lassoPoints, setLassoPoints] = useState<Point[]>([]);
   const [boundingBox, setBoundingBox] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const registerCollage = useGalleryStore(state => state.registerCollage);
+  const { persistCrop } = useCanvasCropPersistence({ onUpdate, rootPath });
 
   const entityWidth = (entity?.width as number) || 400;
   const entityHeight = (entity?.height as number) || 500;
@@ -63,98 +63,42 @@ export const FocusModal: React.FC<FocusModalProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [isOpen, entityWidth, entityHeight]);
 
+  const lassoPathData = useMemo(() => {
+    if (lassoPoints.length < 2) return '';
+    return `M ${lassoPoints[0].x} ${lassoPoints[0].y} ` + 
+           lassoPoints.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ') + 
+           ' Z';
+  }, [lassoPoints]);
+
   if (!isOpen || !entity) return null;
 
   const handleConfirmSelection = async () => {
-    if (!boundingBox || !entity || !containerRef.current) return;
+    if (!boundingBox || !entity || !containerRef.current || !rootPath) return;
     
     setIsSimulatingCut(true);
     const pendingId = onAddPendingCollage?.(entity, boundingBox);
+
+    if (pendingId) {
+      // Chamar o hook descentralizado para persistência
+      await persistCrop(pendingId, {
+        points: lassoPoints,
+        boundingBox,
+        container: containerRef.current
+      });
+    }
 
     // Registrar o "remendo" na entidade original (o buraco)
     const newPatch: CutPatchType = {
       id: `patch-${Math.random().toString(36).substring(2, 9)}`,
       ...boundingBox,
-      page: currentPage
+      page: currentPage,
+      points: lassoPoints.length > 2 ? lassoPoints : undefined
     };
     
     const entityData = entity.data as { patches?: CutPatchType[] };
     const currentPatches = entityData.patches || [];
 
-    const processExtraction = async () => {
-      try {
-        if (!containerRef.current || !rootPath || !pendingId) return;
-
-        const { default: html2canvas } = await import('html2canvas');
-
-        // 1. Capturamos o elemento INTEIRO ignorando a escala do CSS.
-        // O truque 'onclone' permite modificar o DOM clonado antes da renderização.
-        const fullCanvas = await html2canvas(containerRef.current, {
-          useCORS: true,
-          allowTaint: true,
-          scale: 1, // Garantir 1:1 pixels
-          backgroundColor: null,
-          logging: false,
-          onclone: (clonedDoc) => {
-            const el = clonedDoc.querySelector(`.${styles.focusArea}`) as HTMLElement;
-            if (el) {
-              // Removemos a escala do clone para que o html2canvas 
-              // renderize as coordenadas reais (1:1)
-              el.style.transform = 'none';
-            }
-          }
-        });
-
-        // 2. Criamos o canvas final apenas para a região do recorte (crop manual)
-        const cropCanvas = document.createElement('canvas');
-        cropCanvas.width = boundingBox.width;
-        cropCanvas.height = boundingBox.height;
-        const cropCtx = cropCanvas.getContext('2d');
-
-        if (!cropCtx) throw new Error('Could not get crop canvas context');
-
-        // Copiamos apenas a região selecionada do canvas grande para o pequeno
-        cropCtx.drawImage(
-          fullCanvas,
-          boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height, // Source (1:1)
-          0, 0, boundingBox.width, boundingBox.height // Destination
-        );
-
-        const base64Data = cropCanvas.toDataURL('image/png').split(',')[1];
-        const fileName = `collage_${Date.now()}.png`;
-
-        // 3. Salvar via Bridge (que já lida com o invoke correto)
-        const savedPath = await saveBase64Image(
-          fileName,
-          base64Data,
-          rootPath
-        );
-
-        await registerCollage(savedPath);
-
-        onUpdate(pendingId as string, {
-          data: {
-            path: savedPath,
-            isPending: false,
-            progress: 100
-          }
-        });
-
-      } catch (err) {
-        console.error('Erro na extração html2canvas:', err);
-        if (pendingId) {
-          onUpdate(pendingId as string, { 
-            data: { 
-              isPending: false, 
-              error: true 
-            } as unknown as AnyCanvasEntity['data']
-          });
-        }
-      }
-    };
-
-    processExtraction();
-
+    // Pequeno delay para a animação de "flash" do corte
     setTimeout(() => {
       onUpdate(entity.id, {
         data: {
@@ -163,27 +107,33 @@ export const FocusModal: React.FC<FocusModalProps> = ({
         }
       });
       setIsSimulatingCut(false);
-      setStartPoint(null);
-      setCurrentPoint(null);
-      setBoundingBox(null);
+      handleCancelSelection();
     }, 600);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
-    if (activeTool !== 'square' || !containerRef.current || isSimulatingCut) return;
+    if ((activeTool !== 'square' && activeTool !== 'lasso') || !containerRef.current || isSimulatingCut) return;
     
     // Intercepta o evento para que a nota não inicie um arraste (stopPropagation)
     e.stopPropagation();
 
     const rect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / (rect.width / entityWidth);
-    const y = (e.clientY - rect.top) / (rect.height / entityHeight);
+    const x = Math.max(0, Math.min(entityWidth, (e.clientX - rect.left) / (rect.width / entityWidth)));
+    const y = Math.max(0, Math.min(entityHeight, (e.clientY - rect.top) / (rect.height / entityHeight)));
     
     setIsDragging(true);
-    setStartPoint({ x, y });
-    setCurrentPoint({ x, y });
     setBoundingBox(null);
+
+    if (activeTool === 'square') {
+      setStartPoint({ x, y });
+      setCurrentPoint({ x, y });
+      setLassoPoints([]);
+    } else if (activeTool === 'lasso') {
+      setLassoPoints([{ x, y }]);
+      setStartPoint(null);
+      setCurrentPoint(null);
+    }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -193,14 +143,18 @@ export const FocusModal: React.FC<FocusModalProps> = ({
     const x = Math.max(0, Math.min(entityWidth, (e.clientX - rect.left) / (rect.width / entityWidth)));
     const y = Math.max(0, Math.min(entityHeight, (e.clientY - rect.top) / (rect.height / entityHeight)));
     
-    setCurrentPoint({ x, y });
+    if (activeTool === 'square') {
+      setCurrentPoint({ x, y });
+    } else if (activeTool === 'lasso') {
+      setLassoPoints(prev => [...prev, { x, y }]);
+    }
   };
 
   const handleMouseUp = () => {
     if (!isDragging) return;
     setIsDragging(false);
 
-    if (startPoint && currentPoint) {
+    if (activeTool === 'square' && startPoint && currentPoint) {
       const x = Math.min(startPoint.x, currentPoint.x);
       const y = Math.min(startPoint.y, currentPoint.y);
       const width = Math.abs(currentPoint.x - startPoint.x);
@@ -212,32 +166,50 @@ export const FocusModal: React.FC<FocusModalProps> = ({
         setStartPoint(null);
         setCurrentPoint(null);
       }
+    } else if (activeTool === 'lasso' && lassoPoints.length > 2) {
+      const xs = lassoPoints.map(p => p.x);
+      const ys = lassoPoints.map(p => p.y);
+      const minX = Math.min(...xs);
+      const minY = Math.min(...ys);
+      const maxX = Math.max(...xs);
+      const maxY = Math.max(...ys);
+      
+      const width = maxX - minX;
+      const height = maxY - minY;
+
+      if (width >= 10 && height >= 10) {
+        setBoundingBox({ x: minX, y: minY, width, height });
+      } else {
+        setLassoPoints([]);
+      }
     }
   };
 
   const handleCancelSelection = () => {
     setStartPoint(null);
     setCurrentPoint(null);
+    setLassoPoints([]);
     setBoundingBox(null);
   };
 
   const renderSelection = () => {
-    if (!startPoint || !currentPoint) return null;
-
-    const x = Math.min(startPoint.x, currentPoint.x);
-    const y = Math.min(startPoint.y, currentPoint.y);
-    const width = Math.abs(currentPoint.x - startPoint.x);
-    const height = Math.abs(currentPoint.y - startPoint.y);
-
     return (
-      <svg className={styles.selectionLayer}>
-        <rect 
-          x={x} 
-          y={y} 
-          width={width} 
-          height={height} 
-          className={`${styles.selectionRect} ${isSimulatingCut ? styles.simulatingCut : ''}`}
-        />
+      <svg className={styles.selectionLayer} data-html2canvas-ignore="true">
+        {activeTool === 'square' && startPoint && currentPoint && (
+          <rect 
+            x={Math.min(startPoint.x, currentPoint.x)} 
+            y={Math.min(startPoint.y, currentPoint.y)} 
+            width={Math.abs(currentPoint.x - startPoint.x)} 
+            height={Math.abs(currentPoint.y - startPoint.y)} 
+            className={`${styles.selectionRect} ${isSimulatingCut ? styles.simulatingCut : ''}`}
+          />
+        )}
+        {activeTool === 'lasso' && lassoPoints.length > 1 && (
+          <path 
+            d={lassoPathData}
+            className={`${styles.selectionRect} ${isSimulatingCut ? styles.simulatingCut : ''}`}
+          />
+        )}
       </svg>
     );
   };
@@ -315,7 +287,10 @@ export const FocusModal: React.FC<FocusModalProps> = ({
 
         <FocusToolbar 
           activeTool={activeTool} 
-          onToolChange={setActiveTool} 
+          onToolChange={(tool) => {
+            setActiveTool(tool);
+            handleCancelSelection();
+          }} 
         />
 
         <div className={styles.content}>
@@ -343,7 +318,7 @@ export const FocusModal: React.FC<FocusModalProps> = ({
                 />
               ))}
             
-            {activeTool === 'square' && (
+            {(activeTool === 'square' || activeTool === 'lasso') && (
               <div 
                 className={styles.activeOverlay}
                 onMouseDown={handleMouseDown}

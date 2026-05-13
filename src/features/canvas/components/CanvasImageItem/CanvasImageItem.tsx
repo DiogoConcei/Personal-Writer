@@ -40,7 +40,7 @@ export function CanvasImageItem({
 
   return (
     <div 
-      className={`${styles.canvasImage} ${isSelected ? styles.selected : ''} ${isPending ? styles.pending : ''}`}
+      className={`${styles.canvasImage} ${isSelected ? styles.selected : ''} ${isPending ? styles.pending : ''} ${data.isCrop ? styles.isCrop : ''}`}
       style={{ 
         position: 'absolute', 
         left: entity.x, 

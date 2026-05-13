@@ -1,81 +1,63 @@
-import { toCanvas } from 'html-to-image';
-import { Point } from '../hooks/useScissorsTrace';
-
-interface CropOptions {
-  points: Point[];
-  boundingBox: { x: number; y: number; width: number; height: number };
-  container: HTMLElement;
-}
+import html2canvas from 'html2canvas';
+import { CropOptions, Point } from '@/shared/types';
 
 /**
  * Utilitário resiliente para processar o recorte de uma área da tela.
  * Converte a área selecionada em uma imagem PNG Base64.
+ * Utiliza html2canvas com reset de escala para precisão total.
  */
 export async function processCanvasCrop({ points, boundingBox, container }: CropOptions): Promise<string | null> {
   try {
-    const logicalWidth = parseFloat(container.style.width) || container.offsetWidth;
-    const logicalHeight = parseFloat(container.style.height) || container.offsetHeight;
+    // Adicionar marcador temporário para identificar o container no clone
+    container.setAttribute('data-cropping-root', 'true');
 
-    // 1. Tentar capturar o conteúdo. 
-    // Usamos um timeout e capturamos erros de recursos individuais para não travar o processo.
-    const sourceCanvas = await toCanvas(container, {
-      width: logicalWidth,
-      height: logicalHeight,
-      pixelRatio: 2,
-      skipAutoScale: true,
-      cacheBust: true,
-      // Se uma imagem ou fonte falhar, o processo continua sem ela em vez de lançar erro
-      imagePlaceholder: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 
-      filter: (node) => {
-        const el = node as HTMLElement;
-        const classList = el.classList;
-        if (classList && (
-          classList.contains('cutActionMenu') || 
-          classList.contains('closeBtn') ||
-          classList.contains('selectionLayer') ||
-          classList.contains('activeOverlay') ||
-          classList.contains('handle') // Remover alças de redimensionamento
-        )) {
-          return false;
+    // 1. Capturar o conteúdo usando html2canvas
+    const sourceCanvas = await html2canvas(container, {
+      backgroundColor: null, // Manter transparência
+      scale: 2, // Resolução 2x para nitidez
+      useCORS: true,
+      logging: false,
+      // CRITICAL: Resetar transformações no clone para garantir que 1px lógico = 1px no canvas
+      onclone: (clonedDoc) => {
+        const el = clonedDoc.querySelector('[data-cropping-root="true"]') as HTMLElement;
+        if (el) {
+          el.style.transform = 'none';
+          el.style.transformOrigin = 'top left';
+          el.style.left = '0';
+          el.style.top = '0';
         }
-        return true;
+      },
+      ignoreElements: (node) => {
+        const el = node as HTMLElement;
+        const className = typeof el.className === 'string' ? el.className : '';
+        
+        return (
+          className.includes('cutActionMenu') || 
+          className.includes('closeBtn') ||
+          className.includes('selectionLayer') ||
+          className.includes('activeOverlay') ||
+          className.includes('handle') ||
+          className.includes('toolbar')
+        );
       }
-    }).catch(err => {
-      console.error('Falha na captura primária do html-to-image:', err);
-      // Fallback: Tentar capturar apenas o que for canvas/img direto se o clone falhar
-      return null;
     });
 
-    if (!sourceCanvas) {
-      // Estratégia de Fallback: Captura manual de elementos Canvas (PDF) ou Imagem
-      const fallbackCanvas = document.createElement('canvas');
-      const fCtx = fallbackCanvas.getContext('2d');
-      const target = container.querySelector('canvas, img');
-      
-      if (target && fCtx) {
-        const renderScale = 2;
-        fallbackCanvas.width = logicalWidth * renderScale;
-        fallbackCanvas.height = logicalHeight * renderScale;
-        
-        if (target instanceof HTMLCanvasElement) {
-          fCtx.drawImage(target, 0, 0, fallbackCanvas.width, fallbackCanvas.height);
-        } else if (target instanceof HTMLImageElement) {
-          fCtx.drawImage(target, 0, 0, fallbackCanvas.width, fallbackCanvas.height);
-        }
-        return extractArea(fallbackCanvas, points, boundingBox, renderScale);
-      }
-      return null;
-    }
+    // Limpar o marcador
+    container.removeAttribute('data-cropping-root');
+
+    if (!sourceCanvas) return null;
 
     return extractArea(sourceCanvas, points, boundingBox, 2);
   } catch (err) {
     console.error('Erro fatal ao processar recorte:', err);
+    // Limpeza de segurança em caso de erro
+    container.removeAttribute('data-cropping-root');
     return null;
   }
 }
 
 /**
- * Recorta a área final do canvas capturado.
+ * Recorta a área final do canvas capturado com precisão de sub-pixel.
  */
 function extractArea(
   sourceCanvas: HTMLCanvasElement, 
@@ -87,11 +69,18 @@ function extractArea(
   const ctx = destCanvas.getContext('2d');
   if (!ctx) return null;
 
-  destCanvas.width = boundingBox.width * renderScale;
-  destCanvas.height = boundingBox.height * renderScale;
+  // Dimensões do recorte final em pixels de renderização
+  const destWidth = Math.round(boundingBox.width * renderScale);
+  const destHeight = Math.round(boundingBox.height * renderScale);
 
-  // Aplicar máscara de recorte livre
-  if (points.length > 2) {
+  destCanvas.width = destWidth;
+  destCanvas.height = destHeight;
+
+  ctx.clearRect(0, 0, destWidth, destHeight);
+
+  // Aplicar máscara de recorte livre (Lasso)
+  if (points && points.length > 2) {
+    ctx.save();
     ctx.beginPath();
     points.forEach((p, i) => {
       const relX = (p.x - boundingBox.x) * renderScale;
@@ -103,17 +92,23 @@ function extractArea(
     ctx.clip();
   }
 
+  // Desenhar a sub-área do sourceCanvas
+  // O html2canvas já aplicou o renderScale (scale: 2) no sourceCanvas
   ctx.drawImage(
     sourceCanvas,
-    boundingBox.x * renderScale,
-    boundingBox.y * renderScale,
-    boundingBox.width * renderScale,
-    boundingBox.height * renderScale,
+    Math.round(boundingBox.x * renderScale),
+    Math.round(boundingBox.y * renderScale),
+    destWidth,
+    destHeight,
     0,
     0,
-    boundingBox.width * renderScale,
-    boundingBox.height * renderScale
+    destWidth,
+    destHeight
   );
+
+  if (points && points.length > 2) {
+    ctx.restore();
+  }
 
   return destCanvas.toDataURL('image/png');
 }

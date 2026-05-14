@@ -8,6 +8,10 @@ export interface Metadata {
   icon?: string;
   tags?: string[];
   banner?: string;
+  images?: string[];
+  documents?: string[];
+  music?: string;
+  linked_characters?: string[];
   fields?: Record<string, unknown>;
   [key: string]: unknown;
 }

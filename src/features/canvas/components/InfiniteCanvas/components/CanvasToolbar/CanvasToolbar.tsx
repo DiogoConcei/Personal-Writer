@@ -16,7 +16,6 @@ import { CanvasToolbarProps } from '@/shared/types';
 export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
 
   activeTool,
-  isScissorsActive,
   onActivateSelect,
   onActivatePan,
   onActivatePencil,

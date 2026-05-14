@@ -4,7 +4,7 @@ import { PostItConfigPanel } from '../PostItConfigPanel/PostItConfigPanel';
 import { DrawingStylePanel } from '@/shared/components/DrawingStylePanel/DrawingStylePanel';
 import { TextStylePanel } from '../TextStylePanel/TextStylePanel';
 import styles from './CanvasControls.module.scss';
-import { AnyCanvasEntity, SidebarProps } from '@/shared/types';
+import { SidebarProps } from '@/shared/types';
 
 export function Sidebar({
   isSepararActive,

@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext } from 'react';
 import { CanvasControlsContextValue } from '@/shared/types';
 
 const CanvasControlsContext = createContext<CanvasControlsContextValue | undefined>(undefined);

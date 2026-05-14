@@ -4,7 +4,7 @@ import { PdfGallery } from "../../../references/components/PdfGallery/PdfGallery
 import { NoteSelectionModal } from "../NoteSelectionModal/NoteSelectionModal";
 import { SplitModal } from "../SplitModal/SplitModal";
 import { FocusModal } from "../FocusModal/FocusModal";
-import { AnyCanvasEntity, ModalsProps } from '@/shared/types';
+import { ModalsProps } from '@/shared/types';
 
 export function Modals({
   entities,

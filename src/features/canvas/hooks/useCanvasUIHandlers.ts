@@ -1,11 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
-import { AnyCanvasEntity, UseCanvasUIHandlersProps } from '@/shared/types';
+import { useState, useCallback } from 'react';
+import { UseCanvasUIHandlersProps } from '@/shared/types';
 
+/**
+ * Hook orquestrador da interface do Canvas.
+ * Gerencia estados de seleção, modos de visualização e ferramentas.
+ */
 export function useCanvasUIHandlers({
   entities,
-  activeTool,
-  isPencilActive,
-  isTextActive,
   isCollageActive,
   isScissorsActive,
   activateSelect,
@@ -13,40 +14,45 @@ export function useCanvasUIHandlers({
   bringToFront,
   setSideMenuMode
 }: UseCanvasUIHandlersProps) {
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [isSplitModeActive, setIsSplitModeActive] = useState(false);
   const [isCollageConfirmed, setIsCollageConfirmed] = useState(false);
   const [activeCollageGroupId, setActiveCollageGroupId] = useState<string | null>(null);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
 
-  // Sincronizar painel lateral com ferramentas e seleção
-  useEffect(() => {
-    if (isPencilActive) {
-      setSideMenuMode("drawing");
-    } else if (isTextActive) {
-      setSideMenuMode("text");
-    } else if (isCollageActive) {
-      setSideMenuMode("main");
-    } else {
-      const selectedEntity = entities.find((e) => e.id === selectedItemId);
-      if (selectedEntity?.type === "note" || selectedEntity?.type === "page") {
-        setSideMenuMode("notes");
-      } else if (selectedEntity?.type === "postit") {
-        setSideMenuMode("postits");
-      } else {
-        setSideMenuMode("main");
-      }
-    }
-  }, [isPencilActive, isTextActive, isCollageActive, selectedItemId, entities, setSideMenuMode]);
-
-  const handleToggleSplitMode = useCallback((active: boolean) => {
-    setIsSplitModeActive(active);
-    if (active) {
+  const handleSelectItem = useCallback((id: string | null) => {
+    if (!id) {
       setSelectedItemId(null);
       setSelectedItemIds([]);
-      if (isScissorsActive) activateSelect();
+      return;
     }
-  }, [isScissorsActive, activateSelect]);
+
+    if (isCollageActive) {
+      setSelectedItemIds(prev => 
+        prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id].slice(-10)
+      );
+      return id;
+    }
+
+    if (isScissorsActive) {
+      // No modo tesoura, o clique foca o item mas não entra em modo de edição
+      setSelectedItemId(id);
+      return id;
+    }
+
+    setSelectedItemId(id);
+    setSelectedItemIds([id]);
+    bringToFront(id);
+
+    // Ajusta o menu lateral dependendo do tipo selecionado
+    const entity = entities.find(e => e.id === id);
+    if (entity?.type === 'note') setSideMenuMode('notes');
+    else if (entity?.type === 'postit') setSideMenuMode('postits');
+    else if (entity?.type === 'text') setSideMenuMode('text');
+    else setSideMenuMode('main');
+
+    return id;
+  }, [isCollageActive, isScissorsActive, entities, bringToFront, setSideMenuMode]);
 
   const handleToggleScissors = useCallback(() => {
     if (isScissorsActive) {
@@ -55,44 +61,26 @@ export function useCanvasUIHandlers({
       activateScissors();
       setSelectedItemId(null);
       setSelectedItemIds([]);
-      setIsSplitModeActive(false);
     }
   }, [isScissorsActive, activateSelect, activateScissors]);
 
-  const handleSelectItem = useCallback((id: string) => {
-    const entity = entities.find(e => e.id === id);
-    if (isCollageActive && !isCollageConfirmed) {
-      setSelectedItemIds(prev => {
-        if (prev.includes(id)) {
-          return prev.filter(itemId => itemId !== id);
-        }
-        if (prev.length >= 10) return prev;
-        return [...prev, id];
-      });
-      setSelectedItemId(id);
-    } else {
-      setSelectedItemIds([id]);
-      setSelectedItemId(id);
-    }
-    
-    if (entity?.type !== 'page') {
-      bringToFront(id);
-    }
-  }, [entities, isCollageActive, isCollageConfirmed, bringToFront]);
+  const handleToggleSplitMode = useCallback(() => {
+    setIsSplitModeActive(prev => !prev);
+  }, []);
 
   return {
+    selectedItemId,
+    setSelectedItemId,
+    selectedItemIds,
+    setSelectedItemIds,
     isSplitModeActive,
     setIsSplitModeActive,
     isCollageConfirmed,
     setIsCollageConfirmed,
     activeCollageGroupId,
     setActiveCollageGroupId,
-    selectedItemId,
-    setSelectedItemId,
-    selectedItemIds,
-    setSelectedItemIds,
-    handleToggleSplitMode,
+    handleSelectItem,
     handleToggleScissors,
-    handleSelectItem
+    handleToggleSplitMode
   };
 }

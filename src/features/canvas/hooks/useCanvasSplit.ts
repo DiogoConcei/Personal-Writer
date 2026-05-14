@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { AnyCanvasEntity, SplitActionData, SplittingItem, UseCanvasSplitProps } from '@/shared/types';
+import { SplitActionData, SplittingItem, UseCanvasSplitProps } from '@/shared/types';
 import { calculateSplitEntities } from '../utils/canvasSplitUtils';
 
 /**

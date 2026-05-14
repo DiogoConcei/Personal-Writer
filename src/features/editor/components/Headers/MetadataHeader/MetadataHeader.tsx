@@ -1,5 +1,4 @@
 import { useEditorStore } from '@/features/editor/store/editorStore';
-import { EditorMetadata } from '@/shared/types';
 import { CharacterHeader } from '../CharacterHeader/CharacterHeader';
 import { LocationHeader } from '../LocationHeader/LocationHeader';
 

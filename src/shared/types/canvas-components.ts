@@ -1,12 +1,10 @@
 import { ReactNode } from 'react';
-import { MesaDrawing, AnyCanvasEntity } from './index';
+import { MesaDrawing, AnyCanvasEntity, CutPatch, SplitMode } from './index';
 
 export interface CanvasHistoryState {
   entities: AnyCanvasEntity[];
   drawings: MesaDrawing[];
 }
-
-export type SplitMode = 'amount' | 'single' | 'range';
 
 export interface SplitActionData {
   id: string;

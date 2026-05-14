@@ -1,4 +1,3 @@
-import React from "react";
 import styles from "./InfiniteCanvas.module.scss";
 
 // Hooks
@@ -36,7 +35,7 @@ export default function InfiniteCanvas() {
 
   const { zoom, viewState, isPanning, isSpacePressed, zoomIn, zoomOut, resetView, handleMouseDown, screenToCanvas } = engine;
   const { activeTool, isPencilActive, isEraserActive, isScissorsActive, isTextActive, isPanActive, isCollageActive } = tools;
-  const { open, splittingItem, setSideMenuMode } = modalControl;
+  const { open } = modalControl;
 
   return (
     <div className={`${styles.container} ${isPanning ? styles.panning : ""}`} onClick={() => ui.setSelectedItemId(null)}>
@@ -130,11 +129,14 @@ export default function InfiniteCanvas() {
         isPanning={isPanning}
         isSpacePressed={isSpacePressed}
         isPanActive={isPanActive}
+        isPencilActive={isPencilActive}
+        isTextActive={isTextActive}
         isEraserActive={isEraserActive}
         isCollageActive={isCollageActive}
         isSplitModeActive={ui.isSplitModeActive}
         isScissorsActive={isScissorsActive}
         rootPath={rootPath || ""}
+        entities={entities.entities}
         drawings={drawings}
         visibleEntities={entities.visibleEntities}
         selectedItemId={ui.selectedItemId}

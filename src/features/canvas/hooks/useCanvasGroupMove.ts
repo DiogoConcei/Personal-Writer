@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { AnyCanvasEntity, MesaDrawing, UseCanvasGroupMoveProps } from '@/shared/types';
+import { AnyCanvasEntity, UseCanvasGroupMoveProps } from '@/shared/types';
 import { doRectanglesOverlap } from '@/shared/utils/ui';
 
 /**

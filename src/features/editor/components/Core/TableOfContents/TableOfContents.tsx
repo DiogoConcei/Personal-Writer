@@ -1,4 +1,3 @@
-import { Editor } from '@tiptap/react';
 import { useEffect, useState, useRef } from 'react';
 import styles from './TableOfContents.module.scss';
 import { List, GripHorizontal, ChevronDown, ChevronUp } from 'lucide-react';

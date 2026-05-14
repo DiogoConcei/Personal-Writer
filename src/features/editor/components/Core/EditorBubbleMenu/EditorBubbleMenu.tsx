@@ -1,5 +1,4 @@
 import { BubbleMenu } from '@tiptap/react/menus';
-import { Editor } from '@tiptap/core';
 import { Bold, Italic, Strikethrough, Code, Heading1, Heading2, Heading3, Quote } from 'lucide-react';
 import styles from './EditorBubbleMenu.module.scss';
 

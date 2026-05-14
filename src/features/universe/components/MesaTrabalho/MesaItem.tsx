@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
-import { MesaItem as IMesaItem, MesaItemProps } from '@/shared/types';
+import { MesaItemProps } from '@/shared/types';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { X, Tag, Check, Unlink, User, ChevronLeft, ChevronRight, Plus, Maximize2 } from 'lucide-react';

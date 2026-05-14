@@ -1,9 +1,7 @@
 import React from 'react';
 import { Type, MousePointer2, Hand, ZoomIn, ZoomOut, RotateCcw, ImagePlus, Pencil, Eraser, Link, Layers, Map, Settings2, Layout, LayoutPanelLeft, Save } from 'lucide-react';
-import { ActivePanel } from '@/shared/types';
-import styles from './MesaTrabalho.module.scss';
-
 import { MesaToolbarProps } from '@/shared/types';
+import styles from './MesaTrabalho.module.scss';
 
 export const MesaToolbar: React.FC<MesaToolbarProps> = ({
   boardName,
@@ -37,45 +35,32 @@ export const MesaToolbar: React.FC<MesaToolbarProps> = ({
   onSaveBoard
 }) => {
   return (
-    <div className={styles.floatingToolbar}>
-      <div className={styles.toolbar}>
-        {isEditingName ? (
-          <input
-            autoFocus
-            className={styles.boardTitleInput}
-            value={tempName}
-            onChange={(e) => onSetTempName(e.target.value)}
-            onBlur={onSaveName}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onSaveName();
-              if (e.key === 'Escape') {
-                onSetIsEditingName(false);
-                onSetTempName(boardName);
-              }
-            }}
-          />
-        ) : (
-          <button 
-            className={styles.toolbarBtn} 
-            title="Renomear Mesa" 
-            onClick={() => onSetIsEditingName(true)}
-          >
-            <Type size={16} />
-            <span>{boardName}</span>
-          </button>
-        )}
-        <div className={styles.divider}></div>
-        
-        {/* 1. Selecionar */}
+    <div className={styles.toolbar} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.toolbarGroup}>
+        <div className={styles.boardTitle}>
+          {isEditingName ? (
+            <input
+              autoFocus
+              className={styles.titleInput}
+              value={tempName}
+              onChange={(e) => onSetTempName(e.target.value)}
+              onBlur={onSaveName}
+              onKeyDown={(e) => e.key === 'Enter' && onSaveName()}
+            />
+          ) : (
+            <h2 onClick={() => onSetIsEditingName(true)}>{boardName || 'Mesa Sem Nome'}</h2>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.toolbarGroup}>
         <button 
-          className={`${styles.toolbarBtn} ${!isPencilActive && !isEraserActive && !isTextToolActive && !isConnecting && !isGroupingMode && !isPanModeActive ? styles.active : ''}`} 
+          className={`${styles.toolbarBtn} ${!isPanModeActive && !isPencilActive && !isEraserActive && !isTextToolActive ? styles.active : ''}`} 
           title="Selecionar"
           onClick={activateSelectTool}
         >
           <MousePointer2 size={16} />
         </button>
-
-        {/* 2. Mão */}
         <button 
           className={`${styles.toolbarBtn} ${isPanModeActive ? styles.active : ''}`} 
           title="Mover Tela (H)"
@@ -83,10 +68,16 @@ export const MesaToolbar: React.FC<MesaToolbarProps> = ({
         >
           <Hand size={16} />
         </button>
+        
+        <div className={styles.divider}></div>
+
+        <button className={styles.toolbarBtn} title="Aumentar Zoom" onClick={zoomIn}><ZoomIn size={16} /></button>
+        <button className={styles.toolbarBtn} title="Diminuir Zoom" onClick={zoomOut}><ZoomOut size={16} /></button>
+        <button className={styles.toolbarBtn} title="Resetar Visualização" onClick={handleResetView}><RotateCcw size={16} /></button>
 
         <div className={styles.divider}></div>
 
-        {/* 3. Lápis */}
+        <button className={styles.toolbarBtn} title="Adicionar Imagem" onClick={() => onOpenGallery('item')}><ImagePlus size={16} /></button>
         <button 
           className={`${styles.toolbarBtn} ${isPencilActive ? styles.active : ''}`} 
           title="Desenhar (Lápis)"
@@ -94,8 +85,6 @@ export const MesaToolbar: React.FC<MesaToolbarProps> = ({
         >
           <Pencil size={16} />
         </button>
-
-        {/* 4. Borracha */}
         <button 
           className={`${styles.toolbarBtn} ${isEraserActive ? styles.active : ''}`} 
           title="Borracha (Excluir Desenho)"
@@ -103,11 +92,9 @@ export const MesaToolbar: React.FC<MesaToolbarProps> = ({
         >
           <Eraser size={16} />
         </button>
-
-        {/* 5. Texto */}
         <button 
           className={`${styles.toolbarBtn} ${isTextToolActive ? styles.active : ''}`} 
-          title="Adicionar Texto"
+          title="Texto"
           onClick={activateTextTool}
         >
           <Type size={16} />
@@ -115,72 +102,58 @@ export const MesaToolbar: React.FC<MesaToolbarProps> = ({
 
         <div className={styles.divider}></div>
 
-        {/* 6. Zoom-in */}
-        <button className={styles.toolbarBtn} title="Aumentar Zoom" onClick={zoomIn}><ZoomIn size={16} /></button>
-        
-        {/* 7. Zoom-out */}
-        <button className={styles.toolbarBtn} title="Diminuir Zoom" onClick={zoomOut}><ZoomOut size={16} /></button>
-        
-        {/* 8. Botão de reset do zoom */}
-        <button className={styles.toolbarBtn} title="Resetar Visualização" onClick={handleResetView}><RotateCcw size={16} /></button>
-        
-        <div className={styles.divider}></div>
-
-        {/* 9. Botão de agrupamento */}
+        <button 
+          className={`${styles.toolbarBtn} ${isConnecting ? styles.active : ''}`} 
+          title="Vincular Itens (L)"
+          onClick={handleToggleConnectionMode}
+        >
+          <Link size={16} />
+        </button>
         <button 
           className={`${styles.toolbarBtn} ${isGroupingMode ? styles.active : ''}`} 
-          title={isGroupingMode ? "Cancelar Agrupamento" : "Iniciar Agrupamento"}
+          title="Agrupar Itens (G)"
           onClick={handleToggleGroupingMode}
         >
           <Layers size={16} />
         </button>
 
-        {/* 10. Conectar items */}
-        <button 
-          className={`${styles.toolbarBtn} ${isConnecting ? styles.active : ''}`} 
-          title={isConnecting ? "Selecione o segundo item" : "Conectar Itens"} 
-          onClick={handleToggleConnectionMode}
-        >
-          <Link size={16} />
-        </button>
+        <div className={styles.divider}></div>
 
-        <div className={styles.divider}></div>
-        <button className={styles.toolbarBtn} title="Adicionar Imagem" onClick={() => onOpenGallery('item')}><ImagePlus size={16} /></button>
-        <button className={styles.toolbarBtn} title="Mapa" onClick={() => setActivePanel('moodboard-map')}><Map size={16} /></button>
-        
-        <div className={styles.divider}></div>
-        
-        <div className={styles.settingsWrapper}>
+        <div className={styles.settingsDropdown}>
           <button 
             className={`${styles.toolbarBtn} ${isSettingsOpen ? styles.active : ''}`} 
-            title="Configurações da Mesa" 
+            title="Configurações da Mesa"
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
           >
             <Settings2 size={16} />
           </button>
-
+          
           {isSettingsOpen && (
-            <div className={styles.settingsPopover}>
-              <div className={styles.settingsHeader}>Configurações</div>
-              <div className={styles.settingsSection}>
-                <label>Modelo da Mesa</label>
-                <div className={styles.modeToggle}>
-                  <button 
-                    className={boardMode === 'free' ? styles.active : ''} 
-                    onClick={() => setBoardMode('free')}
-                  >
-                    <Layout size={14} />
-                    Livre
-                  </button>
-                  <button 
-                    className={boardMode === 'planning' ? styles.active : ''} 
-                    onClick={() => setBoardMode('planning')}
-                  >
-                    <LayoutPanelLeft size={14} />
-                    Planejamento
-                  </button>
-                </div>
+            <div className={styles.dropdownMenu}>
+              <div className={styles.menuHeader}>Configurações</div>
+              <button className={styles.menuItem} onClick={() => onOpenGallery('background')}>
+                <Map size={14} /> Mudar Imagem de Fundo
+              </button>
+              <div className={styles.menuDivider}></div>
+              <div className={styles.menuLabel}>Modo da Mesa</div>
+              <div className={styles.modeToggle}>
+                <button 
+                  className={`${styles.modeBtn} ${boardMode === 'free' ? styles.active : ''}`}
+                  onClick={() => setBoardMode('free')}
+                >
+                  <Layout size={14} /> Livre
+                </button>
+                <button 
+                  className={`${styles.modeBtn} ${boardMode === 'planning' ? styles.active : ''}`}
+                  onClick={() => setBoardMode('planning')}
+                >
+                  <LayoutPanelLeft size={14} /> Planejamento
+                </button>
               </div>
+              <div className={styles.menuDivider}></div>
+              <button className={styles.menuItem} onClick={() => setActivePanel('dashboard')}>
+                Sair da Mesa
+              </button>
             </div>
           )}
         </div>

@@ -116,7 +116,7 @@ export interface SpellingPluginState {
 export interface WikiLinkOptions {
   HTMLAttributes: Record<string, unknown>;
   onLinkClick?: (noteName: string) => void;
-  suggestion: unknown;
+  suggestion: Record<string, unknown>;
 }
 
 export interface DictionaryContextMenuProps {

@@ -40,7 +40,7 @@ export function useCanvasOrchestrator() {
   } = useDrawingStore();
 
   const modalControl = useCanvasModals();
-  const { open, splittingItem, setSideMenuMode } = modalControl;
+  const { splittingItem, setSideMenuMode } = modalControl;
 
   const engine = useCanvasEngine({
     containerRef,
@@ -52,12 +52,6 @@ export function useCanvasOrchestrator() {
   const {
     zoom,
     viewState,
-    isPanning,
-    isSpacePressed,
-    zoomIn,
-    zoomOut,
-    resetView,
-    handleMouseDown,
     screenToCanvas,
     getVisibleItems,
   } = engine;

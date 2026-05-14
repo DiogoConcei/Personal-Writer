@@ -112,7 +112,17 @@ export const SplitModal: React.FC<SplitModalProps> = ({
         </div>
 
         <div className={styles.actions}>
-          <button className={styles.confirm} onClick={() => onConfirm({ mode, amount, startPage, endPage, singlePage })}>
+          <button className={styles.confirm} onClick={() => onConfirm({ 
+            id: '', // This should probably be passed down if needed, but let's see current usage
+            name: itemName,
+            total: totalItems,
+            initialPage,
+            mode, 
+            amount, 
+            startPage, 
+            endPage, 
+            singlePage 
+          })}>
             {mode === 'single' ? 'Extrair Parte' : 'Extrair Partes'}
           </button>
         </div>

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { AnyCanvasEntity, MesaDrawing, UseCanvasCollageProps } from '@/shared/types';
+import { AnyCanvasEntity, UseCanvasCollageProps } from '@/shared/types';
 import { doRectanglesOverlap } from '@/shared/utils/ui';
 
 export function useCanvasCollage({
@@ -9,7 +9,6 @@ export function useCanvasCollage({
   setEntities,
   updateDrawing,
   addPendingCollage,
-  activeCollageGroupId,
   setActiveCollageGroupId,
   setIsCollageConfirmed,
   setSelectedItemIds,

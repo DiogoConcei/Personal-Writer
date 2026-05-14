@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnyCanvasEntity, NoteData, PdfData, EntityRendererProps } from '@/shared/types';
+import { NoteData, PdfData, EntityRendererProps } from '@/shared/types';
 import { CanvasNoteItem } from '../../CanvasNoteItem/CanvasNoteItem';
 import { CanvasImageItem } from '../../CanvasImageItem/CanvasImageItem';
 import { CanvasPdfItem } from '../../CanvasPdfItem/CanvasPdfItem';

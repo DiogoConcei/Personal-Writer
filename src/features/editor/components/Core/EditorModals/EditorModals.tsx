@@ -1,4 +1,3 @@
-import { Editor } from "@tiptap/react";
 import { useState, useEffect } from "react";
 import { useUIStore } from "@/store/uiStore";
 import { useEditorStore } from "../../../store/editorStore";

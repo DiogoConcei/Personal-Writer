@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnyCanvasEntity, MesaDrawing, CanvasViewportProps } from '@/shared/types';
+import { CanvasViewportProps } from '@/shared/types';
 import { CanvasBase } from '@/shared/components/CanvasBase/CanvasBase';
 import { CanvasDrawingLayer } from '@/shared/components/CanvasDrawingLayer/CanvasDrawingLayer';
 import { EntityRenderer } from './EntityRenderer';
@@ -24,7 +24,6 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   selectedItemIds,
   onMouseDown,
   onSelectItem,
-  onDeselect,
   onUpdateEntity,
   onRemoveEntity,
   onStartTransform,

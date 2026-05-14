@@ -3,7 +3,7 @@ import { useGalleryStore } from '@/features/imageview/store/galleryStore';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { saveBase64Image } from '@/tauri-bridge/fs';
 import { processCanvasCrop } from '../utils/canvasCropUtils';
-import { AnyCanvasEntity, CropOptions, UseCanvasCropPersistenceProps } from '@/shared/types';
+import { CropOptions, UseCanvasCropPersistenceProps } from '@/shared/types';
 
 /**
  * Hook descentralizado para gerenciar a persistência de recortes (colagens).

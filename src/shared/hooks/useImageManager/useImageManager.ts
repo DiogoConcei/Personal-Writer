@@ -296,7 +296,7 @@ export function useImageManager() {
     // Bloqueia movimentação para/entre silos reservados
     const isReservedTarget = ['collages', 'editions'].includes(targetFolder.split('/')[0]);
     if (isReservedTarget) {
-      addNotification('Não é permitido mover arquivos para silos reservados', 'warning');
+      addNotification('Não é permitido mover arquivos para silos reservados', 'info');
       return;
     }
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, RefObject } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ViewState, UseCanvasEngineOptions } from '@/shared/types';
 
 /**

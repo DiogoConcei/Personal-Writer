@@ -1,4 +1,3 @@
-import { ReactNode } from 'react';
 import { ImageAsset, GalleryBreadcrumb, GalleryNavTarget } from './assets';
 
 export interface DocumentModalProps {

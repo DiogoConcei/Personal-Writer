@@ -1,5 +1,4 @@
-import { ReactNode, useRef, useEffect } from "react";
-import { LucideIcon } from "lucide-react";
+import { useRef, useEffect } from "react";
 import { EditorToolbarProps, ActionProps, DropdownProps, DropdownItemProps } from "@/shared/types";
 import styles from "./EditorToolbar.module.scss";
 
@@ -14,14 +13,6 @@ export function EditorToolbar({ children }: EditorToolbarProps) {
       </div>
     </div>
   );
-}
-
-interface ActionProps {
-  icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-  badge?: number;
-  active?: boolean;
 }
 
 /**
@@ -39,14 +30,6 @@ function Action({ icon: Icon, label, onClick, badge, active }: ActionProps) {
       )}
     </button>
   );
-}
-
-interface DropdownProps {
-  icon: LucideIcon;
-  label: string;
-  isOpen: boolean;
-  onToggle: (isOpen: boolean) => void;
-  children: ReactNode;
 }
 
 /**
@@ -76,12 +59,6 @@ function Dropdown({ icon: Icon, label, isOpen, onToggle, children }: DropdownPro
       {isOpen && <div className={styles.menu}>{children}</div>}
     </div>
   );
-}
-
-interface DropdownItemProps {
-  label: string;
-  onClick: () => void;
-  icon?: LucideIcon;
 }
 
 /**

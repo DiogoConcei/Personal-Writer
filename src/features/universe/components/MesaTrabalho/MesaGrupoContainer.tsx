@@ -1,9 +1,7 @@
 import React from 'react';
-import { MesaGrupo, MesaItem as IMesaItem } from '@/shared/types';
+import { MesaGrupoContainerProps } from '@/shared/types';
 import { MesaItem } from './MesaItem';
 import styles from './MesaTrabalho.module.scss';
-
-import { MesaGrupoContainerProps } from '@/shared/types';
 
 export const MesaGrupoContainer: React.FC<MesaGrupoContainerProps> = ({ 
   group, 

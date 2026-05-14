@@ -13,8 +13,8 @@ export function useTimelineSorting() {
     return Object.values(entities)
       .filter(e => e.type === 'character')
       .sort((a, b) => {
-        const orderA = a.fields?.order ?? Infinity;
-        const orderB = b.fields?.order ?? Infinity;
+        const orderA = (a.fields?.order as number) ?? Infinity;
+        const orderB = (b.fields?.order as number) ?? Infinity;
         if (orderA === orderB) return a.name.localeCompare(b.name);
         return orderA - orderB;
       });

@@ -1,6 +1,6 @@
 import styles from './TextStylePanel.module.scss';
 import { Bold, Minus, Plus } from 'lucide-react';
-import { AnyCanvasEntity, TextStylePanelProps } from '@/shared/types';
+import { TextStylePanelProps } from '@/shared/types';
 
 const FONTS = [
   { label: 'Sans Serif', value: 'sans-serif' },

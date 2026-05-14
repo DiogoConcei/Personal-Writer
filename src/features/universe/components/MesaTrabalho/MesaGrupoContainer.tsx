@@ -3,18 +3,9 @@ import { MesaGrupo, MesaItem as IMesaItem } from '@/shared/types';
 import { MesaItem } from './MesaItem';
 import styles from './MesaTrabalho.module.scss';
 
-interface Props {
-  group: MesaGrupo;
-  items: IMesaItem[];
-  zoom?: number;
-  onItemClick?: (id: string) => void;
-  connectionSourceId?: string | null;
-  isGroupingMode?: boolean;
-  onConfirmGroup?: () => void;
-  onCancelGroup?: () => void;
-}
+import { MesaGrupoContainerProps } from '@/shared/types';
 
-export const MesaGrupoContainer: React.FC<Props> = ({ 
+export const MesaGrupoContainer: React.FC<MesaGrupoContainerProps> = ({ 
   group, 
   items, 
   zoom = 1,

@@ -13,11 +13,7 @@ export function useCanvasControls() {
 
 import { Sidebar } from './Sidebar';
 import { Modals } from './Modals';
-
-interface CanvasControlsProps {
-  children: ReactNode;
-  value: CanvasControlsContextValue;
-}
+import { CanvasControlsProps } from '@/shared/types';
 
 export function CanvasControls({ children, value }: CanvasControlsProps) {
   return (

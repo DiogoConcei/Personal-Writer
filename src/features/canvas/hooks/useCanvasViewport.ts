@@ -1,10 +1,5 @@
 import { useState, useCallback, RefObject } from 'react';
-import { AnyCanvasEntity } from '@/shared/types';
-
-interface ViewState {
-  x: number;
-  y: number;
-}
+import { AnyCanvasEntity, ViewState } from '@/shared/types';
 
 interface UseCanvasViewportOptions {
   zoom: number;

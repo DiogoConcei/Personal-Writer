@@ -1,3 +1,5 @@
+import { ActivePanel } from './ui';
+
 /**
  * Interface base para metadados extraídos de arquivos Markdown (YAML Frontmatter).
  */
@@ -6,8 +8,8 @@ export interface Metadata {
   icon?: string;
   tags?: string[];
   banner?: string;
-  fields?: Record<string, any>;
-  [key: string]: any;
+  fields?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 /**
@@ -65,6 +67,8 @@ export interface MesaDrawing {
   width: number;
   opacity?: number;
   groupId?: string;
+  x?: number; // Offset horizontal para otimização de movimento
+  y?: number; // Offset vertical para otimização de movimento
 }
 
 /**
@@ -76,4 +80,74 @@ export interface MesaGrupo {
   y: number;
   zIndex: number;
   title?: string;
+}
+
+export interface CharacterDetailsModalProps {
+  characterId: string;
+  onClose: () => void;
+}
+
+export interface MesaGrupoContainerProps {
+  group: MesaGrupo;
+  items: MesaItem[];
+  zoom?: number;
+  onItemClick?: (id: string) => void;
+  connectionSourceId?: string | null;
+  isGroupingMode?: boolean;
+  onConfirmGroup?: () => void;
+  onCancelGroup?: () => void;
+}
+
+export interface MesaItemProps {
+  item: MesaItem;
+  zoom?: number;
+  onClick?: () => void;
+  onAddPhoto?: () => void;
+  isConnectingSource?: boolean;
+  isGroupingMode?: boolean;
+  onConfirmGroup?: () => void;
+  onCancelGroup?: () => void;
+}
+
+export interface MesaLeftToolbarProps {
+  backgroundImage: string | null;
+  backgroundPattern: 'dots' | 'grid' | 'cork';
+  backgroundZoom?: number;
+  onOpenBackgroundGallery: () => void;
+  onRotateBackground: () => void;
+  onZoomBackground: () => void;
+  onRemoveBackground: () => void;
+  onSetBackgroundPattern: (pattern: 'dots' | 'grid' | 'cork') => void;
+}
+
+export interface MesaToolbarProps {
+  boardName: string;
+  boardMode: 'free' | 'planning';
+  isEditingName: boolean;
+  tempName: string;
+  isPencilActive: boolean;
+  isEraserActive: boolean;
+  isTextToolActive: boolean;
+  isConnecting: boolean;
+  isGroupingMode: boolean;
+  isPanModeActive: boolean;
+  isSettingsOpen: boolean;
+  onSetTempName: (name: string) => void;
+  onSaveName: () => void;
+  onSetIsEditingName: (val: boolean) => void;
+  activateSelectTool: () => void;
+  activatePanTool: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  handleResetView: () => void;
+  onOpenGallery: (mode: 'item' | 'background') => void;
+  activatePencilTool: () => void;
+  activateEraserTool: () => void;
+  activateTextTool: () => void;
+  handleToggleConnectionMode: () => void;
+  handleToggleGroupingMode: () => void;
+  setActivePanel: (panel: ActivePanel) => void;
+  setIsSettingsOpen: (val: boolean) => void;
+  setBoardMode: (mode: 'free' | 'planning') => void;
+  onSaveBoard: () => void;
 }

@@ -1,17 +1,5 @@
 import { useState, useCallback, useEffect, useRef, RefObject } from 'react';
-
-interface ViewState {
-  x: number;
-  y: number;
-}
-
-interface UseCanvasEngineOptions {
-  containerRef: RefObject<HTMLDivElement | null>;
-  initialZoom?: number;
-  minZoom?: number;
-  maxZoom?: number;
-  zoomStep?: number;
-}
+import { ViewState, UseCanvasEngineOptions } from '@/shared/types';
 
 /**
  * Motor unificado de Canvas para gerenciamento de Zoom, Pan e Coordenadas.

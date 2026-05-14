@@ -54,7 +54,8 @@ export function CanvasDrawingLayer({
             style={{ 
               cursor: isEraserActive || isCollageActive ? 'pointer' : 'default',
               pointerEvents: (isEraserActive || isCollageActive) ? 'stroke' : 'none',
-              transition: 'all 0.2s ease',
+              transition: drawing.x === undefined ? 'all 0.2s ease' : 'none', // Desabilita transição durante movimento otimizado
+              transform: `translate(${drawing.x || 0}px, ${drawing.y || 0}px)`,
               filter: isSelected ? 'drop-shadow(0 0 4px var(--color-accent))' : 'none'
             }}
             onClick={(e) => {

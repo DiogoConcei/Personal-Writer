@@ -3,9 +3,7 @@ import { Editor } from '@tiptap/core';
 import { Bold, Italic, Strikethrough, Code, Heading1, Heading2, Heading3, Quote } from 'lucide-react';
 import styles from './EditorBubbleMenu.module.scss';
 
-interface EditorBubbleMenuProps {
-  editor: Editor | null;
-}
+import { EditorBubbleMenuProps } from '@/shared/types';
 
 export default function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
   if (!editor) return null;

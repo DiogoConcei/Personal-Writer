@@ -3,7 +3,7 @@ import styles from './LocationHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { parseMarkdownMetadata } from '@/features/editor/store/metadataParser';
-import { EditorMetadata } from '@/shared/types';
+import { EditorMetadata, LocationHeaderProps, CharacterLink } from '@/shared/types';
 import {
   MapPin, Music, Play, Pause, Plus,
   ChevronRight, Info, User, X
@@ -12,19 +12,7 @@ import ImageGallery from "@/features/SlashMenu/components/ImageGallery/ImageGall
 import Modal from '@/shared/components/Modal/Modal/Modal';
 import { AttributeGrid } from "../../Metadata/AttributeGrid/AttributeGrid";
 import { readFile, listDirectory, resolveAssetPath } from '@/tauri-bridge';
-
-interface CharacterLink {
-  path: string;
-  name: string;
-  icon?: string;
-}
-
 import { Backlinks } from "../../Insights/Backlinks/Backlinks";
-
-interface LocationHeaderProps {
-  metadata?: EditorMetadata;
-  readOnly?: boolean;
-}
 
 export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHeaderProps) {
   const { rootPath, activeFile, setActiveFile } = useWorkspaceStore();

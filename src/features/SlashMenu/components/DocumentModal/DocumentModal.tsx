@@ -1,14 +1,7 @@
 import React from 'react';
 import { FileText, X, ExternalLink, Trash2, Plus } from 'lucide-react';
+import { DocumentModalProps } from '@/shared/types';
 import styles from './DocumentModal.module.scss';
-
-interface DocumentModalProps {
-  documents: string[];
-  onClose: () => void;
-  onOpen: (path: string) => void;
-  onRemove: (path: string) => void;
-  onAddMore?: () => void;
-}
 
 export const DocumentModal: React.FC<DocumentModalProps> = ({ documents, onClose, onOpen, onRemove, onAddMore }) => {
   return (

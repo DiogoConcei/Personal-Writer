@@ -8,3 +8,4 @@ export * from './plugins';
 export * from './references';
 export * from './ui';
 export * from './canvas-components';
+export * from './slash-menu';

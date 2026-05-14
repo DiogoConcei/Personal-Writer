@@ -3,12 +3,7 @@ import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
 import { FileText } from 'lucide-react';
 import { AttributeGrid } from "../../Metadata/AttributeGrid/AttributeGrid";
-import { EditorMetadata } from '@/shared/types';
-
-interface DefaultHeaderProps {
-  metadata?: EditorMetadata;
-  readOnly?: boolean;
-}
+import { DefaultHeaderProps } from '@/shared/types';
 
 export function DefaultHeader({ metadata: propMetadata, readOnly }: DefaultHeaderProps) {
   const { activeFile } = useWorkspaceStore();

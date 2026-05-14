@@ -5,12 +5,9 @@ import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { X, Trash2, Map, Layers, Package, GripHorizontal } from 'lucide-react';
 import styles from './MesaTrabalho.module.scss';
 
-interface Props {
-  characterId: string;
-  onClose: () => void;
-}
+import { CharacterDetailsModalProps } from '@/shared/types';
 
-export const CharacterDetailsModal: React.FC<Props> = ({ characterId, onClose }) => {
+export const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({ characterId, onClose }) => {
   const { rootPath } = useWorkspaceStore();
   const { 
     items, 

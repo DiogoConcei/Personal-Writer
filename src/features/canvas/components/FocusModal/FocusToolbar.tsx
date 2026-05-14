@@ -1,13 +1,9 @@
 import React from 'react';
 import { MousePointer2, Square, Scissors } from 'lucide-react';
+import { FocusTool } from '@/shared/types';
 import styles from './FocusModal.module.scss';
 
-export type FocusTool = 'select' | 'square' | 'lasso';
-
-interface FocusToolbarProps {
-  activeTool: FocusTool;
-  onToolChange: (tool: FocusTool) => void;
-}
+import { FocusToolbarProps } from '@/shared/types';
 
 export const FocusToolbar: React.FC<FocusToolbarProps> = ({ activeTool, onToolChange }) => {
   return (

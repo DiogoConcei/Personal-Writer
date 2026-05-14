@@ -1,12 +1,5 @@
 import { useEffect } from 'react';
-
-interface UseCanvasHotkeysOptions {
-  selectedItemId: string | null;
-  onRemove: (id: string) => void;
-  onDeselect: () => void;
-  onUndo?: () => void;
-  onRedo?: () => void;
-}
+import { UseCanvasHotkeysOptions } from '@/shared/types';
 
 /**
  * Hook para gerenciar atalhos de teclado globais no Canvas.

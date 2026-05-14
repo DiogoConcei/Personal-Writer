@@ -3,10 +3,7 @@ import { EditorMetadata } from '@/shared/types';
 import { CharacterHeader } from '../CharacterHeader/CharacterHeader';
 import { LocationHeader } from '../LocationHeader/LocationHeader';
 
-interface MetadataHeaderProps {
-  metadata?: EditorMetadata;
-  readOnly?: boolean;
-}
+import { MetadataHeaderProps } from '@/shared/types';
 
 export function MetadataHeader({ metadata: propMetadata, readOnly }: MetadataHeaderProps) {
   const { metadata: storeMetadata } = useEditorStore();

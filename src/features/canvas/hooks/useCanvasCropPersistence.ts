@@ -1,18 +1,12 @@
 import { useCallback } from 'react';
-import { useGalleryStore } from '@/features/image-manager/store/galleryStore';
+import { useGalleryStore } from '@/features/imageview/store/galleryStore';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { saveBase64Image } from '@/tauri-bridge/fs';
 import { processCanvasCrop } from '../utils/canvasCropUtils';
-import { AnyCanvasEntity, CropOptions } from '@/shared/types';
-
-interface UseCanvasCropPersistenceProps {
-  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
-  rootPath: string | null;
-}
+import { AnyCanvasEntity, CropOptions, UseCanvasCropPersistenceProps } from '@/shared/types';
 
 /**
  * Hook descentralizado para gerenciar a persistência de recortes (colagens).
- * Segue o padrão de orquestração de stores e efeitos colaterais.
  */
 export function useCanvasCropPersistence({ onUpdate, rootPath }: UseCanvasCropPersistenceProps) {
   const registerCollage = useGalleryStore(state => state.registerCollage);

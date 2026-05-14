@@ -1,11 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
-
-export interface Point {
-  x: number;
-  y: number;
-}
+import { useState, useCallback, useRef } from 'react';
+import { Point } from '@/shared/types';
 
 interface UseScissorsTraceProps {
+
   isEnabled: boolean;
   mode?: 'path' | 'square';
   fadeDelay?: number;

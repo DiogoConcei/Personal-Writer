@@ -1,16 +1,7 @@
 import { Wallpaper, RotateCw, ZoomOut, Maximize2, Minimize2, Plus, Grid3X3, Circle } from 'lucide-react';
 import styles from './MesaLeftToolbar.module.scss';
 
-interface MesaLeftToolbarProps {
-  backgroundImage: string | null;
-  backgroundPattern: 'dots' | 'grid' | 'cork';
-  backgroundZoom?: number;
-  onOpenBackgroundGallery: () => void;
-  onRotateBackground: () => void;
-  onZoomBackground: () => void;
-  onRemoveBackground: () => void;
-  onSetBackgroundPattern: (pattern: 'dots' | 'grid' | 'cork') => void;
-}
+import { MesaLeftToolbarProps } from '@/shared/types';
 
 export function MesaLeftToolbar({
   backgroundImage,

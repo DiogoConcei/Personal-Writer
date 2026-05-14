@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import styles from './CharacterHeader.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useEditorStore } from '@/features/editor/store/editorStore';
-import { EditorMetadata } from '@/shared/types';
+import { EditorMetadata, CharacterHeaderProps } from '@/shared/types';
 import {
   User, Edit3, Sparkles, ChevronRight, Info
 } from 'lucide-react';
@@ -12,11 +12,6 @@ import { AttributeGrid } from '../../Metadata/AttributeGrid/AttributeGrid';
 import { resolveAssetPath } from '@/tauri-bridge';
 import { Backlinks } from '../../Insights/Backlinks/Backlinks';
 import { SummaryEditor } from '../../Metadata/SummaryEditor/SummaryEditor';
-
-interface CharacterHeaderProps {
-  metadata?: EditorMetadata;
-  readOnly?: boolean;
-}
 
 export function CharacterHeader({ metadata: propMetadata, readOnly }: CharacterHeaderProps) {
   const { rootPath, activeFile } = useWorkspaceStore();
@@ -75,7 +70,7 @@ export function CharacterHeader({ metadata: propMetadata, readOnly }: CharacterH
     }
   };
 
-  const handleFieldChange = (key: string, value: any) => {
+  const handleFieldChange = (key: string, value: unknown) => {
     if (readOnly) return;
     const newData = { ...metadata };
     if (!newData.fields) newData.fields = {};
@@ -107,11 +102,11 @@ export function CharacterHeader({ metadata: propMetadata, readOnly }: CharacterH
             <span className={styles.typeTag}><User size={12} /> Personagem</span>
             <ChevronRight size={14} className={styles.separator} />
             <span
-              className={`${styles.statusTag} ${metadata.fields?.Status === 'Morto' ? styles['statusTag--inactive'] : ''} ${readOnly ? styles['statusTag--readonly'] : ''}`}
-              onClick={() => !readOnly && handleFieldChange('Status', metadata.fields?.Status === 'Morto' ? 'Vivo' : 'Morto')}
+              className={`${styles.statusTag} ${(metadata.fields?.Status as string) === 'Morto' ? styles['statusTag--inactive'] : ''} ${readOnly ? styles['statusTag--readonly'] : ''}`}
+              onClick={() => !readOnly && handleFieldChange('Status', (metadata.fields?.Status as string) === 'Morto' ? 'Vivo' : 'Morto')}
               title={readOnly ? "" : "Clique para alternar status"}
             >
-              {metadata.fields?.Status || 'Vivo'}
+              {(metadata.fields?.Status as string) || 'Vivo'}
             </span>
           </div>
 
@@ -135,7 +130,7 @@ export function CharacterHeader({ metadata: propMetadata, readOnly }: CharacterH
           )}
 
           <SummaryEditor
-            value={metadata.fields?.summary || ''}
+            value={(metadata.fields?.summary as string) || ''}
             onChange={(html) => !readOnly && handleFieldChange('summary', html)}
             placeholder={readOnly ? "" : "Clique para adicionar um resumo..."}
             readOnly={readOnly}

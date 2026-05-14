@@ -4,7 +4,7 @@ import { PdfAsset, resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useDocumentManager } from '@/shared/hooks/useDocumentManager/useDocumentManager';
 import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
-import { PdfThumbnail } from '@/features/docs-manager/components/PdfThumbnail/PdfThumbnail';
+import { PdfThumbnail } from '@/features/docsview/components/PdfThumbnail/PdfThumbnail';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
 import styles from './PdfGallery.module.scss';
 

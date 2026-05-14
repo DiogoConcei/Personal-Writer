@@ -1,5 +1,21 @@
 import { CutPatch } from './canvas';
 
+export interface ImageAsset {
+  name: string;
+  path: string;
+  full_path: string;
+  modified_at: number;
+  width: number;
+  height: number;
+}
+
+export interface PdfAsset {
+  name: string;
+  path: string;
+  full_path: string;
+  modified_at: number;
+}
+
 export interface PdfData {
   path: string;
   startPage: number;
@@ -49,7 +65,7 @@ export interface GalleryBreadcrumb {
 }
 
 export interface GalleryModalsState {
-  itemToDelete: any | null;
+  itemToDelete: ImageAsset | null;
   folderToDelete: string | null;
   isInputModalOpen: boolean;
   pendingCollectionImages: string[];
@@ -58,4 +74,36 @@ export interface GalleryModalsState {
 export interface GallerySelectionState {
   isSelectionMode: boolean;
   selectedPaths: string[];
+}
+
+export interface LazyImageProps {
+  src: string;
+  alt: string;
+  className?: string;
+  style?: React.CSSProperties;
+  onLoad?: () => void;
+}
+
+export interface SectionTabsProps {
+  activeSection: GallerySection;
+  onSectionChange: (section: GallerySection) => void;
+}
+
+export interface AssetGalleryProps {
+  pickerMode?: boolean;
+  onSelect?: (path: string) => void;
+  onClose?: () => void;
+  disableOrganization?: boolean;
+}
+
+export interface ImageViewerProps {
+  path: string;
+  onBack?: () => void;
+}
+
+export interface PdfThumbnailProps {
+  fileUrl: string;
+  width?: number;
+  pageNumber?: number;
+  onLoadSuccess?: (data: { numPages: number }) => void;
 }

@@ -55,7 +55,8 @@ export const CanvasBase: React.FC<CanvasBaseProps> = ({
     >
       {beforeViewport}
       <div
-        className={styles.viewport}
+        className={`${styles.viewport} canvas-viewport`}
+        data-is-viewport="true"
         style={{
           transform: `translate(${viewState.x}px, ${viewState.y}px) scale(${zoom})`,
           ...viewportStyle

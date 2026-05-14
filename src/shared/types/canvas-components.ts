@@ -1,16 +1,31 @@
-import { AnyCanvasEntity } from './canvas';
+import { ReactNode } from 'react';
+import { MesaDrawing, AnyCanvasEntity } from './index';
 
-export type CanvasModalType = 'image' | 'pdf' | 'note' | 'split' | 'focus';
+export interface CanvasHistoryState {
+  entities: AnyCanvasEntity[];
+  drawings: MesaDrawing[];
+}
 
-export interface SplittingItem {
+export type SplitMode = 'amount' | 'single' | 'range';
+
+export interface SplitActionData {
   id: string;
   name: string;
   total: number;
-  initialPage?: number;
+  initialPage: number;
+  mode?: SplitMode;
+  amount?: number;
+  startPage?: number;
+  endPage?: number;
+  singlePage?: number;
 }
 
+export type SplittingItem = SplitActionData;
+
+export type CanvasModalType = 'note' | 'split' | 'focus' | 'image' | 'pdf' | null;
+
 export interface CanvasModalsState {
-  openModal: CanvasModalType | null;
+  openModal: CanvasModalType;
   splittingItem: SplittingItem | null;
   focusItem: AnyCanvasEntity | null;
   sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
@@ -18,50 +33,24 @@ export interface CanvasModalsState {
   groupingSourceId: string | null;
 }
 
-export interface SplitActionData {
-  mode: 'amount' | 'single' | 'range';
-  startPage?: number;
-  endPage?: number;
-  amount?: number;
-  singlePage?: number;
+export interface CanvasControlsContextValue extends CanvasModalsState {
+  open: (type: CanvasModalType, data?: unknown) => void;
+  close: () => void;
+  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => void;
+  startGrouping: (id: string) => void;
+  cancelGrouping: () => void;
 }
 
-export interface SplitModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (data: any) => void;
-  totalItems: number;
-  itemName: string;
-  initialPage?: number;
+export interface CanvasControlsProps {
+  children: ReactNode;
+  value: CanvasControlsContextValue;
 }
 
-export interface NoteSelectionModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelect: (path: string, name: string) => void;
-}
+export type FocusTool = 'select' | 'square' | 'lasso';
 
-export interface NoteConfigPanelProps {
-  selectedNoteEntity: AnyCanvasEntity;
-  handleFontSizeChange: (increment: number) => void;
-  updateSelectedNoteStyle: (styleUpdates: Record<string, string | number>) => void;
-  setIsNoteGalleryOpen: (open: boolean) => void;
-}
-
-export interface CanvasPdfItemProps {
-  entity: AnyCanvasEntity;
-  isSelected: boolean;
-  isSepararActive: boolean;
-  isScissorsActive: boolean;
-  onSelect: () => void;
-  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
-  onRemove: (id: string) => void;
-  onStart?: () => void;
-  onEnd?: () => void;
-  onSplit: (page?: number) => void;
-  onFocus: () => void;
-  onPageChange?: (page: number) => void;
-  rootPath: string | null;
+export interface FocusToolbarProps {
+  activeTool: FocusTool;
+  onToolChange: (tool: FocusTool) => void;
 }
 
 export interface CanvasNoteItemProps {
@@ -72,8 +61,8 @@ export interface CanvasNoteItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
-  onStart?: () => void;
-  onEnd?: () => void;
+  onStart: () => void;
+  onEnd: () => void;
   onSplit: (page?: number) => void;
   onFocus: () => void;
   onPageChange?: (page: number) => void;
@@ -86,9 +75,25 @@ export interface CanvasImageItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
-  onStart?: () => void;
-  onEnd?: () => void;
+  onStart: () => void;
+  onEnd: () => void;
   onFocus: () => void;
+  rootPath: string | null;
+}
+
+export interface CanvasPdfItemProps {
+  entity: AnyCanvasEntity;
+  isSelected: boolean;
+  isSepararActive: boolean;
+  isScissorsActive: boolean;
+  onSelect: () => void;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onRemove: (id: string) => void;
+  onStart: () => void;
+  onEnd: () => void;
+  onSplit: () => void;
+  onFocus: () => void;
+  onPageChange?: (page: number) => void;
   rootPath: string | null;
 }
 
@@ -98,8 +103,8 @@ export interface CanvasTextItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
-  onStart?: () => void;
-  onEnd?: () => void;
+  onStart: () => void;
+  onEnd: () => void;
 }
 
 export interface CanvasPostItItemProps {
@@ -109,8 +114,8 @@ export interface CanvasPostItItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
-  onStart?: () => void;
-  onEnd?: () => void;
+  onStart: () => void;
+  onEnd: () => void;
   onFocus: () => void;
 }
 
@@ -120,8 +125,31 @@ export interface CanvasPageItemProps {
   onSelect: () => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
   onRemove: (id: string) => void;
-  onStart?: () => void;
-  onEnd?: () => void;
+  onStart: () => void;
+  onEnd: () => void;
+}
+
+export interface CanvasActionMenuProps {
+  entity: AnyCanvasEntity;
+  onRemove: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onBringToFront: (id: string) => void;
+  onSendToBack: (id: string) => void;
+  handleRotateStart: (e: React.MouseEvent) => void;
+}
+
+export interface TextStylePanelProps {
+  selectedTextEntity: AnyCanvasEntity | undefined;
+  handleFontSizeChange: (newSize: number) => void;
+  handleFontFamilyChange: (fontFamily: string) => void;
+  toggleBold: () => void;
+}
+
+export interface NoteConfigPanelProps {
+  selectedNoteEntity: AnyCanvasEntity;
+  handleFontSizeChange: (increment: number) => void;
+  updateSelectedNoteStyle: (styleUpdates: Record<string, string | number>) => void;
+  setIsNoteGalleryOpen: (isOpen: boolean) => void;
 }
 
 export interface PostItConfigPanelProps {
@@ -132,40 +160,137 @@ export interface PostItConfigPanelProps {
   handleFontFamilyChange: (fontFamily: string) => void;
 }
 
-export interface CanvasSidebarProps {
-  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
-  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => void;
+export interface SplitModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (data: SplitActionData) => void;
+  totalItems: number;
+  itemName: string;
+  initialPage?: number;
+}
+
+export interface FocusModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  entity: AnyCanvasEntity | null;
+  rootPath: string | null;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onAddPendingCollage?: (sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => string | void;
+}
+
+export interface NoteSelectionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (path: string, name: string) => void;
+}
+
+export interface CutPatchProps {
+  patch: CutPatch;
+  backgroundColor?: string;
+}
+
+export interface SidebarProps {
   isSepararActive: boolean;
   setIsSepararActive: (active: boolean) => void;
-  isGroupingActive: boolean;
-  setIsGroupingActive: (active: boolean) => void;
-  setIsNoteGalleryOpen: (open: boolean) => void;
-  setIsPdfGalleryOpen: (open: boolean) => void;
-  setIsImageGalleryOpen: (open: boolean) => void;
   selectedNoteEntity: AnyCanvasEntity | undefined;
   handleFontSizeChange: (increment: number) => void;
   updateSelectedNoteStyle: (styleUpdates: Record<string, string | number>) => void;
+  selectedTextEntity?: AnyCanvasEntity;
+  handleTextFontSizeChange?: (newSize: number) => void;
+  handleTextFontFamilyChange?: (fontFamily: string) => void;
+  toggleTextBold?: () => void;
+  onAddPostIt: () => void;
+  selectedPostItEntity?: AnyCanvasEntity;
+  handlePostItFontSizeChange?: (increment: number) => void;
+  updateSelectedPostItStyle?: (styleUpdates: Record<string, string | number>) => void;
+  togglePostItBold?: () => void;
+  handlePostItFontFamilyChange?: (fontFamily: string) => void;
+  onAddPage?: () => void;
+  isCollageActive?: boolean;
+  activateCollage?: () => void;
+  selectedItemIds?: string[];
+  canConfirmCollage?: boolean;
+  onConfirmCollage?: () => void;
 }
 
-export interface CanvasControlsContextValue {
-  openModal: CanvasModalType | null;
-  splittingItem: SplittingItem | null;
-  focusItem: AnyCanvasEntity | null;
-  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
-  isGroupingActive: boolean;
-  groupingSourceId: string | null;
-  open: (type: CanvasModalType, data?: any) => void;
-  close: () => void;
-  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => void;
-  startGrouping: (id: string) => void;
-  cancelGrouping: () => void;
-}
-
-export interface CanvasActionMenuProps {
-  entity: AnyCanvasEntity;
-  onRemove: (id: string) => void;
+export interface ModalsProps {
+  entities: AnyCanvasEntity[];
+  onNoteSelect: (path: string, name: string) => void;
+  onImageSelect: (path: string) => void;
+  onPdfSelect: (path: string) => void;
+  onConfirmSplit: (data: SplitActionData) => void;
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
-  onBringToFront: (id: string) => void;
-  onSendToBack: (id: string) => void;
-  handleRotateStart: (e: React.MouseEvent) => void;
+  onAddPendingCollage?: (sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => void;
+  rootPath?: string | null;
+}
+
+export interface EntityRendererProps {
+  entity: AnyCanvasEntity;
+  selectedItemIds: string[];
+  isSplitModeActive: boolean;
+  isScissorsActive: boolean;
+  rootPath: string;
+  onSelect: (id: string) => void;
+  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onRemove: (id: string) => void;
+  onStartTransform: () => void;
+  onEndTransform: (id: string) => void;
+  onOpenModal: (type: CanvasModalType, data?: unknown) => void;
+}
+
+export interface CanvasToolbarProps {
+  activeTool: string;
+  isScissorsActive: boolean;
+  onActivateSelect: () => void;
+  onActivatePan: () => void;
+  onActivatePencil: () => void;
+  onActivateEraser: () => void;
+  onActivateText: () => void;
+  onToggleScissors: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onResetView: () => void;
+}
+
+export interface CollageControlsProps {
+  activeTool: string;
+  onActivatePencil: () => void;
+  onActivateEraser: () => void;
+  onActivateText: () => void;
+  onOpenImageGallery: () => void;
+  onFinalize: () => void;
+  onCancel: () => void;
+}
+
+export interface CanvasViewportProps {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  zoom: number;
+  viewState: { x: number; y: number };
+  isPanning: boolean;
+  isSpacePressed: boolean;
+  isPanActive: boolean;
+  isPencilActive: boolean;
+  isTextActive: boolean;
+  isEraserActive: boolean;
+  isCollageActive: boolean;
+  isSplitModeActive: boolean;
+  isScissorsActive: boolean;
+  rootPath: string;
+  entities: AnyCanvasEntity[];
+  drawings: MesaDrawing[];
+  visibleEntities: AnyCanvasEntity[];
+  selectedItemId: string | null;
+  selectedItemIds: string[];
+  onMouseDown: (e: React.MouseEvent) => void;
+  onSelectItem: (id: string) => void;
+  onDeselect: () => void;
+  onUpdateEntity: (id: string, updates: Partial<AnyCanvasEntity>) => void;
+  onRemoveEntity: (id: string) => void;
+  onStartTransform: () => void;
+  onEndTransform: (id: string) => void;
+  onRotateStart: (e: React.MouseEvent) => void;
+  onOpenModal: (type: CanvasModalType, data?: unknown) => void;
+  bringToFront: (id: string) => void;
+  sendToBack: (id: string) => void;
+  removeDrawing: (id: string) => void;
 }

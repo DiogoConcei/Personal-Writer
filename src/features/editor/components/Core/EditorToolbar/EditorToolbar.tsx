@@ -1,10 +1,7 @@
 import { ReactNode, useRef, useEffect } from "react";
 import { LucideIcon } from "lucide-react";
+import { EditorToolbarProps, ActionProps, DropdownProps, DropdownItemProps } from "@/shared/types";
 import styles from "./EditorToolbar.module.scss";
-
-interface EditorToolbarProps {
-  children: ReactNode;
-}
 
 /**
  * Componente principal da Toolbar utilizando o padrão de composição.

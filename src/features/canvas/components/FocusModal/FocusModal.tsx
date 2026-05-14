@@ -1,23 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import styles from './FocusModal.module.scss';
 import { X, Check } from 'lucide-react';
-import { AnyCanvasEntity, Point } from '@/shared/types';
+import { AnyCanvasEntity, Point, FocusModalProps } from '@/shared/types';
 import { CanvasNoteItem } from '../CanvasNoteItem/CanvasNoteItem';
 import { CanvasPdfItem } from '../CanvasPdfItem/CanvasPdfItem';
 import { CanvasImageItem } from '../CanvasImageItem/CanvasImageItem';
-import { FocusToolbar, FocusTool } from './FocusToolbar';
+import { FocusToolbar } from './FocusToolbar';
+import { FocusTool } from '@/shared/types';
 import { CutPatch } from '../CutPatch/CutPatch';
 import { CutPatch as CutPatchType } from '@/shared/types';
 import { useCanvasCropPersistence } from '../../hooks/useCanvasCropPersistence';
-
-interface FocusModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  entity: AnyCanvasEntity | null;
-  rootPath: string | null;
-  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
-  onAddPendingCollage?: (sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => string | void;
-}
 
 export const FocusModal: React.FC<FocusModalProps> = ({
   isOpen,
@@ -255,6 +247,8 @@ export const FocusModal: React.FC<FocusModalProps> = ({
       onSelect: () => {},
       onUpdate: () => {},
       onRemove: () => {},
+      onStart: () => {},
+      onEnd: () => {},
       onFocus: () => {},
       onPageChange: setCurrentPage
     };

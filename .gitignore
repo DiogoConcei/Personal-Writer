@@ -32,6 +32,9 @@ GEMINI.md
 .gemini/
 .env*
 
+# Search results
+search_results.csv
+
 # Executables and Build Artifacts (extra precaution)
 *.exe
 *.msi

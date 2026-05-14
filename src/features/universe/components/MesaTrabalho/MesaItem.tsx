@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
-import { MesaItem as IMesaItem } from '@/shared/types';
+import { MesaItem as IMesaItem, MesaItemProps } from '@/shared/types';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { X, Tag, Check, Unlink, User, ChevronLeft, ChevronRight, Plus, Maximize2 } from 'lucide-react';
@@ -8,17 +8,6 @@ import styles from './MesaTrabalho.module.scss';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
 import { useMesaItemResize } from '../../hooks/useMesaItemResize';
 import { useCanvasText } from '@/shared/hooks/useCanvasText';
-
-interface Props {
-  item: IMesaItem;
-  zoom?: number;
-  onClick?: () => void;
-  onAddPhoto?: () => void;
-  isConnectingSource?: boolean;
-  isGroupingMode?: boolean;
-  onConfirmGroup?: () => void;
-  onCancelGroup?: () => void;
-}
 
 const DEFAULT_CATEGORIES = ['Personagens', 'Itens', 'Figurantes'];
 
@@ -31,7 +20,7 @@ const getCategoryColor = (category?: string) => {
   return '#3b82f6';                            // Blue for others
 };
 
-export const MesaItem: React.FC<Props> = ({ 
+export const MesaItem: React.FC<MesaItemProps> = ({ 
   item, 
   zoom = 1,
   onClick, 

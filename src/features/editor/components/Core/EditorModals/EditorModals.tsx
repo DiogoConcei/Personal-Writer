@@ -15,11 +15,7 @@ import { DocumentModal } from "@/features/SlashMenu/components/DocumentModal/Doc
 import VersionHistory from "../../History/VersionHistory/VersionHistory";
 import ConfirmModal from "@/shared/components/Modal/ConfirmModal/ConfirmModal";
 
-interface EditorModalsProps {
-  editor: Editor | null;
-  templateToApply: string | null;
-  setTemplateToApply: (val: string | null) => void;
-}
+import { EditorModalsProps } from "@/shared/types";
 
 /**
  * Componente que centraliza a renderização de todos os modais e galerias do Editor.

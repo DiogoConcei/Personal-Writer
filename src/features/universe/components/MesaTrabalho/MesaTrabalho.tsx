@@ -351,11 +351,11 @@ export default function MesaTrabalho() {
             if (handleMouseDown(e, isPanModeActive)) return;
             if (isPencilActive) { startDrawing(e); } 
             else if (isTextToolActive) {
-              if ((e.target === e.currentTarget || (e.target as HTMLElement).classList.contains(styles.viewport)) && containerRef.current) {
+              if ((e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('canvas-viewport')) && containerRef.current) {
                 const { x, y } = screenToCanvas(e.clientX, e.clientY);
                 addItem({ type: 'text', text: '', x, y, scale: 1, rotation: 0 });
               }
-            } else if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains(styles.viewport)) {
+            } else if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('canvas-viewport')) {
               if (!e.shiftKey) clearSelection();
               startMarquee(...Object.values(screenToCanvas(e.clientX, e.clientY)) as [number, number]);
             }

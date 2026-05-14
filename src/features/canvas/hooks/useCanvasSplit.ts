@@ -1,15 +1,9 @@
 import { useCallback } from 'react';
-import { AnyCanvasEntity, SplitActionData, SplittingItem } from '@/shared/types';
+import { AnyCanvasEntity, SplitActionData, SplittingItem, UseCanvasSplitProps } from '@/shared/types';
 import { calculateSplitEntities } from '../utils/canvasSplitUtils';
-
-interface UseCanvasSplitProps {
-  entities: AnyCanvasEntity[];
-  setEntities: React.Dispatch<React.SetStateAction<AnyCanvasEntity[]>>;
-}
 
 /**
  * Hook para gerenciar a lógica de corte (split) no Canvas.
- * Integra a lógica pura do utils com o estado do React.
  */
 export function useCanvasSplit({ entities, setEntities }: UseCanvasSplitProps) {
   const performSplit = useCallback((splittingItem: SplittingItem | null, data: SplitActionData) => {

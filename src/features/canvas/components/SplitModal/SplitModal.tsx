@@ -3,11 +3,12 @@ import styles from './SplitModal.module.scss';
 import { Minus, Plus, X } from 'lucide-react';
 import { SplitMode, SplitModalProps } from '@/shared/types';
 
-export const SplitModal: React.FC<SplitModalProps & { initialPage?: number }> = ({
+export const SplitModal: React.FC<SplitModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
   totalItems,
+  itemName,
   initialPage = 1
 }) => {
   const [mode, setMode] = useState<SplitMode>('single');

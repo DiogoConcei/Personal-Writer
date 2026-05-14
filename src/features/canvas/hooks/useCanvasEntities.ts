@@ -1,11 +1,6 @@
 import { useState, useCallback, RefObject } from 'react';
-import { AnyCanvasEntity, ImageData, PdfData, NoteData, TextData, PostItData, PageData } from '@/shared/types';
+import { AnyCanvasEntity, ImageData, PdfData, NoteData, TextData, PostItData, PageData, ViewState } from '@/shared/types';
 import { useCanvasInteraction } from '@/shared/hooks/useCanvasInteraction';
-
-interface ViewState {
-  x: number;
-  y: number;
-}
 
 interface UseCanvasEntitiesOptions {
   zoom: number;

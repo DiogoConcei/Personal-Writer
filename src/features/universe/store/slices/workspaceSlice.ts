@@ -35,6 +35,10 @@ export const createWorkspaceSlice: StateCreator<MesaTrabalhoState, [], [], Parti
     set((state) => ({
       // Deleta o item E todos os itens atrelados a ele (se for personagem)
       items: state.items.filter(item => item.id !== id && item.ownerId !== id),
+      // Deleção profunda: remove conexões vinculadas
+      connections: state.connections.filter(c => c.from !== id && c.to !== id),
+      // Deleção profunda: remove desenhos vinculados (que pertençam ao grupo do item ou ao item em si)
+      drawings: state.drawings.filter(d => d.groupId !== id),
       selectedItems: state.selectedItems.filter(sid => sid !== id)
     }));
   },

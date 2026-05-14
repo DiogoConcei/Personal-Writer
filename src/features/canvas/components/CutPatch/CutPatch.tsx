@@ -1,11 +1,6 @@
 import React, { useMemo } from 'react';
 import styles from './CutPatch.module.scss';
-import { CutPatch as CutPatchType } from '@/shared/types';
-
-interface CutPatchProps {
-  patch: CutPatchType;
-  backgroundColor?: string;
-}
+import { CutPatchProps } from '@/shared/types';
 
 export const CutPatch: React.FC<CutPatchProps> = ({ patch, backgroundColor }) => {
   const clipPath = useMemo(() => {

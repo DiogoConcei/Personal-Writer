@@ -3,37 +3,7 @@ import { Type, MousePointer2, Hand, ZoomIn, ZoomOut, RotateCcw, ImagePlus, Penci
 import { ActivePanel } from '@/shared/types';
 import styles from './MesaTrabalho.module.scss';
 
-interface MesaToolbarProps {
-  boardName: string;
-  boardMode: 'free' | 'planning';
-  isEditingName: boolean;
-  tempName: string;
-  isPencilActive: boolean;
-  isEraserActive: boolean;
-  isTextToolActive: boolean;
-  isConnecting: boolean;
-  isGroupingMode: boolean;
-  isPanModeActive: boolean;
-  isSettingsOpen: boolean;
-  onSetTempName: (name: string) => void;
-  onSaveName: () => void;
-  onSetIsEditingName: (val: boolean) => void;
-  activateSelectTool: () => void;
-  activatePanTool: () => void;
-  zoomIn: () => void;
-  zoomOut: () => void;
-  handleResetView: () => void;
-  onOpenGallery: (mode: 'item' | 'background') => void;
-  activatePencilTool: () => void;
-  activateEraserTool: () => void;
-  activateTextTool: () => void;
-  handleToggleConnectionMode: () => void;
-  handleToggleGroupingMode: () => void;
-  setActivePanel: (panel: ActivePanel) => void;
-  setIsSettingsOpen: (val: boolean) => void;
-  setBoardMode: (mode: 'free' | 'planning') => void;
-  onSaveBoard: () => void;
-}
+import { MesaToolbarProps } from '@/shared/types';
 
 export const MesaToolbar: React.FC<MesaToolbarProps> = ({
   boardName,

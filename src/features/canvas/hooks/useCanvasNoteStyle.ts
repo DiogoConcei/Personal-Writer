@@ -1,11 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { AnyCanvasEntity } from '@/shared/types';
-
-interface UseCanvasNoteStyleOptions {
-  selectedItemId: string | null;
-  entities: AnyCanvasEntity[];
-  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
-}
+import { AnyCanvasEntity, UseCanvasNoteStyleOptions } from '@/shared/types';
 
 /**
  * Hook para gerenciar a personalização visual (CSS/Estilo) das notas no Canvas.

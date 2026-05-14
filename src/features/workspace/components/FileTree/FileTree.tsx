@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useTransition } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { useReferenceStore } from '@/features/references/store/referenceStore';
 import FileTreeItem from '../FileTreeItem/FileTreeItem';
@@ -17,10 +17,13 @@ export default function FileTree() {
     rootPath,
     setRootPath,
     refreshFiles,
-    isLoading,
+    isLoading: storeLoading,
     createFile,
     createDirectory
   } = useWorkspaceStore();
+
+  const [isPending, startTransition] = useTransition();
+  const isLoading = storeLoading || isPending;
 
   const { pinnedNotes } = useReferenceStore();
 
@@ -55,24 +58,34 @@ export default function FileTree() {
     });
 
     if (selected && typeof selected === 'string') {
-      await setRootPath(selected);
+      startTransition(async () => {
+        await setRootPath(selected);
+      });
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!newName.trim()) return;
 
-    if (showInput === 'file') {
-      const template = DEFAULT_TEMPLATES.find(t => t.id === selectedTemplate);
-      await createFile(newName, undefined, template?.content);
-    } else {
-      await createDirectory(newName);
-    }
+    startTransition(async () => {
+      if (showInput === 'file') {
+        const template = DEFAULT_TEMPLATES.find(t => t.id === selectedTemplate);
+        await createFile(newName, undefined, template?.content);
+      } else {
+        await createDirectory(newName);
+      }
 
-    setNewName('');
-    setSelectedTemplate('');
-    setShowInput(null);
+      setNewName('');
+      setSelectedTemplate('');
+      setShowInput(null);
+    });
+  };
+
+  const handleRefresh = () => {
+    startTransition(async () => {
+      await refreshFiles();
+    });
   };
 
   if (!rootPath) {
@@ -94,7 +107,7 @@ export default function FileTree() {
         <div className={styles.tree__actions}>
           <button className={styles.tree__action} onClick={() => setShowInput('file')} title="Nova Nota"><FilePlus size={14} /></button>
           <button className={styles.tree__action} onClick={() => setShowInput('dir')} title="Nova Pasta"><FolderPlus size={14} /></button>
-          <button className={styles.tree__action} onClick={refreshFiles} disabled={isLoading} title="Atualizar"><RefreshCw size={14} className={isLoading ? styles.spinning : ''} /></button>
+          <button className={styles.tree__action} onClick={handleRefresh} disabled={isLoading} title="Atualizar"><RefreshCw size={14} className={isLoading ? styles.spinning : ''} /></button>
         </div>
       </header>
 

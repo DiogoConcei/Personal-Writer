@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
-import { useGalleryStore } from '@/features/image-manager/store/galleryStore';
+import { useGalleryStore } from '@/features/imageview/store/galleryStore';
 import { 
   copyImageToAssets, 
   deleteItem, 
@@ -97,25 +97,32 @@ export function useImageManager() {
         baseList = baseImages.filter(img => {
           let relPath = img.path;
           if (relPath.startsWith('./')) relPath = relPath.substring(2);
-          const virtualRelPath = relPath.replace(/^(assets|moodboard)\//, '');
           
           // --- Lógica de Seção (Silos) ---
+          const isInAssets = relPath.startsWith('assets/');
+          const assetSubPath = isInAssets ? relPath.substring(7) : '';
+
           if (activeSection === 'collages') {
-            return virtualRelPath.startsWith('colagens/') || virtualRelPath.startsWith('collages/');
+            return assetSubPath.startsWith('collages/');
           }
           if (activeSection === 'editions') {
-            return virtualRelPath.startsWith('edicoes/') || virtualRelPath.startsWith('editions/');
+            return assetSubPath.startsWith('editions/');
           }
 
-          // Seção Geral: Esconde pastas reservadas da raiz
-          const isSpecialFolder = virtualRelPath.startsWith('colagens/') || 
-                                 virtualRelPath.startsWith('collages/') || 
-                                 virtualRelPath.startsWith('edicoes/') || 
-                                 virtualRelPath.startsWith('editions/');
-          
-          if (isSpecialFolder) return false;
+          // Seção Geral: Apenas na raiz de assets/ ou moodboard/, excluindo pastas reservadas
+          if (activeSection === 'geral') {
+            const isReserved = assetSubPath.startsWith('collages/') || assetSubPath.startsWith('editions/');
+            if (isReserved) return false;
+            
+            // Se estiver em assets, só mostra se não tiver mais subpastas (ou seja, está na raiz de assets)
+            // Se estiver em moodboard, aplica lógica similar
+            const prefix = relPath.startsWith('moodboard/') ? 'moodboard/' : 'assets/';
+            const virtualRelPath = relPath.startsWith(prefix) ? relPath.substring(prefix.length) : relPath;
+            
+            return !virtualRelPath.includes('/') && !allAssignedVirtualPaths.has(img.path);
+          }
 
-          return !virtualRelPath.includes('/') && !allAssignedVirtualPaths.has(img.path);
+          return false;
         });
       }
     }
@@ -140,22 +147,24 @@ export function useImageManager() {
       let relPath = img.path;
       if (relPath.startsWith('./')) relPath = relPath.substring(2);
       
-      const virtualRelPath = relPath.replace(/^(assets|moodboard)\//, '');
-      if (virtualRelPath === relPath) return; // Ignora o que não está em assets/moodboard
+      const isMoodboard = relPath.startsWith('moodboard/');
+      const prefix = isMoodboard ? 'moodboard/' : 'assets/';
+      if (!relPath.startsWith(prefix)) return;
 
+      const virtualRelPath = relPath.substring(prefix.length);
       const parts = virtualRelPath.split('/');
       parts.pop(); // Remove arquivo
       const imgFolder = parts.join('/');
 
       // Filtra pastas especiais na raiz do Geral
       if (activeSection === 'geral' && currentPath === '') {
-        if (['colagens', 'collages', 'edicoes', 'editions'].includes(parts[0])) return;
+        if (['collages', 'editions'].includes(parts[0])) return;
       }
 
       // Filtra por seção se estiver na raiz
       if (currentPath === '') {
-        if (activeSection === 'collages' && !['colagens', 'collages'].includes(parts[0])) return;
-        if (activeSection === 'editions' && !['edicoes', 'editions'].includes(parts[0])) return;
+        if (activeSection === 'collages' && parts[0] !== 'collages') return;
+        if (activeSection === 'editions' && parts[0] !== 'editions') return;
       }
 
       if (currentPath === '') {
@@ -284,6 +293,13 @@ export function useImageManager() {
   const moveImages = async (sourcePaths: string[], targetFolder: string) => {
     if (!rootPath) return;
 
+    // Bloqueia movimentação para/entre silos reservados
+    const isReservedTarget = ['collages', 'editions'].includes(targetFolder.split('/')[0]);
+    if (isReservedTarget) {
+      addNotification('Não é permitido mover arquivos para silos reservados', 'warning');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       const separator = rootPath.includes('\\') ? '\\' : '/';
@@ -292,6 +308,10 @@ export function useImageManager() {
       for (const itemPath of sourcePaths) {
         const img = (cachedImages || []).find(i => i.path === itemPath);
         if (img) {
+          // Verifica se a origem é um silo reservado
+          const isFromReserved = img.path.includes('/collages/') || img.path.includes('/editions/');
+          if (isFromReserved) continue; // Pula arquivos de silos reservados
+
           const fileName = img.name;
           let prefix = 'assets';
           if (itemPath.startsWith('./moodboard/') || itemPath.startsWith('moodboard/')) prefix = 'moodboard';
@@ -306,7 +326,9 @@ export function useImageManager() {
 
       invalidateImageCache();
       await scanImages();
-      addNotification(`${movedCount} imagem(ns) movida(s)`, 'success');
+      if (movedCount > 0) {
+        addNotification(`${movedCount} imagem(ns) movida(s)`, 'success');
+      }
     } catch (error) {
       console.error('[ImageManager] Erro ao mover imagens:', error);
       addNotification('Erro ao mover imagens', 'error');
@@ -368,7 +390,7 @@ export function useImageManager() {
     const sourceItems = selectedPaths.includes(sourceItem.path) ? selectedPaths : [sourceItem.path];
 
     if (targetType === 'collection') {
-      const { useGalleryStore } = await import('@/features/image-manager/store/galleryStore');
+      const { useGalleryStore } = await import('@/features/imageview/store/galleryStore');
       await useGalleryStore.getState().addToCollection(targetId, sourceItems);
       addNotification(`${sourceItems.length} imagem(ns) adicionada(s) à coleção`, 'success');
       return true;

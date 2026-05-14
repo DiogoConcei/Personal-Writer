@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
-import { PdfThumbnail } from '@/features/docs-manager/components/PdfThumbnail/PdfThumbnail';
+import { PdfThumbnail } from '@/features/docsview/components/PdfThumbnail/PdfThumbnail';
 import { useCanvasEntity } from '../../hooks/useCanvasEntity';
 import { CanvasPdfItemProps, PdfData } from '@/shared/types';
 import { CutPatch } from '../CutPatch/CutPatch';

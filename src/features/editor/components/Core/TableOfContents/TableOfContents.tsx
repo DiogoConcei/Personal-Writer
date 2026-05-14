@@ -3,17 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import styles from './TableOfContents.module.scss';
 import { List, GripHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
 
-interface TOCItem {
-  id: string;
-  text: string;
-  level: number;
-  pos: number;
-}
-
-interface TableOfContentsProps {
-  editor: Editor | null;
-  onClose: () => void;
-}
+import { TableOfContentsProps, TOCItem } from '@/shared/types';
 
 export function TableOfContents({ editor, onClose }: TableOfContentsProps) {
   const [items, setItems] = useState<TOCItem[]>([]);

@@ -42,6 +42,8 @@ export interface ImageAsset {
   path: string;
   full_path: string;
   modified_at: number;
+  width: number;
+  height: number;
 }
 
 export interface PdfAsset {

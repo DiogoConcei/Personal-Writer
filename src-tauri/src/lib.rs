@@ -55,6 +55,7 @@ pub fn run() {
 
             commands::fs::scan_workspace_images,
             commands::fs::scan_workspace_pdfs,
+            commands::fs::search_files_by_name,
             commands::fs::export_workspace_zip,
             commands::plugins::toggle_plugin_daemon
         ])

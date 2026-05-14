@@ -3,6 +3,11 @@ use std::path::Path;
 use serde::{Serialize, Deserialize};
 use std::time::UNIX_EPOCH;
 use walkdir::WalkDir;
+use std::collections::HashMap;
+use zip::write::FileOptions;
+use std::io::{Write, Read};
+use image::ImageReader;
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ImageAsset {
@@ -10,6 +15,8 @@ pub struct ImageAsset {
     pub path: String,
     pub full_path: String,
     pub modified_at: u64,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -20,8 +27,12 @@ pub struct PdfAsset {
     pub modified_at: u64,
 }
 
-use zip::write::FileOptions;
-use std::io::{Write, Read};
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct DimensionCacheEntry {
+    width: u32,
+    height: u32,
+    modified_at: u64,
+}
 
 #[tauri::command]
 pub async fn export_workspace_zip(workspace_root: String, dest_zip_path: String) -> Result<(), String> {
@@ -65,7 +76,20 @@ pub async fn export_workspace_zip(workspace_root: String, dest_zip_path: String)
 #[tauri::command]
 pub async fn scan_workspace_images(workspace_root: String) -> Result<Vec<ImageAsset>, String> {
     let root = Path::new(&workspace_root);
+    let cache_path = root.join(".dimensions_cache.json");
+    
+    // Carregar cache existente
+    let mut cache: HashMap<String, DimensionCacheEntry> = if cache_path.exists() {
+        fs::read_to_string(&cache_path)
+            .ok()
+            .and_then(|content| serde_json::from_str(&content).ok())
+            .unwrap_or_default()
+    } else {
+        HashMap::new()
+    };
+
     let mut images = Vec::new();
+    let mut cache_updated = false;
 
     for entry in WalkDir::new(root)
         .into_iter()
@@ -82,23 +106,58 @@ pub async fn scan_workspace_images(workspace_root: String) -> Result<Vec<ImageAs
                 if ["png", "jpg", "jpeg", "gif", "webp"].contains(&ext_str.as_str()) {
                     let metadata = entry.metadata().map_err(|e| e.to_string())?;
                     let full_path = path.to_string_lossy().to_string();
+                    let modified_at = metadata.modified()
+                        .unwrap_or(UNIX_EPOCH)
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs();
 
                     let relative_path = path.strip_prefix(root)
                         .map(|p| format!("./{}", p.to_string_lossy().replace("\\", "/")))
                         .unwrap_or_else(|_| full_path.clone());
 
+                    // Verificar no cache
+                    let (width, height) = if let Some(cached) = cache.get(&full_path) {
+                        if cached.modified_at == modified_at {
+                            (cached.width, cached.height)
+                        } else {
+                            // Arquivo mudou, re-escanear
+                            let dims = match ImageReader::open(&path) {
+                                Ok(reader) => reader.into_dimensions().unwrap_or((0, 0)),
+                                Err(_) => (0, 0),
+                            };
+                            cache.insert(full_path.clone(), DimensionCacheEntry { width: dims.0, height: dims.1, modified_at });
+                            cache_updated = true;
+                            dims
+                        }
+                    } else {
+                        // Novo arquivo
+                        let dims = match ImageReader::open(&path) {
+                            Ok(reader) => reader.into_dimensions().unwrap_or((0, 0)),
+                            Err(_) => (0, 0),
+                        };
+                        cache.insert(full_path.clone(), DimensionCacheEntry { width: dims.0, height: dims.1, modified_at });
+                        cache_updated = true;
+                        dims
+                    };
+
                     images.push(ImageAsset {
                         name: entry.file_name().to_string_lossy().to_string(),
                         path: relative_path,
                         full_path,
-                        modified_at: metadata.modified()
-                            .unwrap_or(UNIX_EPOCH)
-                            .duration_since(UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .as_secs(),
+                        modified_at,
+                        width,
+                        height,
                     });
                 }
             }
+        }
+    }
+
+    // Salvar cache se houve atualizações
+    if cache_updated {
+        if let Ok(content) = serde_json::to_string(&cache) {
+            let _ = fs::write(cache_path, content);
         }
     }
 
@@ -306,8 +365,6 @@ pub async fn save_image_from_bytes(file_name: String, bytes: Vec<u8>, workspace_
     save_file_from_bytes_to_workspace(file_name, bytes, workspace_root, "assets".to_string(), sub_folder).await
 }
 
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-
 #[tauri::command]
 pub async fn save_base64_image(
     base64_data: String,
@@ -417,6 +474,32 @@ pub async fn toggle_snapshot_lock(path: String, workspace_root: String, snapshot
     } else {
         Err("Snapshot not found".to_string())
     }
+}
+
+#[tauri::command]
+pub async fn search_files_by_name(workspace: String, query: String) -> Result<Vec<String>, String> {
+    let root = Path::new(&workspace);
+    let mut results = Vec::new();
+    let query_lower = query.to_lowercase();
+
+    for entry in WalkDir::new(root)
+        .into_iter()
+        .filter_entry(|e| {
+            let name = e.file_name().to_string_lossy();
+            !name.starts_with('.') && name != "node_modules" && name != ".snapshots" && name != ".git"
+        })
+        .filter_map(|e| e.ok()) {
+
+        let path = entry.path();
+        if path.is_file() {
+            let file_name = entry.file_name().to_string_lossy();
+            if file_name.to_lowercase().contains(&query_lower) {
+                results.push(path.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    Ok(results)
 }
 
 #[tauri::command]

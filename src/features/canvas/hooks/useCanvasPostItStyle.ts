@@ -1,11 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { AnyCanvasEntity } from '@/shared/types';
-
-interface UseCanvasPostItStyleOptions {
-  selectedItemId: string | null;
-  entities: AnyCanvasEntity[];
-  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
-}
+import { AnyCanvasEntity, UseCanvasPostItStyleOptions } from '@/shared/types';
 
 /**
  * Hook para gerenciar a personalização visual (CSS/Estilo) dos Post-its no Canvas.

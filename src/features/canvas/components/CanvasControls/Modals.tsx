@@ -4,18 +4,7 @@ import { PdfGallery } from "../../../references/components/PdfGallery/PdfGallery
 import { NoteSelectionModal } from "../NoteSelectionModal/NoteSelectionModal";
 import { SplitModal } from "../SplitModal/SplitModal";
 import { FocusModal } from "../FocusModal/FocusModal";
-import { AnyCanvasEntity } from '@/shared/types';
-
-interface ModalsProps {
-  entities: AnyCanvasEntity[];
-  onNoteSelect: (path: string, name: string) => void;
-  onImageSelect: (path: string) => void;
-  onPdfSelect: (path: string) => void;
-  onConfirmSplit: (data: any) => void;
-  onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
-  onAddPendingCollage?: (sourceEntity: AnyCanvasEntity, boundingBox: { x: number, y: number, width: number, height: number }) => void;
-  rootPath?: string | null;
-}
+import { AnyCanvasEntity, ModalsProps } from '@/shared/types';
 
 export function Modals({
   entities,

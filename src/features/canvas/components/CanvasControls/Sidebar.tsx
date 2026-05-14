@@ -4,31 +4,7 @@ import { PostItConfigPanel } from '../PostItConfigPanel/PostItConfigPanel';
 import { DrawingStylePanel } from '@/shared/components/DrawingStylePanel/DrawingStylePanel';
 import { TextStylePanel } from '../TextStylePanel/TextStylePanel';
 import styles from './CanvasControls.module.scss';
-import { AnyCanvasEntity } from '@/shared/types';
-
-interface SidebarProps {
-  isSepararActive: boolean;
-  setIsSepararActive: (active: boolean) => void;
-  selectedNoteEntity: AnyCanvasEntity | undefined;
-  handleFontSizeChange: (increment: number) => void;
-  updateSelectedNoteStyle: (styleUpdates: Record<string, string | number>) => void;
-  selectedTextEntity?: AnyCanvasEntity;
-  handleTextFontSizeChange?: (newSize: number) => void;
-  handleTextFontFamilyChange?: (fontFamily: string) => void;
-  toggleTextBold?: () => void;
-  onAddPostIt: () => void;
-  selectedPostItEntity?: AnyCanvasEntity;
-  handlePostItFontSizeChange?: (increment: number) => void;
-  updateSelectedPostItStyle?: (styleUpdates: Record<string, string | number>) => void;
-  togglePostItBold?: () => void;
-  handlePostItFontFamilyChange?: (fontFamily: string) => void;
-  onAddPage?: () => void;
-  isCollageActive?: boolean;
-  activateCollage?: () => void;
-  selectedItemIds?: string[];
-  canConfirmCollage?: boolean;
-  onConfirmCollage?: () => void;
-}
+import { AnyCanvasEntity, SidebarProps } from '@/shared/types';
 
 export function Sidebar({
   isSepararActive,

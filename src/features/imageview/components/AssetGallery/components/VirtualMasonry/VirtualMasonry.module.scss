@@ -1,0 +1,21 @@
+.scrollContainer {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  flex: 1;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+}
+
+.masonryContainer {
+  position: relative;
+  width: 100%;
+}
+
+.masonryItem {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  will-change: transform, top, left;
+}

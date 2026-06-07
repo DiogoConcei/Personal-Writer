@@ -9,13 +9,13 @@ import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
 import { useMesaItemResize } from '../../hooks/useMesaItemResize';
 import { useCanvasText } from '@/shared/hooks/useCanvasText';
 
-const DEFAULT_CATEGORIES = ['Personagens', 'Itens', 'Figurantes'];
+const DEFAULT_CATEGORIES = ['personagem', 'Item', 'Figurantes'];
 
 const getCategoryColor = (category?: string) => {
   if (!category) return 'transparent';
   const cat = category.toLowerCase();
-  if (cat === 'personagens') return '#a855f7'; // Amethyst
-  if (cat === 'itens') return '#22c55e';      // Green
+  if (cat === 'personagem') return '#a855f7'; // Amethyst
+  if (cat === 'item') return '#22c55e';      // Green
   if (cat === 'figurantes') return '#eab308';  // Yellow
   return '#3b82f6';                            // Blue for others
 };
@@ -87,8 +87,8 @@ export const MesaItem: React.FC<MesaItemProps> = ({
   const currentPath = allImages[currentImageIndex] || item.path;
 
   const categoryColor = getCategoryColor(item.category);
-  const isCharacter = item.category?.toLowerCase() === 'personagens';
-  const isItem = item.category?.toLowerCase() === 'itens';
+  const isCharacter = item.category?.toLowerCase() === 'personagem';
+  const isItem = item.category?.toLowerCase() === 'item';
 
   const isPolaroid = isCharacter && boardMode === 'planning';
   const isCircleAvatar = isCharacter && boardMode === 'free';
@@ -176,8 +176,8 @@ export const MesaItem: React.FC<MesaItemProps> = ({
           const targetItem = items.find(i => i.id === targetId);
 
           if (targetItem) {
-            const targetIsCharacter = targetItem.category?.toLowerCase() === 'personagens';
-            const targetIsItem = targetItem.category?.toLowerCase() === 'itens';
+            const targetIsCharacter = targetItem.category?.toLowerCase() === 'personagem';
+            const targetIsItem = targetItem.category?.toLowerCase() === 'item';
 
             if ((isItem && targetIsCharacter) || (isCharacter && targetIsItem)) {
               if (isItem) {
@@ -255,7 +255,7 @@ export const MesaItem: React.FC<MesaItemProps> = ({
         {isConnected && (
           <div className={`
             ${styles.pushpin} 
-            ${item.category?.toLowerCase() === 'personagens' ? styles['pushpin--blue'] : ''}
+            ${item.category?.toLowerCase() === 'personagem' ? styles['pushpin--blue'] : ''}
           `} />
         )}
         {item.category && !isPolaroid && item.type !== 'text' && (
@@ -349,7 +349,7 @@ export const MesaItem: React.FC<MesaItemProps> = ({
               <Plus size={12} />
             </button>
             
-            {isInGroup && (
+            {isInGroup && boardMode !== 'planning' && (
               <button onClick={handleUngroup} className={styles.actionBtn} title="Desagrupar Grupo">
                 <Unlink size={12} />
               </button>

@@ -64,6 +64,9 @@ export function useCanvasInteraction({
         y: pos.y - (finalHeight / 2),
         width: defaultWidth,
         height: finalHeight,
+        scale: 1,
+        rotation: 0,
+        zIndex: 1,
         naturalWidth: img.naturalWidth,
         naturalHeight: img.naturalHeight
       });
@@ -85,7 +88,10 @@ export function useCanvasInteraction({
       x: pos.x - (width / 2),
       y: pos.y - (height / 2),
       width,
-      height
+      height,
+      scale: 1,
+      rotation: 0,
+      zIndex: 1
     });
   }, [getCanvasCenter, onAdd]);
 

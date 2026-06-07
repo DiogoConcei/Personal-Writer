@@ -1,5 +1,5 @@
 import React from 'react';
-import { Type, MousePointer2, Hand, ZoomIn, ZoomOut, RotateCcw, ImagePlus, Pencil, Eraser, Link, Layers, Map, Settings2, Layout, LayoutPanelLeft, Save } from 'lucide-react';
+import { Type, MousePointer2, Hand, ZoomIn, ZoomOut, RotateCcw, ImagePlus, Pencil, Eraser, Link, Layers, Map, Settings2, Layout, LayoutPanelLeft, Save, Wallpaper } from 'lucide-react';
 import { MesaToolbarProps } from '@/shared/types';
 import styles from './MesaTrabalho.module.scss';
 
@@ -102,22 +102,34 @@ export const MesaToolbar: React.FC<MesaToolbarProps> = ({
 
         <div className={styles.divider}></div>
 
-        <button 
-          className={`${styles.toolbarBtn} ${isConnecting ? styles.active : ''}`} 
-          title="Vincular Itens (L)"
-          onClick={handleToggleConnectionMode}
-        >
-          <Link size={16} />
-        </button>
-        <button 
-          className={`${styles.toolbarBtn} ${isGroupingMode ? styles.active : ''}`} 
-          title="Agrupar Itens (G)"
-          onClick={handleToggleGroupingMode}
-        >
-          <Layers size={16} />
-        </button>
+        {boardMode !== 'free' && (
+          <button 
+            className={`${styles.toolbarBtn} ${isConnecting ? styles.active : ''}`} 
+            title="Vincular Itens (L)"
+            onClick={handleToggleConnectionMode}
+          >
+            <Link size={16} />
+          </button>
+        )}
+        {boardMode !== 'planning' && (
+          <button 
+            className={`${styles.toolbarBtn} ${isGroupingMode ? styles.active : ''}`} 
+            title="Agrupar Itens (G)"
+            onClick={handleToggleGroupingMode}
+          >
+            <Layers size={16} />
+          </button>
+        )}
 
         <div className={styles.divider}></div>
+
+        <button 
+          className={styles.toolbarBtn} 
+          title="Ver Mapa de Murais"
+          onClick={() => setActivePanel('moodboard-map')}
+        >
+          <Map size={16} />
+        </button>
 
         <div className={styles.settingsDropdown}>
           <button 
@@ -131,8 +143,11 @@ export const MesaToolbar: React.FC<MesaToolbarProps> = ({
           {isSettingsOpen && (
             <div className={styles.dropdownMenu}>
               <div className={styles.menuHeader}>Configurações</div>
+              <button className={styles.menuItem} onClick={() => setActivePanel('moodboard-map')}>
+                <Map size={14} /> Ver Todas as Mesas
+              </button>
               <button className={styles.menuItem} onClick={() => onOpenGallery('background')}>
-                <Map size={14} /> Mudar Imagem de Fundo
+                <Wallpaper size={14} /> Mudar Imagem de Fundo
               </button>
               <div className={styles.menuDivider}></div>
               <div className={styles.menuLabel}>Modo da Mesa</div>

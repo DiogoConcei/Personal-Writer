@@ -308,22 +308,24 @@ export default function MesaTrabalho() {
         onSetBackgroundPattern={setBackgroundPattern}
       />
 
-      <MesaToolbar 
-        boardName={boardName} boardMode={boardMode} isEditingName={isEditingName} 
-        tempName={tempName} isPencilActive={isPencilActive} isEraserActive={isEraserActive} 
-        isTextToolActive={isTextToolActive} isConnecting={isConnecting} 
-        isGroupingMode={isGroupingMode} isPanModeActive={isPanModeActive} 
-        isSettingsOpen={isSettingsOpen} onSetTempName={setTempName} 
-        onSaveName={handleSaveName} onSetIsEditingName={setIsEditingName} 
-        activateSelectTool={activateSelectTool} activatePanTool={activatePanTool} 
-        zoomIn={zoomIn} zoomOut={zoomOut} handleResetView={handleResetView} 
-        onOpenGallery={setGalleryMode} activatePencilTool={activatePencilTool} 
-        activateEraserTool={activateEraserTool} activateTextTool={activateTextTool} 
-        handleToggleConnectionMode={handleToggleConnectionMode} 
-        handleToggleGroupingMode={handleToggleGroupingMode} 
-        setActivePanel={setActivePanel} setIsSettingsOpen={setIsSettingsOpen} 
-        setBoardMode={setBoardMode} onSaveBoard={() => rootPath && saveBoard(rootPath)} 
-      />
+      <div className={styles.floatingToolbar}>
+        <MesaToolbar 
+          boardName={boardName} boardMode={boardMode} isEditingName={isEditingName} 
+          tempName={tempName} isPencilActive={isPencilActive} isEraserActive={isEraserActive} 
+          isTextToolActive={isTextToolActive} isConnecting={isConnecting} 
+          isGroupingMode={isGroupingMode} isPanModeActive={isPanModeActive} 
+          isSettingsOpen={isSettingsOpen} onSetTempName={setTempName} 
+          onSaveName={handleSaveName} onSetIsEditingName={setIsEditingName} 
+          activateSelectTool={activateSelectTool} activatePanTool={activatePanTool} 
+          zoomIn={zoomIn} zoomOut={zoomOut} handleResetView={handleResetView} 
+          onOpenGallery={setGalleryMode} activatePencilTool={activatePencilTool} 
+          activateEraserTool={activateEraserTool} activateTextTool={activateTextTool} 
+          handleToggleConnectionMode={handleToggleConnectionMode} 
+          handleToggleGroupingMode={handleToggleGroupingMode} 
+          setActivePanel={setActivePanel} setIsSettingsOpen={setIsSettingsOpen} 
+          setBoardMode={setBoardMode} onSaveBoard={() => rootPath && saveBoard(rootPath)} 
+        />
+      </div>
 
       <div className={styles.mainLayout}>
         <aside 
@@ -422,6 +424,7 @@ export default function MesaTrabalho() {
               const targetItem = items.find(i => i.id === galleryMode.itemId);
               if (targetItem) updateItem(targetItem.id, { extraPaths: [...(targetItem.extraPaths || []), relativePath] });
             }
+            setGalleryMode(null);
           }}
           onClose={() => setGalleryMode(null)}
         />

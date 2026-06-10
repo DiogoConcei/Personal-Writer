@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useState } from "react";
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
 import { useUIStore } from "@/store/uiStore";
 import { useDrawingStore } from "@/shared/store/useDrawingStore";
@@ -39,8 +39,32 @@ export function useCanvasOrchestrator() {
     strokeWidth 
   } = useDrawingStore();
 
-  const modalControl = useCanvasModals();
-  const { splittingItem, setSideMenuMode } = modalControl;
+  const { 
+    close: originalClose, 
+    open: openCanvasModal,
+    ...modalState 
+  } = useCanvasModals();
+  
+  const handleOpenFocus = useCallback((entity: AnyCanvasEntity) => {
+    if (entity.type === 'note') {
+      const noteData = entity.data as NoteData;
+      useWorkspaceStore.getState().setActiveFile(noteData.noteId);
+    }
+    openCanvasModal('focus', entity);
+  }, [openCanvasModal]);
+
+  const handleCloseFocus = useCallback(() => {
+    originalClose();
+    useWorkspaceStore.getState().setActiveFile(null);
+  }, [originalClose]);
+
+  const modalControl = {
+    ...modalState,
+    open: openCanvasModal,
+    close: handleCloseFocus
+  };
+
+  const { focusItem, openModal, setSideMenuMode } = modalControl;
 
   const engine = useCanvasEngine({
     containerRef,
@@ -73,20 +97,14 @@ export function useCanvasOrchestrator() {
     activateCollage,
   } = useCanvasTools('select');
 
-  const { takeSnapshot, undo, redo } = useHistory<CanvasHistoryState>();
+  // Centralização de estado da UI (Zero Duplicidade)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [isSplitModeActive, setIsSplitModeActive] = useState(false);
+  const [isCollageConfirmed, setIsCollageConfirmed] = useState(false);
+  const [activeCollageGroupId, setActiveCollageGroupId] = useState<string | null>(null);
 
-  const ui = useCanvasUIHandlers({
-    entities: [], // Placeholder
-    activeTool,
-    isPencilActive,
-    isTextActive,
-    isCollageActive,
-    isScissorsActive,
-    activateSelect,
-    activateScissors,
-    bringToFront: () => {}, // Placeholder
-    setSideMenuMode
-  });
+  const { takeSnapshot, undo, redo } = useHistory<CanvasHistoryState>();
 
   const {
     entities,
@@ -102,41 +120,14 @@ export function useCanvasOrchestrator() {
     bringToFront,
     sendToBack,
     addPendingCollage,
-  } = useCanvasEntities({ zoom, viewState, containerRef, rootPath, activeGroupId: ui.activeCollageGroupId });
-
-  const { handleUpdateWithGroup, handleTransformEnd } = useCanvasGroupMove({
-    entities,
-    drawings,
-    setEntities,
-    updateDrawing,
-    handleUpdateEntity,
-    isCollageConfirmed: ui.isCollageConfirmed,
-    activeCollageGroupId: ui.activeCollageGroupId,
-    takeSnapshot
+  } = useCanvasEntities({ 
+    zoom, 
+    viewState, 
+    containerRef, 
+    rootPath, 
+    activeGroupId: activeCollageGroupId 
   });
 
-  const {
-    handleConfirmCollage,
-    handleFinalizeCollage,
-    handleCancelCollage,
-    handleAddPendingCollage
-  } = useCanvasCollage({
-    entities,
-    drawings,
-    selectedItemIds: ui.selectedItemIds,
-    setEntities,
-    updateDrawing,
-    addPendingCollage,
-    activeCollageGroupId: ui.activeCollageGroupId,
-    setActiveCollageGroupId: ui.setActiveCollageGroupId,
-    setIsCollageConfirmed: ui.setIsCollageConfirmed,
-    setSelectedItemIds: ui.setSelectedItemIds,
-    setSelectedItemId: ui.setSelectedItemId,
-    activateSelect,
-    takeSnapshot
-  });
-
-  // Re-injetar funções no UI Handler
   const uiHandlers = useCanvasUIHandlers({
     entities,
     activeTool,
@@ -147,7 +138,50 @@ export function useCanvasOrchestrator() {
     activateSelect,
     activateScissors,
     bringToFront,
-    setSideMenuMode
+    setSideMenuMode,
+    // Passagem de estado centralizado
+    selectedItemId,
+    setSelectedItemId,
+    selectedItemIds,
+    setSelectedItemIds,
+    isSplitModeActive,
+    setIsSplitModeActive,
+    isCollageConfirmed,
+    setIsCollageConfirmed,
+    activeCollageGroupId,
+    setActiveCollageGroupId
+  });
+
+  const {
+    handleConfirmCollage,
+    handleFinalizeCollage,
+    handleCancelCollage,
+    handleAddPendingCollage
+  } = useCanvasCollage({
+    entities,
+    drawings,
+    selectedItemIds,
+    setEntities,
+    updateDrawing,
+    addPendingCollage,
+    activeCollageGroupId,
+    setActiveCollageGroupId,
+    setIsCollageConfirmed,
+    setSelectedItemIds,
+    setSelectedItemId,
+    activateSelect,
+    takeSnapshot
+  });
+
+  const { handleUpdateWithGroup, handleTransformEnd } = useCanvasGroupMove({
+    entities,
+    drawings,
+    setEntities,
+    updateDrawing,
+    handleUpdateEntity,
+    isCollageConfirmed,
+    activeCollageGroupId,
+    takeSnapshot
   });
 
   const handleUpdateWithSnapshot = useCallback((id: string, updates: Partial<AnyCanvasEntity>) => {
@@ -346,6 +380,8 @@ export function useCanvasOrchestrator() {
       handleTransformEnd,
       handleConfirmSplit,
       handleRotateStart,
+      handleOpenFocus,
+      handleCloseFocus,
       screenToCanvas
     }
   };

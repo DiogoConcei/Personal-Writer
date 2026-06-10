@@ -3,7 +3,11 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { Loader2, FileWarning } from 'lucide-react';
 import styles from '../DocumentGallery/DocumentGallery.module.scss';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Configuração do Worker local para melhor performance e offline
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 import { PdfThumbnailProps } from '@/shared/types';
 
@@ -29,7 +33,7 @@ export const PdfThumbnail: React.FC<PdfThumbnailProps> = ({ fileUrl, width = 200
           width={width}
           renderTextLayer={false}
           renderAnnotationLayer={false}
-          canvasBackground="transparent"
+          canvasBackground="white"
           className={styles.pdfPage}
         />
       </Document>

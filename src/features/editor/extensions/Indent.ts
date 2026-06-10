@@ -26,6 +26,46 @@ export const Indent = Extension.create({
     };
   },
 
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: any, node: any) {
+          if (node.attrs.indent) {
+            state.write(' '.repeat(node.attrs.indent * 4));
+          }
+          state.renderContent(node);
+        },
+        parse: {
+          setup(markdownit: any) {
+            markdownit.block.ruler.before('paragraph', 'indentation', (state: any, startLine: any, endLine: any, silent: boolean) => {
+              const line = state.getLines(startLine, startLine + 1, 0, false);
+              const match = line.match(/^(\s+)/);
+              
+              if (match) {
+                const indentStr = match[1];
+                const spaces = indentStr.replace(/\t/g, '    ').length;
+                const indentLevel = Math.min(Math.floor(spaces / 4), 8);
+                
+                if (indentLevel > 0) {
+                  if (silent) return true;
+                  
+                  state.line = startLine;
+                  const token = state.push('paragraph_open', 'p', 1);
+                  token.attrs = [['indent', indentLevel]];
+                  
+                  state.md.block.tokenize(state, startLine, endLine);
+                  
+                  return true;
+                }
+              }
+              return false;
+            });
+          }
+        }
+      }
+    };
+  },
+
   addGlobalAttributes() {
     return [
       {

@@ -406,8 +406,8 @@ function App() {
               {isCanvasActive ? (
                 <button
                   className={styles.app__iconBtn}
-                  onClick={() => setActivePanel("editor")}
-                  title="Voltar para Notas"
+                  onClick={() => setActivePanel("dashboard")}
+                  title="Voltar ao Dashboard"
                 >
                   <ArrowLeft size={18} />
                 </button>

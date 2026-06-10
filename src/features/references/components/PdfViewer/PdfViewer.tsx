@@ -16,7 +16,11 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import styles from './PdfViewer.module.scss';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+// Configuração do Worker local para melhor performance e offline
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 export const PdfViewer: React.FC = () => {
   const { activePdfPath, setActivePdf } = useReferenceStore();
@@ -178,6 +182,7 @@ export const PdfViewer: React.FC = () => {
             className={styles.pdf_viewer__page}
             renderTextLayer={true}
             renderAnnotationLayer={true}
+            canvasBackground="white"
           />
         </Document>
       </div>

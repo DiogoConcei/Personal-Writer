@@ -118,6 +118,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const now = new Date();
 
       useUniverseStore.getState().updateEntity(path, fullContent, now.getTime() / 1000);
+      
+      // Notifica o sistema de que um arquivo foi salvo (Útil para o Infinite Canvas)
+      const { useUIStore } = await import('@/store/uiStore');
+      useUIStore.getState().triggerFileSaveTick();
 
       if (workspaceRoot && (!lastSnapshotAt || now.getTime() - lastSnapshotAt.getTime() > 30 * 60 * 1000)) {
         await createSnapshot(path, workspaceRoot, fullContent);

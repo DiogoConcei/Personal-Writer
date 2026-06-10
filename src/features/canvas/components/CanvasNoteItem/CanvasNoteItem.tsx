@@ -3,6 +3,9 @@ import MarkdownIt from 'markdown-it';
 import { readFile } from '@/tauri-bridge';
 import { useCanvasEntity } from '../../hooks/useCanvasEntity';
 import { CanvasNoteItemProps, NoteData } from '@/shared/types';
+import { useUIStore } from '@/store/uiStore';
+import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
+import { resolveImageUrl } from '@/shared/hooks/useImageManager/useImageManager';
 import { CutPatch } from '../CutPatch/CutPatch';
 import styles from './CanvasNoteItem.module.scss';
 
@@ -31,6 +34,7 @@ export function CanvasNoteItem({
   onPageChange
 }: CanvasNoteItemProps) {
   const data = entity.data as NoteData;
+  const lastFileSaveTick = useUIStore(state => state.lastFileSaveTick);
   const [html, setHtml] = useState('');
   const [localTotalPages, setLocalTotalPages] = useState(data.totalPages || 1);
   const [currentPage, setCurrentPage] = useState(data.startPage || 1);
@@ -64,6 +68,8 @@ export function CanvasNoteItem({
     onEnd
   });
 
+  const { rootPath } = useWorkspaceStore();
+
   // Sincroniza a página atual se os limites do bloco mudarem
   useEffect(() => {
     if (currentPage < startPage) setCurrentPage(startPage);
@@ -71,14 +77,65 @@ export function CanvasNoteItem({
   }, [startPage, effectiveEndPage, currentPage]);
 
   useEffect(() => {
-    readFile(data.noteId).then(text => {
-      const markdown = text.replace(/^---\n[\s\S]*?\n---\n/, '');
-      setHtml(md.render(markdown));
-    }).catch(err => {
-      setHtml('<p>Erro ao carregar nota.</p>');
-      console.error(err);
-    });
-  }, [data.noteId]);
+    const loadNote = async () => {
+      try {
+        const text = await readFile(data.noteId);
+        let markdown = text.replace(/^---\n[\s\S]*?\n---\n/, '');
+
+        // Resolução de Imagens (Pre-processamento para paridade com o Editor)
+        if (rootPath) {
+          // 1. Resolver Links Obsidian ![[imagem.png]]
+          const obsidianRegex = /!\[\[(.*?)\]\]/g;
+          const obsidianMatches = Array.from(markdown.matchAll(obsidianRegex));
+          for (const match of obsidianMatches) {
+            const src = match[1];
+            const resolved = await resolveImageUrl(src, rootPath);
+            if (resolved) {
+              markdown = markdown.replace(match[0], `![${src}](${resolved})`);
+            }
+          }
+
+          // 2. Resolver Links Markdown Padrão ![alt](./caminho)
+          const standardRegex = /!\[(.*?)\]\((.*?)\)/g;
+          const standardMatches = Array.from(markdown.matchAll(standardRegex));
+          for (const match of standardMatches) {
+            const alt = match[1];
+            const src = match[2];
+            if (!src.startsWith('http') && !src.startsWith('asset://')) {
+              const resolved = await resolveImageUrl(src, rootPath);
+              if (resolved) {
+                markdown = markdown.replace(match[0], `![${alt}](${resolved})`);
+              }
+            }
+          }
+
+          // 3. Resolver Tags HTML Brutas <img src="./assets/..." />
+          const htmlImgRegex = /<img\s+[^>]*src=["'](.*?)["'][^>]*>/g;
+          const htmlImgMatches = Array.from(markdown.matchAll(htmlImgRegex));
+          for (const match of htmlImgMatches) {
+            const src = match[1];
+            if (!src.startsWith('http') && !src.startsWith('asset://')) {
+              const resolved = await resolveImageUrl(src, rootPath);
+              if (resolved) {
+                const newTag = match[0].replace(src, resolved);
+                markdown = markdown.replace(match[0], newTag);
+              }
+            }
+          }
+        }
+
+        const renderedHtml = md.render(markdown);
+        console.log('[CanvasNoteItem] Markdown processado:', markdown);
+        console.log('[CanvasNoteItem] HTML renderizado:', renderedHtml);
+        setHtml(renderedHtml);
+      } catch (err) {
+        setHtml('<p>Erro ao carregar nota.</p>');
+        console.error(err);
+      }
+    };
+
+    loadNote();
+  }, [data.noteId, lastFileSaveTick, rootPath]);
 
   // Observer para paginação dinâmica baseada em CSS Columns
   useEffect(() => {
@@ -159,6 +216,10 @@ export function CanvasNoteItem({
       }}
       onMouseDown={handleMouseDown}
       onClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onFocus();
+      }}
     >
       <h3 className={styles.noteTitle}>{data.title}</h3>
       
@@ -167,6 +228,9 @@ export function CanvasNoteItem({
         className={styles.noteContentWrapper} 
         style={{ padding: `${paddingValue}px` }}
       >
+        {/* Camada de interação para capturar cliques/duplo-cliques uniformemente */}
+        <div className={styles.clickOverlay} />
+
         <div className={styles.noteContentMask}>
           <div 
             ref={contentRef}
@@ -185,6 +249,7 @@ export function CanvasNoteItem({
             <button 
               className={styles.navBtn} 
               onClick={(e) => navigatePage(e, 'prev')}
+              onDoubleClick={(e) => e.stopPropagation()}
               disabled={currentPage <= startPage}
             >
               &lt;
@@ -195,6 +260,7 @@ export function CanvasNoteItem({
             <button 
               className={styles.navBtn} 
               onClick={(e) => navigatePage(e, 'next')}
+              onDoubleClick={(e) => e.stopPropagation()}
               disabled={currentPage >= effectiveEndPage}
             >
               &gt;

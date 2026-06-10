@@ -1,6 +1,7 @@
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { useCanvasEntity } from '../../hooks/useCanvasEntity';
-import { CanvasImageItemProps, ImageData } from '@/shared/types';
+import { CanvasImageItemProps, ImageData, CutPatch as CutPatchType } from '@/shared/types';
+import { CutPatch } from '../CutPatch/CutPatch';
 import styles from './CanvasImageItem.module.scss';
 import { Loader2 } from 'lucide-react';
 
@@ -69,6 +70,15 @@ export function CanvasImageItem({
           crossOrigin="anonymous" 
         />
       )}
+
+      {/* Renderizar os remendos (Patches) sobre a imagem para sinalizar recortes */}
+      {(data.patches || []).map((patch: CutPatchType) => (
+        <CutPatch 
+          key={patch.id} 
+          patch={patch} 
+          backgroundColor="var(--color-bg-base)"
+        />
+      ))}
 
       {isSelected && !isPending && (
         <>

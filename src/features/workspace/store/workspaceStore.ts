@@ -329,6 +329,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       if (activeFile === path) setActiveFile(null);
 
       useUniverseStore.getState().removeEntity(path);
+      get().invalidateImageCache();
       if (parentPath) await syncNode(parentPath);
     } catch (error) {
       console.error('Erro ao excluir item:', error);
@@ -349,6 +350,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       if (activeFile === oldPath) setActiveFile(newPath);
 
       useUniverseStore.getState().removeEntity(oldPath);
+      get().invalidateImageCache();
       if (parentPath) await syncNode(parentPath);
     } catch (error) {
       console.error('Erro ao renomear item:', error);
@@ -382,6 +384,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       }
 
       useUniverseStore.getState().removeEntity(sourcePath);
+      get().invalidateImageCache();
 
       await new Promise(resolve => setTimeout(resolve, 100));
 

@@ -131,10 +131,30 @@ export function useImageManager() {
   }, [cachedImages, filter, activeTarget, collections, isPickingExisting, activeSection]);
 
   const filteredCollections = useMemo(() => {
-    if (isPickingExisting || activeTarget?.type === 'physical' || activeSection !== 'geral') return [];
+    if (isPickingExisting || activeTarget?.type === 'physical') return [];
     
-    const parentId = activeTarget?.type === 'virtual' ? activeTarget.id : undefined;
-    return collections.filter(c => c.parentId === parentId && c.name.toLowerCase().includes(filter.toLowerCase()));
+    let effectiveParentId: string | undefined = activeTarget?.type === 'virtual' ? activeTarget.id : undefined;
+
+    // KI-038: Se estivermos na raiz de um silo (Colagens/Edições), 
+    // buscamos coleções que sejam filhas do silo virtual correspondente.
+    if (!effectiveParentId && activeSection !== 'geral') {
+      const siloName = activeSection === 'collages' ? 'Colagens' : 'Edições';
+      effectiveParentId = collections.find(c => c.name === siloName)?.id;
+      
+      // Se o silo virtual ainda não existe, não há como ter subpastas nele
+      if (!effectiveParentId) return [];
+    }
+
+    return collections.filter(c => {
+      const matchesFilter = c.name.toLowerCase().includes(filter.toLowerCase());
+      const isCorrectParent = c.parentId === effectiveParentId;
+      
+      // Se estivermos na raiz do Geral (effectiveParentId undefined), 
+      // ocultamos as pastas "Silo" (Colagens/Edições) que têm abas próprias.
+      const isReservedSilo = effectiveParentId === undefined && ['Colagens', 'Edições'].includes(c.name);
+
+      return isCorrectParent && matchesFilter && !isReservedSilo;
+    });
   }, [collections, filter, activeTarget, isPickingExisting, activeSection]);
 
   const filteredPhysicalFolders = useMemo(() => {
@@ -188,7 +208,7 @@ export function useImageManager() {
   };
 
   const getBreadcrumbs = (): GalleryBreadcrumb[] => {
-    const rootLabel = activeSection === 'geral' ? 'Galeria' : activeSection === 'collages' ? 'Colagens' : 'Edições';
+    const rootLabel = activeSection === 'geral' ? 'Geral' : activeSection === 'collages' ? 'Colagens' : 'Edições';
     const crumbs: GalleryBreadcrumb[] = [{ label: rootLabel, target: null }];
     
     if (activeTarget?.type === 'virtual') {

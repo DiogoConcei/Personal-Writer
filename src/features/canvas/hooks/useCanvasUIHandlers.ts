@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UseCanvasUIHandlersProps } from '@/shared/types';
+import { UseCanvasUIHandlersProps, CanvasUIState } from '@/shared/types';
 
 /**
  * Hook orquestrador da interface do Canvas.
@@ -12,13 +12,31 @@ export function useCanvasUIHandlers({
   activateSelect,
   activateScissors,
   bringToFront,
-  setSideMenuMode
-}: UseCanvasUIHandlersProps) {
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
-  const [isSplitModeActive, setIsSplitModeActive] = useState(false);
-  const [isCollageConfirmed, setIsCollageConfirmed] = useState(false);
-  const [activeCollageGroupId, setActiveCollageGroupId] = useState<string | null>(null);
+  setSideMenuMode,
+  ...externalState
+}: UseCanvasUIHandlersProps & Partial<CanvasUIState>) {
+  // Estados internos (usados apenas se não fornecidos externamente)
+  const [internalSelectedItemId, setInternalSelectedItemId] = useState<string | null>(null);
+  const [internalSelectedItemIds, setInternalSelectedItemIds] = useState<string[]>([]);
+  const [internalIsSplitModeActive, setInternalIsSplitModeActive] = useState(false);
+  const [internalIsCollageConfirmed, setInternalIsCollageConfirmed] = useState(false);
+  const [internalActiveCollageGroupId, setInternalActiveCollageGroupId] = useState<string | null>(null);
+
+  // Mapeamento para estado externo ou interno
+  const selectedItemId = externalState.selectedItemId !== undefined ? externalState.selectedItemId : internalSelectedItemId;
+  const setSelectedItemId = externalState.setSelectedItemId || setInternalSelectedItemId;
+  
+  const selectedItemIds = externalState.selectedItemIds !== undefined ? externalState.selectedItemIds : internalSelectedItemIds;
+  const setSelectedItemIds = externalState.setSelectedItemIds || setInternalSelectedItemIds;
+
+  const isSplitModeActive = externalState.isSplitModeActive !== undefined ? externalState.isSplitModeActive : internalIsSplitModeActive;
+  const setIsSplitModeActive = externalState.setIsSplitModeActive || setInternalIsSplitModeActive;
+
+  const isCollageConfirmed = externalState.isCollageConfirmed !== undefined ? externalState.isCollageConfirmed : internalIsCollageConfirmed;
+  const setIsCollageConfirmed = externalState.setIsCollageConfirmed || setInternalIsCollageConfirmed;
+
+  const activeCollageGroupId = externalState.activeCollageGroupId !== undefined ? externalState.activeCollageGroupId : internalActiveCollageGroupId;
+  const setActiveCollageGroupId = externalState.setActiveCollageGroupId || setInternalActiveCollageGroupId;
 
   const handleSelectItem = useCallback((id: string | null) => {
     if (!id) {
@@ -52,7 +70,7 @@ export function useCanvasUIHandlers({
     else setSideMenuMode('main');
 
     return id;
-  }, [isCollageActive, isScissorsActive, entities, bringToFront, setSideMenuMode]);
+  }, [isCollageActive, isScissorsActive, entities, bringToFront, setSideMenuMode, setSelectedItemId, setSelectedItemIds]);
 
   const handleToggleScissors = useCallback(() => {
     if (isScissorsActive) {
@@ -62,11 +80,11 @@ export function useCanvasUIHandlers({
       setSelectedItemId(null);
       setSelectedItemIds([]);
     }
-  }, [isScissorsActive, activateSelect, activateScissors]);
+  }, [isScissorsActive, activateSelect, activateScissors, setSelectedItemId, setSelectedItemIds]);
 
   const handleToggleSplitMode = useCallback(() => {
     setIsSplitModeActive(prev => !prev);
-  }, []);
+  }, [setIsSplitModeActive]);
 
   return {
     selectedItemId,

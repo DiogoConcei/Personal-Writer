@@ -39,16 +39,6 @@ export default function InfiniteCanvas() {
 
   return (
     <div className={`${styles.container} ${isPanning ? styles.panning : ""}`} onClick={() => ui.setSelectedItemId(null)}>
-      <button 
-        className={styles.backButton} 
-        onClick={() => setActivePanel("dashboard")} 
-        title="Voltar ao Dashboard"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-      </button>
-
       {!ui.isCollageConfirmed && (
         <CanvasToolbar
           activeTool={activeTool}
@@ -159,7 +149,10 @@ export default function InfiniteCanvas() {
         onStartTransform={history.takeSnapshot}
         onEndTransform={handlers.handleTransformEnd}
         onRotateStart={handlers.handleRotateStart}
-        onOpenModal={open}
+        onOpenModal={(type, data) => {
+          if (type === 'focus') handlers.handleOpenFocus(data as AnyCanvasEntity);
+          else open(type, data);
+        }}
         bringToFront={entities.bringToFront}
         sendToBack={entities.sendToBack}
         removeDrawing={removeDrawing}

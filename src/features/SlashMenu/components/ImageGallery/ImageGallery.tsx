@@ -1,34 +1,39 @@
 import React from "react";
 import AssetGallery from "@/features/imageview/components/AssetGallery/AssetGallery";
 import { ImageGalleryProps } from "@/shared/types";
-import styles from "./ImageGallery.module.scss";
+import Modal from "@/shared/components/Modal/Modal/Modal";
 
 /**
  * ImageGallery (SlashMenu Version)
- * 
- * Atua como um wrapper (modal overlay) em torno do componente unificado AssetGallery.
- * Reduz a complexidade e garante sincronia visual e funcional entre os domínios.
+ *
+ * Atua como um wrapper em torno do componente unificado AssetGallery utilizando o Modal compartilhado.
+ * Garante que a galeria seja exibida com proporções corretas e controles de fechamento visíveis.
  */
+
 const ImageGallery: React.FC<ImageGalleryProps> = ({
   onSelect,
   onClose,
   disableOrganization = false,
-  largeModal = false,
+  title,
+  children
 }) => {
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div
-        className={`${styles.modal} ${largeModal ? styles["modal--large"] : ""}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <AssetGallery 
-          pickerMode 
-          onSelect={onSelect} 
-          onClose={onClose} 
-          disableOrganization={disableOrganization}
-        />
-      </div>
-    </div>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      size="xl"
+      padding={false}
+      showHeader={!!title}
+      title={title}
+    >
+      {children}
+      <AssetGallery
+        pickerMode
+        onSelect={onSelect}
+        onClose={onClose}
+        disableOrganization={disableOrganization}
+      />
+    </Modal>
   );
 };
 

@@ -139,6 +139,19 @@ export interface UseCanvasTextStyleOptions {
   onUpdate: (id: string, updates: Partial<AnyCanvasEntity>) => void;
 }
 
+export interface CanvasUIState {
+  selectedItemId: string | null;
+  setSelectedItemId: (id: string | null) => void;
+  selectedItemIds: string[];
+  setSelectedItemIds: (ids: string[]) => void;
+  isSplitModeActive: boolean;
+  setIsSplitModeActive: (active: boolean) => void;
+  isCollageConfirmed: boolean;
+  setIsCollageConfirmed: (confirmed: boolean) => void;
+  activeCollageGroupId: string | null;
+  setActiveCollageGroupId: (id: string | null) => void;
+}
+
 export interface UseCanvasUIHandlersProps {
   entities: AnyCanvasEntity[];
   activeTool: string;

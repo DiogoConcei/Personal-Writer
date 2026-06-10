@@ -13,6 +13,8 @@ export interface ImageGalleryProps {
   onClose: () => void;
   disableOrganization?: boolean;
   largeModal?: boolean;
+  title?: string;
+  children?: React.ReactNode;
 }
 
 export interface GalleryDragGhostProps {

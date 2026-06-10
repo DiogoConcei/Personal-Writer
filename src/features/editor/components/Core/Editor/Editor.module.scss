@@ -20,6 +20,10 @@
 
   &--sans { font-family: var(--font-sans); }
   &--serif { font-family: var(--font-serif); }
+
+  &--location {
+    padding-top: 0;
+  }
 }
 
 .editor {

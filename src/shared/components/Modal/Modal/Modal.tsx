@@ -6,10 +6,12 @@ import styles from './Modal.module.scss';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  showHeader?: boolean;
+  padding?: boolean;
 }
 
 export default function Modal({ 
@@ -18,7 +20,9 @@ export default function Modal({
   title, 
   children, 
   footer,
-  size = 'md' 
+  size = 'md',
+  showHeader = true,
+  padding = true
 }: ModalProps) {
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -42,14 +46,16 @@ export default function Modal({
         className={`${styles.modal} ${styles[`modal--${size}`]}`} 
         onClick={(e) => e.stopPropagation()}
       >
-        <header className={styles.header}>
-          <h2 className={styles.header__title}>{title}</h2>
-          <button className={styles.header__close} onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
+        {showHeader && (
+          <header className={styles.header}>
+            <h2 className={styles.header__title}>{title}</h2>
+            <button className={styles.header__close} onClick={onClose}>
+              <X size={18} />
+            </button>
+          </header>
+        )}
         
-        <main className={styles.content}>
+        <main className={`${styles.content} ${!padding ? styles['content--no-padding'] : ''}`}>
           {children}
         </main>
         

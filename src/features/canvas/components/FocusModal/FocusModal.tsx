@@ -10,6 +10,8 @@ import { FocusTool } from '@/shared/types';
 import { CutPatch } from '../CutPatch/CutPatch';
 import { CutPatch as CutPatchType } from '@/shared/types';
 import { useCanvasCropPersistence } from '../../hooks/useCanvasCropPersistence';
+import Editor from '@/features/editor/components/Core/Editor/Editor';
+import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 
 export const FocusModal: React.FC<FocusModalProps> = ({
   isOpen,
@@ -54,6 +56,12 @@ export const FocusModal: React.FC<FocusModalProps> = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isOpen, entityWidth, entityHeight]);
+
+  // Garantir que o activeFile seja limpo ao fechar
+  const handleClose = () => {
+    useWorkspaceStore.getState().setActiveFile(null);
+    onClose();
+  };
 
   const lassoPathData = useMemo(() => {
     if (lassoPoints.length < 2) return '';
@@ -213,24 +221,32 @@ export const FocusModal: React.FC<FocusModalProps> = ({
       <div 
         className={styles.cutActionMenu}
         style={{
-          left: boundingBox.x + boundingBox.width,
-          top: boundingBox.y,
-          // Contra-escala para os botões não ficarem gigantes no zoom
-          transform: `translate(-100%, -100%) scale(${1 / scale})`,
-          transformOrigin: 'bottom right'
+          left: boundingBox.x + (boundingBox.width / 2),
+          top: boundingBox.y - 10,
+          // Contra-escala ajustada com fator de 0.8 para evitar botões gigantes
+          transform: `translate(-50%, -100%) scale(${(1 / scale) * 0.8})`,
+          transformOrigin: 'bottom center'
         }}
       >
-        <button className={styles.confirmBtn} onClick={handleConfirmSelection}>
-          <Check size={18} />
+        <button className={styles.confirmBtn} onClick={handleConfirmSelection} title="Confirmar Recorte">
+          <Check size={14} />
         </button>
-        <button className={styles.cancelBtn} onClick={handleCancelSelection}>
-          <X size={18} />
+        <button className={styles.cancelBtn} onClick={handleCancelSelection} title="Cancelar">
+          <X size={14} />
         </button>
       </div>
     );
   };
 
   const renderFocusedEntity = () => {
+    if (activeTool === 'edit' && entity.type === 'note') {
+      return (
+        <div className={styles.editModeContainer}>
+          <Editor />
+        </div>
+      );
+    }
+
     const focusedEntity: AnyCanvasEntity = {
       ...entity,
       x: 0,
@@ -270,17 +286,18 @@ export const FocusModal: React.FC<FocusModalProps> = ({
       className={styles.overlay} 
       onClick={(e) => {
         e.stopPropagation();
-        onClose();
+        handleClose();
       }}
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className={styles.modal} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-        <button className={styles.closeBtn} onClick={onClose}>
+        <button className={styles.closeBtn} onClick={handleClose}>
           <X size={24} />
         </button>
 
         <FocusToolbar 
           activeTool={activeTool} 
+          canEdit={entity.type === 'note'}
           onToolChange={(tool) => {
             setActiveTool(tool);
             handleCancelSelection();
@@ -290,19 +307,19 @@ export const FocusModal: React.FC<FocusModalProps> = ({
         <div className={styles.content}>
           <div 
             ref={containerRef}
-            className={styles.focusArea}
+            className={`${styles.focusArea} ${activeTool === 'edit' ? styles.fullSize : ''}`}
             style={{ 
-              width: entityWidth, 
-              height: entityHeight, 
+              width: activeTool === 'edit' ? 'min(1200px, 90vw)' : entityWidth, 
+              height: activeTool === 'edit' ? '85vh' : entityHeight, 
               position: 'relative',
-              transform: `scale(${scale})`,
+              transform: activeTool === 'edit' ? 'none' : `scale(${scale})`,
               transformOrigin: 'center center'
             }}
           >
             {renderFocusedEntity()}
 
-            {/* Renderizar os remendos (Patches) da página atual */}
-            {((entity.data as { patches?: CutPatchType[] }).patches || [])
+            {/* Renderizar os remendos (Patches) da página atual - ocultar no modo edit */}
+            {activeTool !== 'edit' && ((entity.data as { patches?: CutPatchType[] }).patches || [])
               .filter((p: CutPatchType) => p.page === currentPage)
               .map((patch: CutPatchType) => (
                 <CutPatch 
@@ -323,8 +340,8 @@ export const FocusModal: React.FC<FocusModalProps> = ({
               />
             )}
 
-            {renderSelection()}
-            {renderActionMenu()}
+            {activeTool !== 'edit' && renderSelection()}
+            {activeTool !== 'edit' && renderActionMenu()}
           </div>
         </div>
       </div>

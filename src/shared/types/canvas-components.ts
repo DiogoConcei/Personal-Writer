@@ -44,11 +44,12 @@ export interface CanvasControlsProps {
   value: CanvasControlsContextValue;
 }
 
-export type FocusTool = 'select' | 'square' | 'lasso';
+export type FocusTool = 'select' | 'square' | 'lasso' | 'edit';
 
 export interface FocusToolbarProps {
   activeTool: FocusTool;
   onToolChange: (tool: FocusTool) => void;
+  canEdit?: boolean;
 }
 
 export interface CanvasNoteItemProps {

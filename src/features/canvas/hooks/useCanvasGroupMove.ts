@@ -19,7 +19,8 @@ export function useCanvasGroupMove({
   const handleUpdateWithGroup = useCallback((id: string, updates: Partial<AnyCanvasEntity>) => {
     const draggingEntity = entities.find(e => e.id === id);
     
-    if (!isCollageConfirmed && draggingEntity?.groupId && (updates.x !== undefined || updates.y !== undefined)) {
+    // Se o item pertence a um grupo, movemos o grupo inteiro (Coesão Física)
+    if (draggingEntity?.groupId && (updates.x !== undefined || updates.y !== undefined)) {
       setEntities(prev => {
         const currentEntity = prev.find(e => e.id === id);
         if (!currentEntity) return prev;
@@ -43,8 +44,6 @@ export function useCanvasGroupMove({
         if (dx !== 0 || dy !== 0) {
           drawings.forEach(d => {
             if (d.groupId === draggingEntity.groupId) {
-              // OTIMIZAÇÃO: Atualiza apenas o offset (x, y) durante o drag
-              // evitando o map() custoso em milhares de pontos
               updateDrawing(d.id, { 
                 x: (d.x || 0) + dx, 
                 y: (d.y || 0) + dy 
@@ -58,7 +57,7 @@ export function useCanvasGroupMove({
     } else {
       handleUpdateEntity(id, updates);
     }
-  }, [entities, drawings, setEntities, updateDrawing, handleUpdateEntity, isCollageConfirmed]);
+  }, [entities, drawings, setEntities, updateDrawing, handleUpdateEntity]);
 
   const handleTransformEnd = useCallback((entityId: string) => {
     // "Bake" dos offsets de desenhos de volta para os pontos reais ao finalizar o movimento

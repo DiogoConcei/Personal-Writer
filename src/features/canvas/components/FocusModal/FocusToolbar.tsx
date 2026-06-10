@@ -1,9 +1,9 @@
 import React from 'react';
-import { MousePointer2, Square, Scissors } from 'lucide-react';
+import { MousePointer2, Square, Scissors, FileText } from 'lucide-react';
 import { FocusToolbarProps } from '@/shared/types';
 import styles from './FocusModal.module.scss';
 
-export const FocusToolbar: React.FC<FocusToolbarProps> = ({ activeTool, onToolChange }) => {
+export const FocusToolbar: React.FC<FocusToolbarProps> = ({ activeTool, onToolChange, canEdit }) => {
   return (
     <div className={styles.toolbar}>
       <button 
@@ -13,6 +13,17 @@ export const FocusToolbar: React.FC<FocusToolbarProps> = ({ activeTool, onToolCh
       >
         <MousePointer2 size={20} />
       </button>
+
+      {canEdit && (
+        <button 
+          className={`${styles.toolBtn} ${activeTool === 'edit' ? styles.active : ''}`}
+          onClick={() => onToolChange('edit')}
+          title="Editar Conteúdo (E)"
+        >
+          <FileText size={20} />
+        </button>
+      )}
+
       <button 
         className={`${styles.toolBtn} ${activeTool === 'square' ? styles.active : ''}`}
         onClick={() => onToolChange('square')}

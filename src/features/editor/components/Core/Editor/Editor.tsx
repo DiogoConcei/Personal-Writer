@@ -25,13 +25,7 @@ import { EditorRuler } from "./EditorRuler";
 
 // Utils e Tipos
 import { useUIStore } from "@/store/uiStore";
-import {
-  ImageIcon,
-  FileText,
-  List,
-  History,
-  Ruler,
-} from "lucide-react";
+import { ImageIcon, FileText, List, History, Ruler } from "lucide-react";
 
 import styles from "./Editor.module.scss";
 
@@ -67,6 +61,7 @@ export default function Editor() {
 
   // Verifica se há qualquer modal aberto para desativar o drop global do editor
   const isAnyModalOpen = Object.values(editorModals).some((isOpen) => isOpen);
+  const isLocation = metadata.type === "location";
 
   useNativeDragDrop({
     onDrop: async (paths) => {
@@ -118,52 +113,60 @@ export default function Editor() {
 
   return (
     <div
-      className={`${styles.container} ${styles[`container--${typography}`]}`}
-      style={{
-        '--editor-margin-left': `${metadata.margins?.left ?? 80}px`,
-        '--editor-margin-right': `${metadata.margins?.right ?? 80}px`,
-        '--editor-margin-top': `${metadata.margins?.top ?? 40}px`,
-        '--editor-margin-bottom': `${metadata.margins?.bottom ?? 40}px`,
-      } as React.CSSProperties}
+      className={`
+        ${styles.container} 
+        ${styles[`container--${typography}`]}
+        ${isLocation ? styles["container--location"] : ""}
+      `}
+      style={
+        {
+          "--editor-margin-left": `${metadata.margins?.left ?? 80}px`,
+          "--editor-margin-right": `${metadata.margins?.right ?? 80}px`,
+          "--editor-margin-top": `${metadata.margins?.top ?? 40}px`,
+          "--editor-margin-bottom": `${metadata.margins?.bottom ?? 40}px`,
+        } as React.CSSProperties
+      }
     >
-      <EditorToolbar>
-        <EditorToolbar.Action
-          icon={Ruler}
-          label="Régua"
-          onClick={() => setEditorModal("showRuler", !editorModals.showRuler)}
-          active={editorModals.showRuler}
-        />
+      {!isLocation && (
+        <EditorToolbar>
+          <EditorToolbar.Action
+            icon={Ruler}
+            label="Régua"
+            onClick={() => setEditorModal("showRuler", !editorModals.showRuler)}
+            active={editorModals.showRuler}
+          />
 
-        <EditorToolbar.Action
-          icon={FileText}
-          label="Documentos"
-          onClick={() => setEditorModal("showDocuments", true)}
-          badge={metadata.documents?.length}
-        />
+          <EditorToolbar.Action
+            icon={FileText}
+            label="Documentos"
+            onClick={() => setEditorModal("showDocuments", true)}
+            badge={metadata.documents?.length}
+          />
 
-        <EditorToolbar.Action
-          icon={ImageIcon}
-          label="Galeria"
-          onClick={() => setEditorModal("showGallery", true)}
-        />
-        <EditorToolbar.Action
-          icon={List}
-          label="Sumário"
-          onClick={() => setEditorModal("showTOC", !editorModals.showTOC)}
-        />
-        <EditorToolbar.Action
-          icon={History}
-          label="Histórico"
-          onClick={() => setEditorModal("showHistory", true)}
-        />
-      </EditorToolbar>
+          <EditorToolbar.Action
+            icon={ImageIcon}
+            label="Galeria"
+            onClick={() => setEditorModal("showGallery", true)}
+          />
+          <EditorToolbar.Action
+            icon={List}
+            label="Sumário"
+            onClick={() => setEditorModal("showTOC", !editorModals.showTOC)}
+          />
+          <EditorToolbar.Action
+            icon={History}
+            label="Histórico"
+            onClick={() => setEditorModal("showHistory", true)}
+          />
+        </EditorToolbar>
+      )}
 
       <div onContextMenu={handleContextMenu} onClick={closeContextMenu}>
         <MetadataHeader />
-        
-        {editorModals.showRuler && <EditorRuler />}
 
-        {editorModals.showTOC && (
+        {!isLocation && editorModals.showRuler && <EditorRuler />}
+
+        {!isLocation && editorModals.showTOC && (
           <TableOfContents
             editor={editor}
             onClose={() => setEditorModal("showTOC", false)}

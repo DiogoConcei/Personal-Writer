@@ -227,8 +227,17 @@ export function useCanvasEntities({
 
   const bringToFront = useCallback((id: string) => {
     setEntities(prev => {
+      const entity = prev.find(e => e.id === id);
+      const groupId = entity?.groupId;
       const maxZ = Math.max(0, ...prev.map(e => e.zIndex || 0));
-      return prev.map(e => e.id === id ? { ...e, zIndex: maxZ + 1 } : e);
+      
+      return prev.map(e => {
+        // Se o item clicado ou qualquer item do mesmo grupo for encontrado
+        if (e.id === id || (groupId && e.groupId === groupId)) {
+          return { ...e, zIndex: maxZ + 1 };
+        }
+        return e;
+      });
     });
   }, []);
 

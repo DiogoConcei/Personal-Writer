@@ -43,10 +43,12 @@ export default function CharacterGallery() {
 
   const filterKeys = useMemo(() => {
     const keys = new Set<string>();
+    const ignoredKeys = ['summary', 'order', 'ordem'];
+    
     characters.forEach(c => {
       if (c.fields) {
         Object.keys(c.fields).forEach(k => {
-          if (k !== 'summary') keys.add(k);
+          if (!ignoredKeys.includes(k)) keys.add(k);
         });
       }
     });
@@ -183,7 +185,7 @@ export default function CharacterGallery() {
                 <h3 className={styles.card__name}>{char.name}</h3>
                 <div className={styles.card__meta}>
                    {Object.entries(char.fields || {})
-                     .filter(([k]) => k !== 'summary')
+                     .filter(([k]) => !['summary', 'order', 'ordem'].includes(k))
                      .slice(0, 2)
                      .map(([k, v]) => (
                        <span key={k}>{String(v)}</span>

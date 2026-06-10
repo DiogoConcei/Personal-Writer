@@ -26,6 +26,7 @@
   &--sm { max-width: 400px; }
   &--md { max-width: 600px; }
   &--lg { max-width: 900px; }
+  &--xl { max-width: 1200px; width: 95%; }
 }
 
 @keyframes modalIn {
@@ -78,6 +79,10 @@
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
+
+  &--no-padding {
+    padding: 0;
+  }
 }
 
 .footer {

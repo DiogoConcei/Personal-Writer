@@ -5,17 +5,15 @@ import { useEditorStore } from '@/features/editor/store/editorStore';
 import { parseMarkdownMetadata } from '@/features/editor/store/metadataParser';
 import { EditorMetadata, LocationHeaderProps, CharacterLink } from '@/shared/types';
 import {
-  MapPin, Music, Play, Pause, Plus,
-  ChevronRight, Info, User, X
+  MapPin, Plus,
+  ChevronRight, X
 } from 'lucide-react';
 import ImageGallery from "@/features/SlashMenu/components/ImageGallery/ImageGallery";
 import Modal from '@/shared/components/Modal/Modal/Modal';
-import { AttributeGrid } from "../../Metadata/AttributeGrid/AttributeGrid";
 import { readFile, listDirectory, resolveAssetPath } from '@/tauri-bridge';
-import { Backlinks } from "../../Insights/Backlinks/Backlinks";
 
 export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHeaderProps) {
-  const { rootPath, activeFile, setActiveFile } = useWorkspaceStore();
+  const { rootPath, activeFile } = useWorkspaceStore();
   const { metadata: storeMetadata, setMetadata, save } = useEditorStore();
 
   const metadata = propMetadata || storeMetadata;
@@ -23,10 +21,6 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [showCharacterPicker, setShowCharacterPicker] = useState(false);
   const [availableCharacters, setAvailableCharacters] = useState<CharacterLink[]>([]);
-
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -113,37 +107,6 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
     setShowCharacterPicker(false);
   };
 
-  const unlinkCharacter = (path: string) => {
-    if (readOnly) return;
-    const linked = (metadata.linked_characters || []).filter(p => p !== path);
-    updateMetadata({ ...metadata, linked_characters: linked });
-  };
-
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const onTimeUpdate = () => {
-    if (audioRef.current) {
-      const p = (audioRef.current.currentTime / audioRef.current.duration) * 100;
-      setProgress(p);
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (audioRef.current) {
-      const time = (Number(e.target.value) / 100) * audioRef.current.duration;
-      audioRef.current.currentTime = time;
-      setProgress(Number(e.target.value));
-    }
-  };
-
   const handleStartEditing = () => {
     if (readOnly) return;
     setEditedName(noteName || '');
@@ -200,11 +163,6 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
           <div className={styles.info}>
             <div className={styles.badgeRow}>
               <span className={styles.typeTag}><MapPin size={12} /> Localização</span>
-              {metadata.music && (
-                <span className={`${styles.musicIndicator} ${isPlaying ? styles.active : ''}`}>
-                  <Music size={12} />
-                </span>
-              )}
               <ChevronRight size={14} className={styles.separator} />
               <span className={styles.statusTag}>Explorado</span>
             </div>
@@ -228,73 +186,15 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
               </h1>
             )}
           </div>
-
-          {metadata.music && (
-            <div className={styles.audioPlayer}>
-              <audio
-                ref={audioRef}
-                src={resolveAssetPath(metadata.music, rootPath) || undefined}
-                onTimeUpdate={onTimeUpdate}
-                onEnded={() => setIsPlaying(false)}
-              />
-              <button className={styles.playBtn} onClick={togglePlay}>
-                {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-              </button>
-              <div className={styles.playerInfo}>
-                <span className={styles.trackName}>
-                  {metadata.music.split(/[\\/]/).pop() || 'Trilha Sonora'}
-                </span>
-                <input
-                  type="range"
-                  min="0" max="100"
-                  value={progress}
-                  onChange={handleSeek}
-                  className={styles.progressBar}
-                  disabled={readOnly}
-                />
-              </div>
-            </div>
-          )}
         </div>
-
-        <div className={styles.linkedSection}>
-          <div className={styles.sectionHeader}>
-            <User size={14} />
-            <span>Personagens Presentes</span>
-          </div>
-          <div className={styles.tagsGrid}>
-            {metadata.linked_characters?.map((path: string) => {
-              const charName = path.split(/[\\/]/).pop()?.replace('.md', '');
-              return (
-                <div key={path} className={styles.charTag}>
-                  <span className={styles.tagName} onClick={() => !readOnly && setActiveFile(path)}>{charName}</span>
-                  {!readOnly && <button className={styles.unlinkBtn} onClick={() => unlinkCharacter(path)}><X size={12} /></button>}
-                </div>
-              );
-            })}
-            {!readOnly && (
-              <button className={styles.addTagBtn} onClick={() => setShowCharacterPicker(true)}>
-                <Plus size={14} /> Vincular
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.attributesSection}>
-          <div className={styles.sectionHeader}>
-            <Info size={14} />
-            <span>Detalhes da Localização</span>
-          </div>
-          <AttributeGrid metadata={metadata} onUpdate={updateMetadata} readOnly={readOnly} />
-        </div>
-
-        {!readOnly && activeFile && <Backlinks targetPath={activeFile} />}
       </div>
 
       {showImagePicker && (
-        <Modal isOpen={true} onClose={() => setShowImagePicker(false)} title="Adicionar Imagem" size="lg">
-          <ImageGallery onSelect={addImage} onClose={() => setShowImagePicker(false)} />
-        </Modal>
+        <ImageGallery 
+          onSelect={addImage} 
+          onClose={() => setShowImagePicker(false)} 
+          title="Adicionar Imagem"
+        />
       )}
 
       {showCharacterPicker && (
@@ -306,7 +206,7 @@ export function LocationHeader({ metadata: propMetadata, readOnly }: LocationHea
                 .map(char => (
                   <button key={char.path} className={styles.charOption} onClick={() => linkCharacter(char)}>
                     <div className={styles.charIcon}>
-                      {char.icon && char.icon.length < 5 ? <span>{char.icon}</span> : <User size={16} />}
+                      {char.icon && char.icon.length < 5 ? <span>{char.icon}</span> : <MapPin size={16} />}
                     </div>
                     <span>{char.name}</span>
                   </button>

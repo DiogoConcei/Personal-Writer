@@ -24,6 +24,8 @@ interface UIState {
   preview: PreviewState;
 
   dragInfo: DragInfo;
+  
+  lastFileSaveTick: number;
 
   setActivePanel: (panel: ActivePanel) => void;
   toggleSidebar: () => void;
@@ -36,6 +38,7 @@ interface UIState {
   resetDrag: () => void;
   addNotification: (message: string, type?: ToastNotification['type']) => void;
   removeNotification: (id: string) => void;
+  triggerFileSaveTick: () => void;
 }
 
 const INITIAL_DRAG: DragInfo = {
@@ -69,11 +72,12 @@ export const useUIStore = create<UIState>((set) => ({
     showDocuments: false,
     showHistory: false,
     showTOC: false,
-    showRuler: true,
+    showRuler: false,
   },
   notifications: [],
   dragInfo: INITIAL_DRAG,
   preview: INITIAL_PREVIEW,
+  lastFileSaveTick: 0,
 
   setActivePanel: (panel) => set({ activePanel: panel }),
   toggleSidebar: () => set((state) => ({ isSidebarVisible: !state.isSidebarVisible })),
@@ -92,6 +96,8 @@ export const useUIStore = create<UIState>((set) => ({
   })),
 
   resetDrag: () => set({ dragInfo: INITIAL_DRAG }),
+
+  triggerFileSaveTick: () => set((state) => ({ lastFileSaveTick: state.lastFileSaveTick + 1 })),
 
   addNotification: (message, type = 'info') => {
     const id = Math.random().toString(36).substring(2, 9);

@@ -23,7 +23,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ImageViewerProps } from '@/shared/types';
 
 export default function ImageViewer({ path, onBack }: ImageViewerProps) {
-  const { setActiveFile, refreshFiles } = useWorkspaceStore();
+  const { setActiveFile, refreshFiles, invalidateImageCache } = useWorkspaceStore();
   const { addNotification } = useUIStore();
   const { zoom, setZoom, zoomIn: handleZoomIn, zoomOut: handleZoomOut } = useZoom();
   const [rotation, setRotation] = useState(0);
@@ -85,6 +85,7 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
       await deleteItem(path);
       addNotification('Imagem excluída com sucesso', 'success');
       setActiveFile(null);
+      invalidateImageCache();
       await refreshFiles();
       if (onBack) onBack();
     } catch (err) {
@@ -104,6 +105,7 @@ export default function ImageViewer({ path, onBack }: ImageViewerProps) {
         await renameItem(path, newPath);
         addNotification('Imagem renomeada', 'success');
         setActiveFile(newPath);
+        invalidateImageCache();
         await refreshFiles();
       } catch (err) {
         console.error('Erro ao renomear imagem:', err);

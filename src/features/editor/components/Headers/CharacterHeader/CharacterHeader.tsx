@@ -150,14 +150,17 @@ export function CharacterHeader({ metadata: propMetadata, readOnly }: CharacterH
       </div>
 
       {showIconPicker && (
-        <Modal isOpen={true} onClose={() => setShowIconPicker(false)} title="Escolher Retrato" size="lg">
+        <ImageGallery 
+          onSelect={(src) => { updateMetadata({ ...metadata, icon: src }); setShowIconPicker(false); }} 
+          onClose={() => setShowIconPicker(false)}
+          title="Escolher Retrato"
+        >
           <div className={styles.modalActions}>
              <button onClick={() => setShowEmojiPrompt(true)} className={styles.secondaryBtn}>
                 <Sparkles size={16} /> Usar Emoji
               </button>
           </div>
-          <ImageGallery onSelect={(src) => { updateMetadata({ ...metadata, icon: src }); setShowIconPicker(false); }} onClose={() => setShowIconPicker(false)} />
-        </Modal>
+        </ImageGallery>
       )}
 
       {showEmojiPrompt && (

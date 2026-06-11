@@ -10,6 +10,7 @@ import { WikiLink } from "../extensions/WikiLink/WikiLink";
 import { CustomImage } from "../extensions/Image/Image";
 import { CustomCodeBlock } from "../extensions/CodeBlock/CodeBlock";
 import { PdfLink } from "../extensions/PdfLink/PdfLink";
+import { PostIt } from "../extensions/PostIt/PostIt";
 import { FontSize } from "../extensions/FontSize";
 import { Indent } from "../extensions/Indent";
 import { Spelling } from "../extensions/Spelling";
@@ -25,13 +26,14 @@ import typographyStyles from "../components/Core/Editor/EditorTypography.module.
 
 interface UseEditorSetupOptions {
   onUpdate: (props: { editor: any }) => void;
+  isCanvasMode?: boolean;
 }
 
 /**
  * Hook especializado para configurar o editor TipTap com todas as extensões e lógicas de eventos.
  * Extrai a complexidade do componente principal Editor.tsx.
  */
-export function useEditorSetup({ onUpdate }: UseEditorSetupOptions) {
+export function useEditorSetup({ onUpdate, isCanvasMode = false }: UseEditorSetupOptions) {
   const { activeFile, rootPath } = useWorkspaceStore();
 
   const editor = useEditor(
@@ -59,6 +61,7 @@ export function useEditorSetup({ onUpdate }: UseEditorSetupOptions) {
         } as any),
         CustomImage.configure({ inline: true, allowBase64: true }),
         PdfLink,
+        isCanvasMode ? PostIt : null,
         SlashCommand.configure({
           suggestion: {
             render: renderSlashMenuPopup,

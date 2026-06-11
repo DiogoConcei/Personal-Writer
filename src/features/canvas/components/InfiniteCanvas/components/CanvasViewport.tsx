@@ -32,7 +32,9 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   onOpenModal,
   bringToFront,
   sendToBack,
-  removeDrawing
+  removeDrawing,
+  onDropEntityOnNote,
+  marquee
 }) => {
   return (
     <CanvasBase
@@ -68,6 +70,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             onStartTransform={onStartTransform}
             onEndTransform={onEndTransform}
             onOpenModal={onOpenModal}
+            onDropEntity={(sourceData) => onDropEntityOnNote?.(entity.id, sourceData)}
           />
 
           {selectedItemId === entity.id && (
@@ -91,6 +94,18 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         selectedItemIds={selectedItemIds} 
         onSelect={onSelectItem} 
       />
+
+      {marquee?.isVisible && (
+        <div
+          className={styles.marquee}
+          style={{
+            left: Math.min(marquee.startX, marquee.endX),
+            top: Math.min(marquee.startY, marquee.endY),
+            width: Math.abs(marquee.endX - marquee.startX),
+            height: Math.abs(marquee.endY - marquee.startY),
+          }}
+        />
+      )}
     </CanvasBase>
   );
 };

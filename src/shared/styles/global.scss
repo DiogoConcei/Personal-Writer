@@ -96,3 +96,91 @@ a {
     margin: 0 1px;
   }
 }
+
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  body, html {
+    background: white !important;
+    color: black !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  // Hide UI Chrome
+  nav,
+  header,
+  aside,
+  footer,
+  button,
+  [class*="sidebar"],
+  [class*="header"],
+  [class*="toolbar"],
+  [class*="statusBar"],
+  [class*="TableOfContents"],
+  [class*="EditorRuler"],
+  [class*="Modal"],
+  .lucide {
+    display: none !important;
+  }
+
+  [class*="app__main"],
+  [class*="app__content"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
+    background: white !important;
+  }
+
+  // Reset Editor for print
+  [class*="Editor_container"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+
+    // Apply the user-defined margins even in print if possible, 
+    // or reset them if they interfere with @page
+    --editor-margin-top: 2cm !important;
+    --editor-margin-bottom: 2cm !important;
+    --editor-margin-left: 2cm !important;
+    --editor-margin-right: 2cm !important;
+  }
+
+  [class*="Editor_editor"] {
+    padding: 0 !important;
+  }
+
+  // Force black text for all content
+  * {
+    color: black !important;
+    background-color: transparent !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  // Images should not be cut off
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  // Typography adjustments for print
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+
+  p, li {
+    orphans: 3;
+    widows: 3;
+  }
+}

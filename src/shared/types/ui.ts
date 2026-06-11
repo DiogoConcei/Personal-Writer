@@ -10,6 +10,7 @@ export interface DragInfo {
   sourcePath: string | null;
   sourceName: string | null;
   sourceNodePos: number | null;
+  sourceData?: any;
   currentX: number;
   currentY: number;
   targetPath: string | null;

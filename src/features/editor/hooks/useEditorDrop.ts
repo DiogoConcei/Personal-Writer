@@ -53,6 +53,27 @@ export function useEditorDrop({ editor, containerSelector }: UseEditorDropOption
 
       const dropPos = getPosAtCoords(editor, e.clientX, e.clientY);
 
+      const { sourceData } = useUIStore.getState().dragInfo;
+
+      if (sourceData?.type === 'postit') {
+        // DROP DE POST-IT DO CANVAS
+        editor
+          .chain()
+          .focus()
+          .insertContentAt(dropPos, {
+            type: "postIt",
+            attrs: { 
+              backgroundColor: sourceData.backgroundColor,
+              color: sourceData.color
+            },
+            content: [{ type: 'text', text: sourceData.text || ' ' }]
+          })
+          .run();
+        
+        useUIStore.getState().resetDrag();
+        return;
+      }
+
       if (sourceNodePos !== null) {
         // MOVIMENTAÇÃO INTERNA (Ex: arrastar uma imagem de um parágrafo para outro)
         const from = sourceNodePos;

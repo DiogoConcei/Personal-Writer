@@ -31,7 +31,7 @@ export function useCanvasModals() {
     }));
   }, []);
 
-  const setSideMenuMode = useCallback((mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => {
+  const setSideMenuMode = useCallback((mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text' | 'pages') => {
     setState(prev => ({ ...prev, sideMenuMode: mode }));
   }, []);
 

@@ -110,6 +110,7 @@ export interface UseCanvasGroupMoveProps {
 
 export interface UseCanvasHotkeysOptions {
   selectedItemId: string | null;
+  selectedItemIds?: string[];
   onRemove: (id: string) => void;
   onDeselect: () => void;
   onUndo?: () => void;
@@ -141,15 +142,15 @@ export interface UseCanvasTextStyleOptions {
 
 export interface CanvasUIState {
   selectedItemId: string | null;
-  setSelectedItemId: (id: string | null) => void;
+  setSelectedItemId: (id: string | null | ((prev: string | null) => string | null)) => void;
   selectedItemIds: string[];
-  setSelectedItemIds: (ids: string[]) => void;
+  setSelectedItemIds: (ids: string[] | ((prev: string[]) => string[])) => void;
   isSplitModeActive: boolean;
-  setIsSplitModeActive: (active: boolean) => void;
+  setIsSplitModeActive: (active: boolean | ((prev: boolean) => boolean)) => void;
   isCollageConfirmed: boolean;
-  setIsCollageConfirmed: (confirmed: boolean) => void;
+  setIsCollageConfirmed: (confirmed: boolean | ((prev: boolean) => boolean)) => void;
   activeCollageGroupId: string | null;
-  setActiveCollageGroupId: (id: string | null) => void;
+  setActiveCollageGroupId: (id: string | null | ((prev: string | null) => string | null)) => void;
 }
 
 export interface UseCanvasUIHandlersProps {
@@ -159,10 +160,12 @@ export interface UseCanvasUIHandlersProps {
   isTextActive: boolean;
   isCollageActive: boolean;
   isScissorsActive: boolean;
+  isAttachActive: boolean;
   activateSelect: () => void;
   activateScissors: () => void;
+  activateAttach: () => void;
   bringToFront: (id: string) => void;
-  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => void;
+  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text' | 'pages') => void;
 }
 
 export interface UseCanvasViewportOptions {

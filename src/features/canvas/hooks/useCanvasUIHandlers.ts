@@ -9,8 +9,10 @@ export function useCanvasUIHandlers({
   entities,
   isCollageActive,
   isScissorsActive,
+  isAttachActive,
   activateSelect,
   activateScissors,
+  activateAttach,
   bringToFront,
   setSideMenuMode,
   ...externalState
@@ -45,7 +47,7 @@ export function useCanvasUIHandlers({
       return;
     }
 
-    if (isCollageActive) {
+    if (isCollageActive || isAttachActive) {
       setSelectedItemIds(prev => 
         prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id].slice(-10)
       );
@@ -67,10 +69,11 @@ export function useCanvasUIHandlers({
     if (entity?.type === 'note') setSideMenuMode('notes');
     else if (entity?.type === 'postit') setSideMenuMode('postits');
     else if (entity?.type === 'text') setSideMenuMode('text');
+    else if (entity?.type === 'page') setSideMenuMode('pages');
     else setSideMenuMode('main');
 
     return id;
-  }, [isCollageActive, isScissorsActive, entities, bringToFront, setSideMenuMode, setSelectedItemId, setSelectedItemIds]);
+  }, [isCollageActive, isAttachActive, isScissorsActive, entities, bringToFront, setSideMenuMode, setSelectedItemId, setSelectedItemIds]);
 
   const handleToggleScissors = useCallback(() => {
     if (isScissorsActive) {
@@ -82,8 +85,20 @@ export function useCanvasUIHandlers({
     }
   }, [isScissorsActive, activateSelect, activateScissors, setSelectedItemId, setSelectedItemIds]);
 
+  const handleToggleAttach = useCallback(() => {
+    if (isAttachActive) {
+      activateSelect();
+    } else {
+      activateAttach();
+      // Se houver um item selecionado que seja nota, mantemos ele como base da seleção?
+      // Melhor limpar e deixar o usuário selecionar o que quer anexar a quê.
+      setSelectedItemId(null);
+      setSelectedItemIds([]);
+    }
+  }, [isAttachActive, activateSelect, activateAttach, setSelectedItemId, setSelectedItemIds]);
+
   const handleToggleSplitMode = useCallback(() => {
-    setIsSplitModeActive(prev => !prev);
+    setIsSplitModeActive((prev) => !prev);
   }, [setIsSplitModeActive]);
 
   return {
@@ -99,6 +114,7 @@ export function useCanvasUIHandlers({
     setActiveCollageGroupId,
     handleSelectItem,
     handleToggleScissors,
+    handleToggleAttach,
     handleToggleSplitMode
   };
 }

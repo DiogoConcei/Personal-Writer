@@ -242,7 +242,7 @@ export const FocusModal: React.FC<FocusModalProps> = ({
     if (activeTool === 'edit' && entity.type === 'note') {
       return (
         <div className={styles.editModeContainer}>
-          <Editor />
+          <Editor isCanvasMode={true} />
         </div>
       );
     }

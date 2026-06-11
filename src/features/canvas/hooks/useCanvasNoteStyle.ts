@@ -42,9 +42,23 @@ export function useCanvasNoteStyle({
     updateSelectedNoteStyle({ fontSize: `${newSize}px` });
   }, [selectedNoteEntity, selectedItemId, updateSelectedNoteStyle]);
 
+  const handleFontFamilyChange = useCallback((fontFamily: string) => {
+    if (!selectedNoteEntity || !selectedItemId) return;
+    updateSelectedNoteStyle({ fontFamily });
+  }, [selectedNoteEntity, selectedItemId, updateSelectedNoteStyle]);
+
+  const toggleBold = useCallback(() => {
+    if (!selectedNoteEntity || !selectedItemId) return;
+    const currentWeight = selectedNoteEntity.style?.fontWeight || 'normal';
+    const newWeight = currentWeight === 'bold' || currentWeight === '600' || currentWeight === '700' ? 'normal' : 'bold';
+    updateSelectedNoteStyle({ fontWeight: newWeight });
+  }, [selectedNoteEntity, selectedItemId, updateSelectedNoteStyle]);
+
   return {
     selectedNoteEntity,
     updateSelectedNoteStyle,
-    handleFontSizeChange
+    handleFontSizeChange,
+    handleFontFamilyChange,
+    toggleBold
   };
 }

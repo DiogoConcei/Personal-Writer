@@ -1,6 +1,7 @@
 import { useCanvasControls } from './CanvasControls';
 import { NoteConfigPanel } from '../NoteConfigPanel/NoteConfigPanel';
 import { PostItConfigPanel } from '../PostItConfigPanel/PostItConfigPanel';
+import { PageConfigPanel } from '../PageConfigPanel/PageConfigPanel';
 import { DrawingStylePanel } from '@/shared/components/DrawingStylePanel/DrawingStylePanel';
 import { TextStylePanel } from '../TextStylePanel/TextStylePanel';
 import styles from './CanvasControls.module.scss';
@@ -23,8 +24,16 @@ export function Sidebar({
   togglePostItBold,
   handlePostItFontFamilyChange,
   onAddPage,
+  selectedPageEntity,
+  updateSelectedPageStyle,
+  handlePageFontSizeChange,
+  handlePageFontFamilyChange,
+  togglePageBold,
   isCollageActive,
   activateCollage,
+  isAttachActive,
+  onToggleAttach,
+  onBatchAttach,
   selectedItemIds = [],
   canConfirmCollage,
   onConfirmCollage,
@@ -83,12 +92,27 @@ export function Sidebar({
           </header>
 
           {selectedNoteEntity && (
-            <NoteConfigPanel
-              selectedNoteEntity={selectedNoteEntity}
-              handleFontSizeChange={handleFontSizeChange}
-              updateSelectedNoteStyle={updateSelectedNoteStyle}
-              setIsNoteGalleryOpen={(isOpen) => isOpen ? open('note') : undefined}
-            />
+            <>
+              <NoteConfigPanel
+                selectedNoteEntity={selectedNoteEntity}
+                handleFontSizeChange={handleFontSizeChange}
+                updateSelectedNoteStyle={updateSelectedNoteStyle}
+                setIsNoteGalleryOpen={(isOpen) => isOpen ? open('note') : undefined}
+              />
+
+              {isAttachActive && (
+                <div className={styles.collageSelectionStatus} style={{ margin: 'var(--spacing-md)' }}>
+                  <p>Selecionados: {selectedItemIds.length}</p>
+                  <button 
+                    className={`${styles.menuButton} ${styles.confirmButton}`}
+                    onClick={onBatchAttach}
+                    style={{ width: '100%', marginTop: '8px' }}
+                  >
+                    Confirmar Anexo
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       );
@@ -123,6 +147,41 @@ export function Sidebar({
               updateSelectedPostItStyle={updateSelectedPostItStyle || (() => {})}
               toggleBold={togglePostItBold || (() => {})}
               handleFontFamilyChange={handlePostItFontFamilyChange || (() => {})}
+            />
+          )}
+        </>
+      );
+    }
+
+    if (sideMenuMode === "pages") {
+      return (
+        <>
+          <header className={styles.subHeader}>
+            <button
+              className={styles.subBackButton}
+              onClick={() => setSideMenuMode("main")}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h2>Configurar Página</h2>
+          </header>
+
+          {selectedPageEntity && (
+            <PageConfigPanel
+              selectedPageEntity={selectedPageEntity}
+              handleFontSizeChange={handlePageFontSizeChange || (() => {})}
+              updateSelectedPageStyle={updateSelectedPageStyle || (() => {})}
+              handleFontFamilyChange={handlePageFontFamilyChange || (() => {})}
+              toggleBold={togglePageBold || (() => {})}
             />
           )}
         </>
@@ -225,31 +284,10 @@ export function Sidebar({
             Imagem
           </button>
 
-          <div
-            style={{
-              height: "1px",
-              backgroundColor: "var(--color-border)",
-              margin: "var(--spacing-xs) 0",
-              opacity: 0.5,
-            }}
-          />
-
-          <button className={styles.menuButton}>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12h14" />
-              <path d="m13 18 6-6-6-6" />
-            </svg>
-            Vínculo
-          </button>
-
-          <button className={styles.menuButton}>
+          <button 
+            className={`${styles.menuButton} ${isAttachActive ? styles.active : ""}`}
+            onClick={onToggleAttach}
+          >
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -262,6 +300,18 @@ export function Sidebar({
             </svg>
             Anexar
           </button>
+
+          {isAttachActive && (
+            <div className={styles.collageSelectionStatus}>
+              <p>Selecionados: {selectedItemIds.length}</p>
+              <button 
+                className={`${styles.menuButton} ${styles.confirmButton}`}
+                onClick={onBatchAttach}
+              >
+                Confirmar Anexo
+              </button>
+            </div>
+          )}
 
           <button
             className={`${styles.menuButton} ${isSepararActive ? styles.active : ""}`}

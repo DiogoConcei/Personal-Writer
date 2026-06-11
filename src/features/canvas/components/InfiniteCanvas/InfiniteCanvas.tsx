@@ -8,6 +8,7 @@ import { CanvasControls } from "../CanvasControls/CanvasControls";
 import { CanvasToolbar } from "./components/CanvasToolbar/CanvasToolbar";
 import { CollageControls } from "./components/CollageControls/CollageControls";
 import { CanvasViewport } from "./components/CanvasViewport";
+import { AnyCanvasEntity } from "@/shared/types";
 
 /**
  * InfiniteCanvas (Refatorado v1.5)
@@ -18,7 +19,6 @@ export default function InfiniteCanvas() {
   const {
     containerRef,
     rootPath,
-    setActivePanel,
     drawings,
     removeDrawing,
     modalControl,
@@ -30,11 +30,12 @@ export default function InfiniteCanvas() {
     styles: canvasStyles,
     history,
     drawing,
-    handlers
+    handlers,
+    marquee
   } = useCanvasOrchestrator();
 
   const { zoom, viewState, isPanning, isSpacePressed, zoomIn, zoomOut, resetView, handleMouseDown, screenToCanvas } = engine;
-  const { activeTool, isPencilActive, isEraserActive, isScissorsActive, isTextActive, isPanActive, isCollageActive } = tools;
+  const { activeTool, isPencilActive, isEraserActive, isScissorsActive, isTextActive, isPanActive, isCollageActive, isAttachActive } = tools;
   const { open } = modalControl;
 
   return (
@@ -92,8 +93,16 @@ export default function InfiniteCanvas() {
               const id = entities.addPage();
               if (id) ui.handleSelectItem(id);
             }}
+            selectedPageEntity={canvasStyles.selectedNoteEntity?.type === 'page' ? canvasStyles.selectedNoteEntity : undefined}
+            updateSelectedPageStyle={canvasStyles.updateSelectedNoteStyle}
+            handlePageFontSizeChange={canvasStyles.handleFontSizeChange}
+            handlePageFontFamilyChange={canvasStyles.handleNoteFontFamilyChange}
+            togglePageBold={canvasStyles.toggleNoteBold}
             isCollageActive={isCollageActive}
             activateCollage={tools.activateCollage}
+            isAttachActive={isAttachActive}
+            onToggleAttach={ui.handleToggleAttach}
+            onBatchAttach={handlers.handleBatchAttach}
             selectedItemIds={ui.selectedItemIds}
             canConfirmCollage={collage.canConfirmCollage}
             onConfirmCollage={collage.handleConfirmCollage}
@@ -131,6 +140,7 @@ export default function InfiniteCanvas() {
         visibleEntities={entities.visibleEntities}
         selectedItemId={ui.selectedItemId}
         selectedItemIds={ui.selectedItemIds}
+        marquee={marquee}
         onMouseDown={(e) => {
           if (handleMouseDown(e, isPanActive)) return;
           if (isPencilActive) drawing.startDrawing(e);
@@ -140,6 +150,8 @@ export default function InfiniteCanvas() {
               const id = entities.addText({ text: '' }, pos);
               if (id) ui.setSelectedItemId(id as string);
             }
+          } else if (activeTool === 'select') {
+            handlers.startMarquee(e);
           } else ui.setSelectedItemId(null);
         }}
         onSelectItem={ui.handleSelectItem}
@@ -156,6 +168,7 @@ export default function InfiniteCanvas() {
         bringToFront={entities.bringToFront}
         sendToBack={entities.sendToBack}
         removeDrawing={removeDrawing}
+        onDropEntityOnNote={handlers.handleDropEntityOnNote}
       />
     </div>
   );

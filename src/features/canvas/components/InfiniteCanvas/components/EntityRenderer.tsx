@@ -18,7 +18,8 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
   onRemove,
   onStartTransform,
   onEndTransform,
-  onOpenModal
+  onOpenModal,
+  onDropEntity
 }) => {
   const isSelected = selectedItemIds.includes(entity.id);
 
@@ -33,6 +34,7 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({
     onStart: onStartTransform,
     onEnd: () => onEndTransform(entity.id),
     onFocus: () => onOpenModal("focus", entity),
+    onDropEntity
   };
 
   switch (entity.type) {

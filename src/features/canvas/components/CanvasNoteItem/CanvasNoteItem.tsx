@@ -82,6 +82,10 @@ export function CanvasNoteItem({
         const text = await readFile(data.noteId);
         let markdown = text.replace(/^---\n[\s\S]*?\n---\n/, '');
 
+        // 0. Ocultar links de PDF na visualização do Canvas (Mantendo no arquivo)
+        const pdfPattern = /\[PDF: .*?\]\(.*?\)/g;
+        markdown = markdown.replace(pdfPattern, '');
+
         // Resolução de Imagens (Pre-processamento para paridade com o Editor)
         if (rootPath) {
           // 1. Resolver Links Obsidian ![[imagem.png]]
@@ -125,8 +129,6 @@ export function CanvasNoteItem({
         }
 
         const renderedHtml = md.render(markdown);
-        console.log('[CanvasNoteItem] Markdown processado:', markdown);
-        console.log('[CanvasNoteItem] HTML renderizado:', renderedHtml);
         setHtml(renderedHtml);
       } catch (err) {
         setHtml('<p>Erro ao carregar nota.</p>');

@@ -6,6 +6,7 @@ import { UseCanvasHotkeysOptions } from '@/shared/types';
  */
 export function useCanvasHotkeys({
   selectedItemId,
+  selectedItemIds = [],
   onRemove,
   onDeselect,
   onUndo,
@@ -34,11 +35,18 @@ export function useCanvasHotkeys({
         return;
       }
 
-      if (!selectedItemId) return;
+      const hasSelection = selectedItemId || selectedItemIds.length > 0;
+      if (!hasSelection) return;
 
       if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
-        onRemove(selectedItemId);
+        
+        if (selectedItemIds.length > 0) {
+          selectedItemIds.forEach(id => onRemove(id));
+        } else if (selectedItemId) {
+          onRemove(selectedItemId);
+        }
+        
         onDeselect();
       }
     };

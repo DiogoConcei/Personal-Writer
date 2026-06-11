@@ -23,24 +23,49 @@ import { DictionaryContextMenu } from "../DictionaryContextMenu/DictionaryContex
 import { TableOfContents } from "../TableOfContents/TableOfContents";
 import { EditorRuler } from "./EditorRuler";
 
+import { save as saveDialog } from "@tauri-apps/plugin-dialog";
+import { exportPdf } from "@/tauri-bridge";
+
 // Utils e Tipos
 import { useUIStore } from "@/store/uiStore";
-import { ImageIcon, FileText, List, History, Ruler } from "lucide-react";
+import { ImageIcon, FileText, List, History, Ruler, FileDown } from "lucide-react";
 
 import styles from "./Editor.module.scss";
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"];
 const PDF_EXTENSIONS = [".pdf"];
 
-export default function Editor() {
+export default function Editor({ isCanvasMode = false }: { isCanvasMode?: boolean }) {
   const { activeFile, rootPath } = useWorkspaceStore();
-  const { editorModals, setEditorModal } = useUIStore();
+  const { editorModals, setEditorModal, addNotification } = useUIStore();
   const { metadata, typography, setMetadata, save } = useEditorStore();
 
   const [templateToApply, setTemplateToApply] = useState<string | null>(null);
 
+  const handleExportPdf = async () => {
+    if (!activeFile) return;
+
+    const defaultName = activeFile.split(/[\\/]/).pop()?.replace(".md", ".pdf") || "nota.pdf";
+
+    const path = await saveDialog({
+      filters: [{ name: "PDF", extensions: ["pdf"] }],
+      defaultPath: defaultName,
+    });
+
+    if (path) {
+      try {
+        await exportPdf(path);
+        addNotification("PDF exportado com sucesso!", "success");
+      } catch (error) {
+        console.error("Erro ao exportar PDF:", error);
+        addNotification("Falha ao exportar PDF.", "error");
+      }
+    }
+  };
+
   // 1. Configuração do Core do Editor (Agnóstico de Persistência/Métricas)
   const editor = useEditorSetup({
+    isCanvasMode,
     onUpdate: () => {
       // O editor apenas sinaliza mudança.
       // Hooks especializados (Analytics/Persistence) ouvem e agem via listeners internos.
@@ -157,6 +182,11 @@ export default function Editor() {
             icon={History}
             label="Histórico"
             onClick={() => setEditorModal("showHistory", true)}
+          />
+          <EditorToolbar.Action
+            icon={FileDown}
+            label="Exportar PDF"
+            onClick={handleExportPdf}
           />
         </EditorToolbar>
       )}

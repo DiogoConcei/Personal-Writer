@@ -26,7 +26,7 @@ export interface CanvasModalsState {
   openModal: CanvasModalType;
   splittingItem: SplittingItem | null;
   focusItem: AnyCanvasEntity | null;
-  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text';
+  sideMenuMode: 'main' | 'notes' | 'drawing' | 'postits' | 'text' | 'pages';
   isGroupingActive: boolean;
   groupingSourceId: string | null;
 }
@@ -34,7 +34,7 @@ export interface CanvasModalsState {
 export interface CanvasControlsContextValue extends CanvasModalsState {
   open: (type: CanvasModalType, data?: unknown) => void;
   close: () => void;
-  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text') => void;
+  setSideMenuMode: (mode: 'main' | 'notes' | 'drawing' | 'postits' | 'text' | 'pages') => void;
   startGrouping: (id: string) => void;
   cancelGrouping: () => void;
 }
@@ -65,6 +65,7 @@ export interface CanvasNoteItemProps {
   onSplit: (page?: number) => void;
   onFocus: () => void;
   onPageChange?: (page: number) => void;
+  onDropEntity?: (sourceData: any) => void;
 }
 
 export interface CanvasImageItemProps {
@@ -151,6 +152,14 @@ export interface NoteConfigPanelProps {
   setIsNoteGalleryOpen: (isOpen: boolean) => void;
 }
 
+export interface PageConfigPanelProps {
+  selectedPageEntity: AnyCanvasEntity;
+  handleFontSizeChange: (increment: number) => void;
+  updateSelectedPageStyle: (styleUpdates: Record<string, string | number>) => void;
+  handleFontFamilyChange: (fontFamily: string) => void;
+  toggleBold: () => void;
+}
+
 export interface PostItConfigPanelProps {
   selectedPostItEntity: AnyCanvasEntity;
   handleFontSizeChange: (increment: number) => void;
@@ -205,8 +214,16 @@ export interface SidebarProps {
   togglePostItBold?: () => void;
   handlePostItFontFamilyChange?: (fontFamily: string) => void;
   onAddPage?: () => void;
+  selectedPageEntity?: AnyCanvasEntity;
+  updateSelectedPageStyle?: (styleUpdates: Record<string, string | number>) => void;
+  handlePageFontSizeChange?: (increment: number) => void;
+  handlePageFontFamilyChange?: (fontFamily: string) => void;
+  togglePageBold?: () => void;
   isCollageActive?: boolean;
   activateCollage?: () => void;
+  isAttachActive?: boolean;
+  onToggleAttach?: () => void;
+  onBatchAttach?: () => void;
   selectedItemIds?: string[];
   canConfirmCollage?: boolean;
   onConfirmCollage?: () => void;
@@ -235,6 +252,7 @@ export interface EntityRendererProps {
   onStartTransform: () => void;
   onEndTransform: (id: string) => void;
   onOpenModal: (type: CanvasModalType, data?: unknown) => void;
+  onDropEntity?: (sourceData: any) => void;
 }
 
 export interface CanvasToolbarProps {
@@ -261,6 +279,14 @@ export interface CollageControlsProps {
   onCancel: () => void;
 }
 
+export interface Marquee {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  isVisible: boolean;
+}
+
 export interface CanvasViewportProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   zoom: number;
@@ -280,6 +306,7 @@ export interface CanvasViewportProps {
   visibleEntities: AnyCanvasEntity[];
   selectedItemId: string | null;
   selectedItemIds: string[];
+  marquee?: Marquee;
   onMouseDown: (e: React.MouseEvent) => void;
   onSelectItem: (id: string) => void;
   onDeselect: () => void;
@@ -292,4 +319,5 @@ export interface CanvasViewportProps {
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
   removeDrawing: (id: string) => void;
+  onDropEntityOnNote?: (noteEntityId: string, sourceData: any) => void;
 }

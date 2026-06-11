@@ -57,6 +57,7 @@ pub fn run() {
             commands::fs::scan_workspace_pdfs,
             commands::fs::search_files_by_name,
             commands::fs::export_workspace_zip,
+            commands::pdf::export_pdf,
             commands::plugins::toggle_plugin_daemon
         ])
         .run(tauri::generate_context!())

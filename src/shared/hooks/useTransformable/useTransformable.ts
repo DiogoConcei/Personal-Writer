@@ -47,28 +47,36 @@ export function useTransformable({
 
     if (shouldIgnore) return;
 
-    if (onStart) onStart();
-
     const startX = e.clientX;
     const startY = e.clientY;
     const initialX = x;
     const initialY = y;
+    let isDragging = false;
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
-      onUpdate({ x: initialX + dx, y: initialY + dy });
+      
+      // KI-023 / KI-037: Threshold de 5px para evitar movimentos acidentais em cliques
+      if (!isDragging && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        isDragging = true;
+        if (onStart) onStart();
+      }
+
+      if (isDragging) {
+        onUpdate({ x: initialX + dx, y: initialY + dy });
+      }
     };
 
     const onMouseUp = () => {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
-      if (onEnd) onEnd();
+      if (isDragging && onEnd) onEnd();
     };
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, [x, y, onUpdate, onSelect, onEnd, ignoreSelectors]);
+  }, [x, y, onUpdate, onSelect, onStart, onEnd, ignoreSelectors]);
 
   const handleResizeStart = useCallback((direction: 'tl' | 'tr' | 'bl' | 'br', e: React.MouseEvent) => {
     e.preventDefault();

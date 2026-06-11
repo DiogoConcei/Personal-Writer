@@ -16,17 +16,22 @@ import { useCanvasTextStyle } from "./useCanvasTextStyle";
 import { useCanvasGroupMove } from "./useCanvasGroupMove";
 import { useCanvasCollage } from "./useCanvasCollage";
 import { useCanvasUIHandlers } from "./useCanvasUIHandlers";
+import { useCanvasMarquee } from "./useCanvasMarquee";
 import { useHistory } from "@/shared/hooks/useHistory";
 import { useCanvasDrawing } from "@/shared/hooks/useCanvasDrawing";
 import { useTransformable } from "@/shared/hooks/useTransformable/useTransformable";
+import { readFile, writeFile } from "@/tauri-bridge";
+import { doRectanglesOverlap } from "@/shared/utils/ui";
 
 // Types
-import { AnyCanvasEntity, CanvasHistoryState, SplitActionData } from "@/shared/types";
+import { AnyCanvasEntity, CanvasHistoryState, SplitActionData, NoteData, PostItData, ImageData, PdfData, SplittingItem } from "@/shared/types";
 
 export function useCanvasOrchestrator() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { rootPath } = useWorkspaceStore();
+  const { addNotification } = useUIStore();
   const setActivePanel = useUIStore((state) => state.setActivePanel);
+  const [splittingItem, _setSplittingItem] = useState<SplittingItem | null>(null);
 
   const { 
     drawings, 
@@ -64,7 +69,7 @@ export function useCanvasOrchestrator() {
     close: handleCloseFocus
   };
 
-  const { focusItem, openModal, setSideMenuMode } = modalControl;
+  const { setSideMenuMode } = modalControl;
 
   const engine = useCanvasEngine({
     containerRef,
@@ -88,6 +93,7 @@ export function useCanvasOrchestrator() {
     isTextActive,
     isPanActive,
     isCollageActive,
+    isAttachActive,
     activateSelect,
     activatePan,
     activatePencil,
@@ -95,6 +101,7 @@ export function useCanvasOrchestrator() {
     activateScissors,
     activateText,
     activateCollage,
+    activateAttach,
   } = useCanvasTools('select');
 
   // Centralização de estado da UI (Zero Duplicidade)
@@ -135,8 +142,10 @@ export function useCanvasOrchestrator() {
     isTextActive,
     isCollageActive,
     isScissorsActive,
+    isAttachActive,
     activateSelect,
     activateScissors,
+    activateAttach,
     bringToFront,
     setSideMenuMode,
     // Passagem de estado centralizado
@@ -173,6 +182,108 @@ export function useCanvasOrchestrator() {
     takeSnapshot
   });
 
+  const takeSnapshotNoArgs = useCallback(() => {
+    takeSnapshot({ entities, drawings });
+  }, [takeSnapshot, entities, drawings]);
+
+  const handleDropEntityOnNote = useCallback(async (noteEntityId: string, sourceData: any) => {
+    if (sourceData.type !== 'postit' && sourceData.type !== 'image' && sourceData.type !== 'pdf') return;
+
+    const noteEntity = entities.find(e => e.id === noteEntityId);
+    if (!noteEntity || noteEntity.type !== 'note') return;
+
+    takeSnapshot({ entities, drawings });
+
+    try {
+      const noteData = noteEntity.data as NoteData;
+      const currentContent = await readFile(noteData.noteId);
+      
+      let contentToAdd = '';
+      if (sourceData.type === 'postit') {
+        contentToAdd = `<div data-type="post-it" data-background-color="${sourceData.backgroundColor}" data-color="${sourceData.color}" style="background-color: ${sourceData.backgroundColor}; color: ${sourceData.color};">${sourceData.text || ''}</div>`;
+      } else if (sourceData.type === 'image') {
+        // Formato compatível com a extensão CustomImage do editor
+        const width = sourceData.width ? `${sourceData.width}px` : '300px';
+        contentToAdd = `<img src="${sourceData.path}" width="${width}" data-layout="inline" />`;
+      } else if (sourceData.type === 'pdf') {
+        // Padrão estabelecido: [PDF: Nome](caminho)
+        const fileName = sourceData.path.split(/[\\\/]/).pop() || 'Documento PDF';
+        contentToAdd = `[PDF: ${fileName}](${sourceData.path})`;
+      }
+      
+      const newContent = currentContent + "\n\n" + contentToAdd;
+      await writeFile(noteData.noteId, newContent);
+
+      // Remover a entidade original do canvas
+      handleRemoveEntity(sourceData.id);
+      
+      // Forçar atualização da UI do CanvasNoteItem
+      useUIStore.getState().triggerFileSaveTick();
+      
+      const typeLabels: Record<string, string> = { postit: 'Post-it', image: 'Imagem', pdf: 'PDF' };
+      addNotification(`${typeLabels[sourceData.type]} mesclado à nota!`, "success");
+    } catch (error) {
+      console.error(`Erro ao mesclar ${sourceData.type}:`, error);
+      addNotification(`Falha ao mesclar ${sourceData.type}.`, "error");
+    }
+
+    useUIStore.getState().resetDrag();
+  }, [entities, drawings, takeSnapshot, handleRemoveEntity, addNotification]);
+
+  const handleBatchAttach = useCallback(async () => {
+    const selectedEntities = entities.filter(e => selectedItemIds.includes(e.id));
+    const noteTarget = selectedEntities.find(e => e.type === 'note') || entities.find(e => e.id === selectedItemId && e.type === 'note');
+
+    if (!noteTarget) {
+      addNotification("Selecione pelo menos uma nota como destino do anexo.", "error");
+      return;
+    }
+
+    const sources = selectedEntities.filter(e => e.id !== noteTarget.id && (e.type === 'postit' || e.type === 'image' || e.type === 'pdf'));
+
+    if (sources.length === 0) {
+      addNotification("Nenhum item válido (Post-it, Imagem ou PDF) selecionado para anexo.", "info");
+      return;
+    }
+
+    takeSnapshot({ entities, drawings });
+
+    try {
+      const noteData = noteTarget.data as NoteData;
+      let currentContent = await readFile(noteData.noteId);
+      
+      for (const source of sources) {
+        let contentToAdd = '';
+        if (source.type === 'postit') {
+          const sData = source.data as PostItData;
+          contentToAdd = `<div data-type="post-it" data-background-color="${source.style?.backgroundColor || '#fef3c7'}" data-color="${source.style?.color || '#92400e'}" style="background-color: ${source.style?.backgroundColor || '#fef3c7'}; color: ${source.style?.color || '#92400e'};">${sData.text || ''}</div>`;
+        } else if (source.type === 'image') {
+          const sData = source.data as ImageData;
+          const width = source.width ? `${source.width}px` : '300px';
+          contentToAdd = `<img src="${sData.path}" width="${width}" data-layout="inline" />`;
+        } else if (source.type === 'pdf') {
+          const sData = source.data as PdfData;
+          const fileName = sData.path.split(/[\\\/]/).pop() || 'Documento PDF';
+          contentToAdd = `[PDF: ${fileName}](${sData.path})`;
+        }
+        
+        currentContent += "\n\n" + contentToAdd;
+        handleRemoveEntity(source.id);
+      }
+
+      await writeFile(noteData.noteId, currentContent);
+      useUIStore.getState().triggerFileSaveTick();
+      addNotification(`${sources.length} item(ns) anexado(s) à nota!`, "success");
+      
+      activateSelect();
+      uiHandlers.setSelectedItemIds([]);
+      uiHandlers.setSelectedItemId(noteTarget.id);
+    } catch (error) {
+      console.error("Erro no anexo em lote:", error);
+      addNotification("Falha ao anexar itens.", "error");
+    }
+  }, [selectedItemIds, selectedItemId, entities, drawings, takeSnapshot, handleRemoveEntity, addNotification, activateSelect, uiHandlers.setSelectedItemIds, uiHandlers.setSelectedItemId]);
+
   const { handleUpdateWithGroup, handleTransformEnd } = useCanvasGroupMove({
     entities,
     drawings,
@@ -183,6 +294,62 @@ export function useCanvasOrchestrator() {
     activeCollageGroupId,
     takeSnapshot
   });
+
+  const handleTransformEndWithMerge = useCallback((id: string) => {
+    handleTransformEnd(id);
+
+    const movedEntity = entities.find(e => e.id === id);
+    if (!movedEntity || (movedEntity.type !== 'postit' && movedEntity.type !== 'image' && movedEntity.type !== 'pdf')) return;
+
+    const itemRect = { 
+      x: movedEntity.x, 
+      y: movedEntity.y, 
+      width: movedEntity.width || 100, 
+      height: (movedEntity as any).height || 100 
+    };
+
+    const targetNote = entities.find(other => {
+      if (other.id === movedEntity.id || other.type !== 'note') return false;
+      const otherRect = { 
+        x: other.x, 
+        y: other.y, 
+        width: other.width || 200, 
+        height: (other as any).height || 400 
+      };
+      return doRectanglesOverlap(itemRect, otherRect);
+    });
+
+    if (targetNote) {
+      let sourceData: any;
+      
+      if (movedEntity.type === 'postit') {
+        sourceData = { 
+          type: 'postit', 
+          id: movedEntity.id, 
+          text: (movedEntity.data as PostItData).text,
+          backgroundColor: (movedEntity.style?.backgroundColor as string) || '#fef3c7',
+          color: (movedEntity.style?.color as string) || '#92400e'
+        };
+      } else if (movedEntity.type === 'image') {
+        sourceData = {
+          type: 'image',
+          id: movedEntity.id,
+          path: (movedEntity.data as ImageData).path,
+          width: movedEntity.width
+        };
+      } else if (movedEntity.type === 'pdf') {
+        sourceData = {
+          type: 'pdf',
+          id: movedEntity.id,
+          path: (movedEntity.data as PdfData).path
+        };
+      }
+      
+      if (sourceData) {
+        handleDropEntityOnNote(targetNote.id, sourceData);
+      }
+    }
+  }, [entities, handleTransformEnd, handleDropEntityOnNote]);
 
   const handleUpdateWithSnapshot = useCallback((id: string, updates: Partial<AnyCanvasEntity>) => {
     handleUpdateWithGroup(id, updates);
@@ -236,12 +403,36 @@ export function useCanvasOrchestrator() {
 
   const { performSplit } = useCanvasSplit({ entities, setEntities });
 
-  const { selectedNoteEntity, updateSelectedNoteStyle, handleFontSizeChange } =
-    useCanvasNoteStyle({
-      selectedItemId: uiHandlers.selectedItemId,
-      entities,
-      onUpdate: handleUpdateWithSnapshot,
-    });
+  const { marquee, startMarquee, updateMarquee, endMarquee } = useCanvasMarquee({
+    entities,
+    drawings,
+    onSelectItems: uiHandlers.setSelectedItemIds,
+    screenToCanvas,
+    isEnabled: activeTool === 'select'
+  });
+
+  useEffect(() => {
+    if (marquee.isVisible) {
+      window.addEventListener('mousemove', updateMarquee);
+      window.addEventListener('mouseup', endMarquee);
+      return () => {
+        window.removeEventListener('mousemove', updateMarquee);
+        window.removeEventListener('mouseup', endMarquee);
+      };
+    }
+  }, [marquee.isVisible, updateMarquee, endMarquee]);
+
+  const { 
+    selectedNoteEntity, 
+    updateSelectedNoteStyle, 
+    handleFontSizeChange,
+    handleFontFamilyChange: handleNoteFontFamilyChange,
+    toggleBold: toggleNoteBold
+  } = useCanvasNoteStyle({
+    selectedItemId: uiHandlers.selectedItemId,
+    entities,
+    onUpdate: handleUpdateWithSnapshot,
+  });
 
   const {
     selectedPostItEntity,
@@ -268,6 +459,7 @@ export function useCanvasOrchestrator() {
 
   useCanvasHotkeys({
     selectedItemId: uiHandlers.selectedItemId,
+    selectedItemIds: uiHandlers.selectedItemIds,
     onRemove: handleRemoveWithSnapshot,
     onDeselect: () => {
       uiHandlers.setSelectedItemId(null);
@@ -301,10 +493,6 @@ export function useCanvasOrchestrator() {
     return !!(entity?.groupId || drawing?.groupId);
   });
 
-  const takeSnapshotNoArgs = useCallback(() => {
-    takeSnapshot({ entities, drawings });
-  }, [takeSnapshot, entities, drawings]);
-
   return {
     containerRef,
     rootPath,
@@ -321,6 +509,7 @@ export function useCanvasOrchestrator() {
       isTextActive,
       isPanActive,
       isCollageActive,
+      isAttachActive,
       activateSelect,
       activatePan,
       activatePencil,
@@ -328,6 +517,7 @@ export function useCanvasOrchestrator() {
       activateScissors,
       activateText,
       activateCollage,
+      activateAttach,
     },
     ui: uiHandlers,
     entities: {
@@ -354,6 +544,8 @@ export function useCanvasOrchestrator() {
       selectedNoteEntity,
       updateSelectedNoteStyle,
       handleFontSizeChange,
+      handleNoteFontFamilyChange,
+      toggleNoteBold,
       selectedPostItEntity,
       updateSelectedPostItStyle,
       handlePostItFontSizeChange,
@@ -377,12 +569,16 @@ export function useCanvasOrchestrator() {
     handlers: {
       handleUpdateWithSnapshot,
       handleRemoveWithSnapshot,
-      handleTransformEnd,
+      handleTransformEnd: handleTransformEndWithMerge,
       handleConfirmSplit,
       handleRotateStart,
       handleOpenFocus,
       handleCloseFocus,
-      screenToCanvas
-    }
+      screenToCanvas,
+      startMarquee,
+      handleDropEntityOnNote,
+      handleBatchAttach
+    },
+    marquee
   };
 }

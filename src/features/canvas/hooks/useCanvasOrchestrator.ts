@@ -24,7 +24,7 @@ import { readFile, writeFile } from "@/tauri-bridge";
 import { doRectanglesOverlap } from "@/shared/utils/ui";
 
 // Types
-import { AnyCanvasEntity, CanvasHistoryState, SplitActionData, NoteData, PostItData, ImageData, PdfData, SplittingItem } from "@/shared/types";
+import { AnyCanvasEntity, CanvasHistoryState, SplitActionData, NoteData, PostItData, ImageData, PdfData, SplittingItem, PageData } from "@/shared/types";
 
 export function useCanvasOrchestrator() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -187,7 +187,7 @@ export function useCanvasOrchestrator() {
   }, [takeSnapshot, entities, drawings]);
 
   const handleDropEntityOnNote = useCallback(async (noteEntityId: string, sourceData: any) => {
-    if (sourceData.type !== 'postit' && sourceData.type !== 'image' && sourceData.type !== 'pdf') return;
+    if (sourceData.type !== 'postit' && sourceData.type !== 'image' && sourceData.type !== 'pdf' && sourceData.type !== 'page') return;
 
     const noteEntity = entities.find(e => e.id === noteEntityId);
     if (!noteEntity || noteEntity.type !== 'note') return;
@@ -201,6 +201,8 @@ export function useCanvasOrchestrator() {
       let contentToAdd = '';
       if (sourceData.type === 'postit') {
         contentToAdd = `<div data-type="post-it" data-background-color="${sourceData.backgroundColor}" data-color="${sourceData.color}" style="background-color: ${sourceData.backgroundColor}; color: ${sourceData.color};">${sourceData.text || ''}</div>`;
+      } else if (sourceData.type === 'page') {
+        contentToAdd = sourceData.title || '';
       } else if (sourceData.type === 'image') {
         // Formato compatível com a extensão CustomImage do editor
         const width = sourceData.width ? `${sourceData.width}px` : '300px';
@@ -220,7 +222,7 @@ export function useCanvasOrchestrator() {
       // Forçar atualização da UI do CanvasNoteItem
       useUIStore.getState().triggerFileSaveTick();
       
-      const typeLabels: Record<string, string> = { postit: 'Post-it', image: 'Imagem', pdf: 'PDF' };
+      const typeLabels: Record<string, string> = { postit: 'Post-it', image: 'Imagem', pdf: 'PDF', page: 'Página' };
       addNotification(`${typeLabels[sourceData.type]} mesclado à nota!`, "success");
     } catch (error) {
       console.error(`Erro ao mesclar ${sourceData.type}:`, error);
@@ -239,10 +241,10 @@ export function useCanvasOrchestrator() {
       return;
     }
 
-    const sources = selectedEntities.filter(e => e.id !== noteTarget.id && (e.type === 'postit' || e.type === 'image' || e.type === 'pdf'));
+    const sources = selectedEntities.filter(e => e.id !== noteTarget.id && (e.type === 'postit' || e.type === 'image' || e.type === 'pdf' || e.type === 'page'));
 
     if (sources.length === 0) {
-      addNotification("Nenhum item válido (Post-it, Imagem ou PDF) selecionado para anexo.", "info");
+      addNotification("Nenhum item válido (Post-it, Imagem, PDF ou Página) selecionado para anexo.", "info");
       return;
     }
 
@@ -257,6 +259,9 @@ export function useCanvasOrchestrator() {
         if (source.type === 'postit') {
           const sData = source.data as PostItData;
           contentToAdd = `<div data-type="post-it" data-background-color="${source.style?.backgroundColor || '#fef3c7'}" data-color="${source.style?.color || '#92400e'}" style="background-color: ${source.style?.backgroundColor || '#fef3c7'}; color: ${source.style?.color || '#92400e'};">${sData.text || ''}</div>`;
+        } else if (source.type === 'page') {
+          const sData = source.data as PageData;
+          contentToAdd = sData.title || '';
         } else if (source.type === 'image') {
           const sData = source.data as ImageData;
           const width = source.width ? `${source.width}px` : '300px';
@@ -299,7 +304,7 @@ export function useCanvasOrchestrator() {
     handleTransformEnd(id);
 
     const movedEntity = entities.find(e => e.id === id);
-    if (!movedEntity || (movedEntity.type !== 'postit' && movedEntity.type !== 'image' && movedEntity.type !== 'pdf')) return;
+    if (!movedEntity || (movedEntity.type !== 'postit' && movedEntity.type !== 'image' && movedEntity.type !== 'pdf' && movedEntity.type !== 'page')) return;
 
     const itemRect = { 
       x: movedEntity.x, 
@@ -329,6 +334,12 @@ export function useCanvasOrchestrator() {
           text: (movedEntity.data as PostItData).text,
           backgroundColor: (movedEntity.style?.backgroundColor as string) || '#fef3c7',
           color: (movedEntity.style?.color as string) || '#92400e'
+        };
+      } else if (movedEntity.type === 'page') {
+        sourceData = {
+          type: 'page',
+          id: movedEntity.id,
+          title: (movedEntity.data as PageData).title
         };
       } else if (movedEntity.type === 'image') {
         sourceData = {

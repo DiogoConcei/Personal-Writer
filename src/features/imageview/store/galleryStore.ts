@@ -1,21 +1,7 @@
 import { create } from 'zustand';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { exists, readFile, writeFile } from '@/tauri-bridge';
-import { GalleryCollection } from '@/shared/types';
-
-interface GalleryState {
-  collections: GalleryCollection[];
-  isLoading: boolean;
-
-  loadCollections: () => Promise<void>;
-  saveCollections: () => Promise<void>;
-  createCollection: (name: string, images: string[], parentId?: string) => Promise<void>;
-  updateCollection: (id: string, updates: Partial<GalleryCollection>) => Promise<void>;
-  deleteCollection: (id: string) => Promise<void>;
-  addToCollection: (id: string, imagePaths: string[]) => Promise<void>;
-  removeFromCollection: (id: string, imagePath: string) => Promise<void>;
-  registerCollage: (imagePath: string) => Promise<void>;
-}
+import { GalleryState, GalleryCollection } from '@/shared/types';
 
 const CONFIG_FILE = '.gallery.json';
 

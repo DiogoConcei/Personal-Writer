@@ -174,3 +174,31 @@ export interface TableOfContentsProps {
   editor: Editor | null;
   onClose: () => void;
 }
+
+/**
+ * Estado da Store do Editor.
+ */
+export interface EditorState {
+  metadata: EditorMetadata;
+  markdownContent: string;
+  saveStatus: SaveStatus;
+  lastSavedAt: Date | null;
+  lastSnapshotAt: Date | null;
+  typography: Typography;
+  wordCount: number;
+  wordGoal: number;
+  sessionGoal: number;
+  sessionStartWordCount: number;
+
+  loadContent: (path: string) => Promise<string>;
+  setMarkdownContent: (content: string) => void;
+  setMetadata: (metadata: EditorMetadata) => void;
+  setMargins: (margins: EditorMargins) => void;
+  save: (path: string, workspaceRoot?: string) => Promise<boolean>;
+  setTypography: (type: Typography) => void;
+  setGoals: (wordGoal?: number, sessionGoal?: number) => void;
+  setWordCount: (count: number) => void;
+  setWordGoal: (goal: number) => void;
+  setSessionGoal: (goal: number) => void;
+  startNewSession: () => void;
+}

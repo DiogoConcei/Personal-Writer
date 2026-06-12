@@ -1,12 +1,8 @@
 import React from 'react';
 import { User, MapPin, FileText, X } from 'lucide-react';
 import styles from './TemplateGallery.module.scss';
-import { DEFAULT_TEMPLATES } from '../data/defaultTemplates';
-
-interface TemplateGalleryProps {
-  onSelect: (content: string) => void;
-  onClose: () => void;
-}
+import { DEFAULT_TEMPLATES } from '../../data/defaultTemplates';
+import { TemplateGalleryProps, Template } from '@/shared/types';
 
 export const TemplateGallery: React.FC<TemplateGalleryProps> = ({ onSelect, onClose }) => {
   const getIcon = (id: string) => {
@@ -26,7 +22,7 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({ onSelect, onCl
         </div>
         
         <div className={styles.grid}>
-          {DEFAULT_TEMPLATES.map(template => (
+          {DEFAULT_TEMPLATES.map((template: Template) => (
             <button 
               key={template.id} 
               className={styles.card}

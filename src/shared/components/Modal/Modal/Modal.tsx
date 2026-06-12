@@ -1,18 +1,8 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
+import { ModalProps } from '@/shared/types';
 import styles from './Modal.module.scss';
-
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title?: string;
-  children: React.ReactNode;
-  footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  showHeader?: boolean;
-  padding?: boolean;
-}
 
 export default function Modal({ 
   isOpen, 

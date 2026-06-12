@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
+import { useMesaTrabalhoStore } from '../../../store/moodBoardStore';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { X, Trash2, Map, Layers, Package, GripHorizontal } from 'lucide-react';
-import styles from './MesaTrabalho.module.scss';
+import styles from '../MesaTrabalho/MesaTrabalho.module.scss';
 
 import { CharacterDetailsModalProps } from '@/shared/types';
 

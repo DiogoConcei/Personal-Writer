@@ -8,7 +8,7 @@ import { removeDocumentFromMetadata, addDocumentToMetadata } from "@/shared/util
 
 // Componentes de Modal
 import ImageGallery from "@/features/SlashMenu/components/ImageGallery/ImageGallery";
-import { TemplateGallery } from "@/features/templates/components/TemplateGallery";
+import { TemplateGallery } from "@/features/templates/components/TemplateGallery/TemplateGallery";
 import { PdfGallery } from "@/features/references/components/PdfGallery/PdfGallery";
 import { DocumentModal } from "@/features/SlashMenu/components/DocumentModal/DocumentModal";
 import VersionHistory from "../../History/VersionHistory/VersionHistory";

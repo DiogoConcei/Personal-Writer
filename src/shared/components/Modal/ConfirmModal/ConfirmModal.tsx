@@ -1,17 +1,7 @@
 import Modal from '../Modal/Modal';
-import styles from './ConfirmModal.module.scss';
 import { HelpCircle } from 'lucide-react';
-
-interface ConfirmModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  variant?: 'primary' | 'danger';
-}
+import { ConfirmModalProps } from '@/shared/types';
+import styles from './ConfirmModal.module.scss';
 
 export default function ConfirmModal({ 
   isOpen, 

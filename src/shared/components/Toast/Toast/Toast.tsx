@@ -1,12 +1,8 @@
 import React from 'react';
 import { useUIStore } from '@/store/uiStore';
-import { ToastNotification } from '@/shared/types';
+import { ToastProps } from '@/shared/types';
 import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 import styles from './Toast.module.scss';
-
-interface ToastProps {
-  notification: ToastNotification;
-}
 
 export const Toast: React.FC<ToastProps> = ({ notification }) => {
   const { removeNotification } = useUIStore();

@@ -1,15 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { VirtualMasonryProps } from '@/shared/types';
 import styles from './VirtualMasonry.module.scss';
-
-interface VirtualMasonryProps<T> {
-  items: T[];
-  columnWidth: number;
-  gap: number;
-  renderItem: (item: T, style: React.CSSProperties, index: number) => React.ReactNode;
-  getItemKey: (item: T) => string;
-  getItemHeight: (item: T, actualWidth: number) => number;
-  buffer?: number;
-}
 
 export function VirtualMasonry<T>({
   items,

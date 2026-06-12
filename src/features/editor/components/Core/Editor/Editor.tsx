@@ -4,8 +4,7 @@ import { MetadataHeader } from "../../Headers/MetadataHeader/MetadataHeader";
 import { useEditorStore } from "../../../store/editorStore";
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
 import { useNativeDragDrop } from "@/shared/hooks/useNativeDragDrop/useNativeDragDrop";
-import { useImageManager } from "@/shared/hooks/useImageManager/useImageManager";
-import { useDocumentManager } from "@/shared/hooks/useDocumentManager/useDocumentManager";
+import { useMediaManager } from "@/shared/hooks/useMediaManager/useMediaManager";
 
 // Hooks Customizados
 import { useEditorDrop } from "../../../hooks/useEditorDrop";
@@ -80,9 +79,8 @@ export default function Editor({ isCanvasMode = false }: { isCanvasMode?: boolea
   const { contextMenu, handleContextMenu, closeContextMenu } =
     useEditorContextMenu(editor);
 
-  // 3. Drag & Drop Nativo (OS -> Editor)
-  const { uploadImages } = useImageManager();
-  const { handleUpload: uploadPdfs } = useDocumentManager();
+  // 3. Motor de Mídias Unificado (ADR-019)
+  const { uploadMedia } = useMediaManager('all');
 
   // Verifica se há qualquer modal aberto para desativar o drop global do editor
   const isAnyModalOpen = Object.values(editorModals).some((isOpen) => isOpen);
@@ -101,11 +99,11 @@ export default function Editor({ isCanvasMode = false }: { isCanvasMode?: boolea
 
       if (imagePaths.length > 0) {
         const pos = editor.state.selection.from;
-        const importedImages = await uploadImages("", imagePaths);
+        const importedImages = await uploadMedia("", imagePaths);
 
         if (importedImages && importedImages.length > 0) {
           let chain = editor.chain().focus();
-          importedImages.forEach((src) => {
+          importedImages.forEach((src: string) => {
             chain = chain.insertContentAt(pos, {
               type: "image",
               attrs: { src },
@@ -116,12 +114,12 @@ export default function Editor({ isCanvasMode = false }: { isCanvasMode?: boolea
       }
 
       if (pdfPaths.length > 0) {
-        const importedPdfs = await uploadPdfs(pdfPaths);
+        const importedPdfs = await uploadMedia("", pdfPaths);
         if (importedPdfs && importedPdfs.length > 0) {
           const currentDocs = metadata.documents || [];
           const newDocs = [...currentDocs];
 
-          importedPdfs.forEach((src) => {
+          importedPdfs.forEach((src: string) => {
             if (!newDocs.includes(src)) newDocs.push(src);
           });
 

@@ -39,6 +39,27 @@ export type SplitMode = 'amount' | 'single' | 'range';
 export type GallerySection = 'geral' | 'collages' | 'editions';
 
 /**
+ * Item genérico para exibição na galeria (Imagem, PDF ou Coleção).
+ */
+export type GalleryItem =
+  | { type: 'collection'; data: GalleryCollection }
+  | { type: 'image'; data: ImageAsset }
+  | { type: 'pdf'; data: PdfAsset };
+
+/**
+ * Props para o componente VirtualMasonry.
+ */
+export interface VirtualMasonryProps<T> {
+  items: T[];
+  columnWidth: number;
+  gap: number;
+  renderItem: (item: T, style: React.CSSProperties, index: number) => React.ReactNode;
+  getItemKey: (item: T) => string;
+  getItemHeight: (item: T, actualWidth: number) => number;
+  buffer?: number;
+}
+
+/**
  * Representa uma coleção/pasta de imagens na galeria.
  */
 export interface GalleryCollection {
@@ -89,11 +110,17 @@ export interface SectionTabsProps {
   onSectionChange: (section: GallerySection) => void;
 }
 
+/**
+ * União de tipos de assets suportados pela galeria unificada.
+ */
+export type MediaAsset = ImageAsset | PdfAsset;
+
 export interface AssetGalleryProps {
   pickerMode?: boolean;
   onSelect?: (path: string) => void;
   onClose?: () => void;
   disableOrganization?: boolean;
+  assetType?: 'image' | 'pdf' | 'all';
 }
 
 export interface ImageViewerProps {
@@ -106,4 +133,21 @@ export interface PdfThumbnailProps {
   width?: number;
   pageNumber?: number;
   onLoadSuccess?: (data: { numPages: number }) => void;
+}
+
+/**
+ * Estado da Store de Galeria (Asset Gallery).
+ */
+export interface GalleryState {
+  collections: GalleryCollection[];
+  isLoading: boolean;
+
+  loadCollections: () => Promise<void>;
+  saveCollections: () => Promise<void>;
+  createCollection: (name: string, images: string[], parentId?: string) => Promise<void>;
+  updateCollection: (id: string, updates: Partial<GalleryCollection>) => Promise<void>;
+  deleteCollection: (id: string) => Promise<void>;
+  addToCollection: (id: string, imagePaths: string[]) => Promise<void>;
+  removeFromCollection: (id: string, imagePath: string) => Promise<void>;
+  registerCollage: (imagePath: string) => Promise<void>;
 }

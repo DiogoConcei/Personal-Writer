@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { MesaTrabalhoState } from '../moodBoardStore.types';
+import { MesaTrabalhoState } from '@/shared/types';
 import { MesaItem } from '@/shared/types';
 
 export const createWorkspaceSlice: StateCreator<MesaTrabalhoState, [], [], Partial<MesaTrabalhoState>> = (set, get) => ({

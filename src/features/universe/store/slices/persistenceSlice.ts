@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { MesaTrabalhoState } from '../moodBoardStore.types';
+import { MesaTrabalhoState } from '@/shared/types';
 import { readFile, writeFile } from '@/tauri-bridge/fs';
 import { useUIStore } from '@/store/uiStore';
 

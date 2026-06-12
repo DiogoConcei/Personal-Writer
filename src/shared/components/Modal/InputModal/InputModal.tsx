@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../Modal/Modal';
+import { InputModalProps } from '@/shared/types';
 import styles from './InputModal.module.scss';
-
-interface InputModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: (value: string) => void;
-  title: string;
-  placeholder?: string;
-  defaultValue?: string;
-  confirmLabel?: string;
-}
 
 export default function InputModal({
   isOpen,

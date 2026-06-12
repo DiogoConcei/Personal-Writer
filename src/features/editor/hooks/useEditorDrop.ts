@@ -55,7 +55,12 @@ export function useEditorDrop({ editor, containerSelector }: UseEditorDropOption
 
       const { sourceData } = useUIStore.getState().dragInfo;
 
-      if (sourceData?.type === 'postit') {
+      // Type guard para Post-it (proveniente do Canvas)
+      const isPostItData = (data: unknown): data is { type: string, backgroundColor: string, color: string, text: string } => {
+        return !!data && typeof data === 'object' && (data as Record<string, unknown>).type === 'postit';
+      };
+
+      if (isPostItData(sourceData)) {
         // DROP DE POST-IT DO CANVAS
         editor
           .chain()

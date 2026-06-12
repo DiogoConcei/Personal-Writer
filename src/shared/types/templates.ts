@@ -7,3 +7,8 @@ export interface Template {
   description: string;
   content: string;
 }
+
+export interface TemplateGalleryProps {
+  onSelect: (content: string) => void;
+  onClose: () => void;
+}

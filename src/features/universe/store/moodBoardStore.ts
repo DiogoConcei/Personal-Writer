@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { MesaTrabalhoState } from './moodBoardStore.types';
+import { MesaTrabalhoState } from '@/shared/types';
 import { createConfigSlice } from './slices/configSlice';
 import { createUISlice } from './slices/uiSlice';
 import { createSelectionSlice } from './slices/selectionSlice';

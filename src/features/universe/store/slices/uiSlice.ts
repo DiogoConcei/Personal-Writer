@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { MesaTrabalhoState } from '../moodBoardStore.types';
+import { MesaTrabalhoState } from '@/shared/types';
 
 export const createUISlice: StateCreator<MesaTrabalhoState, [], [], Partial<MesaTrabalhoState>> = (set) => ({
   activeDetailsIds: [],

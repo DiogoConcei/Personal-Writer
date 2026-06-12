@@ -1,36 +1,8 @@
 import { create } from 'zustand';
 import { FileNode } from '@/tauri-bridge';
-import type { ImageAsset } from '@/tauri-bridge';
+import { WorkspaceState } from '@/shared/types';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
 import { normalizePath, getSeparator, getParentPath } from '@/shared/utils/path';
-
-interface WorkspaceState {
-  rootPath: string | null;
-  files: FileNode[];
-  activeFile: string | null;
-  dashboardFilterPath: string | null;
-  isLoading: boolean;
-  isPathInvalid: boolean;
-  cachedImages: ImageAsset[] | null;
-  isScanning: boolean;
-
-  setRootPath: (path: string) => Promise<void>;
-  validateWorkspace: () => Promise<void>;
-  selectWorkspace: () => Promise<void>;
-  refreshFiles: () => Promise<void>;
-  fetchChildren: (path: string) => Promise<void>;
-  syncNode: (path: string) => Promise<void>;
-  setActiveFile: (path: string | null) => void;
-  setDashboardFilterPath: (path: string | null) => void;
-  createFile: (name: string, parentPath?: string, initialContent?: string) => Promise<void>;
-  createDirectory: (name: string, parentPath?: string) => Promise<void>;
-  deleteItem: (path: string) => Promise<void>;
-  renameItem: (oldPath: string, newName: string) => Promise<void>;
-  moveItem: (sourcePath: string, targetDirPath: string) => Promise<void>;
-  scanWorkspace: () => Promise<void>;
-  scanImages: () => Promise<void>;
-  invalidateImageCache: () => void;
-}
 
 const STORAGE_KEY = 'hybrid-editor-root-path';
 const HIDDEN_ITEMS = ['assets', 'docs', 'murais', 'mesa.json', 'moodboard.json'];
@@ -123,6 +95,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   isLoading: false,
   isPathInvalid: false,
   cachedImages: null,
+  cachedPdfs: null,
   isScanning: false,
 
   scanImages: async () => {
@@ -142,13 +115,34 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
   },
 
+  scanPdfs: async () => {
+    const { rootPath, cachedPdfs } = get();
+    if (!rootPath || cachedPdfs !== null) return;
+
+    set({ isScanning: true });
+    try {
+      const { scanWorkspacePdfs } = await import('@/tauri-bridge');
+      const pdfs = await scanWorkspacePdfs(rootPath);
+      set({ cachedPdfs: pdfs });
+    } catch (error) {
+      console.error('Erro ao escanear PDFs:', error);
+      set({ cachedPdfs: [] });
+    } finally {
+      set({ isScanning: false });
+    }
+  },
+
   invalidateImageCache: () => {
     set({ cachedImages: null });
   },
 
+  invalidatePdfCache: () => {
+    set({ cachedPdfs: null });
+  },
+
   setRootPath: async (path: string) => {
     localStorage.setItem(STORAGE_KEY, path);
-    set({ rootPath: path, isLoading: true, dashboardFilterPath: null, isPathInvalid: false, cachedImages: null });
+    set({ rootPath: path, isLoading: true, dashboardFilterPath: null, isPathInvalid: false, cachedImages: null, cachedPdfs: null });
     try {
       const { createDirectory, listDirectory, exists } = await import('@/tauri-bridge');
 

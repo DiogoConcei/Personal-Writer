@@ -1,22 +1,6 @@
-import React, { ReactNode, RefObject } from 'react';
+import React from 'react';
+import { CanvasBaseProps } from '@/shared/types';
 import styles from './CanvasBase.module.scss';
-
-interface CanvasBaseProps {
-  containerRef: RefObject<HTMLDivElement | null>;
-  zoom: number;
-  viewState: { x: number; y: number };
-  isPanning: boolean;
-  isSpacePressed?: boolean;
-  isPanModeActive?: boolean;
-  isPlanning?: boolean;
-  backgroundPattern?: 'dots' | 'grid' | 'cork' | 'none';
-  children: ReactNode;
-  beforeViewport?: ReactNode;
-  onMouseDown?: (e: React.MouseEvent) => void;
-  className?: string;
-  style?: React.CSSProperties;
-  viewportStyle?: React.CSSProperties;
-}
 
 /**
  * Componente base que fornece a estrutura visual de um Canvas (Viewport + Background).

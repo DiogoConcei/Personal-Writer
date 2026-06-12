@@ -1,3 +1,4 @@
+import { ReactNode, RefObject } from 'react';
 import { PdfData, ImageData } from './assets';
 import { NoteData, PostItData, TextData, PageData } from './editor';
 import { MesaDrawing } from './universe';
@@ -5,6 +6,38 @@ import { MesaDrawing } from './universe';
 export interface Point {
   x: number;
   y: number;
+}
+
+/**
+ * Props para o componente base do Canvas (Viewport + Background).
+ */
+export interface CanvasBaseProps {
+  containerRef: RefObject<HTMLDivElement | null>;
+  zoom: number;
+  viewState: { x: number; y: number };
+  isPanning: boolean;
+  isSpacePressed?: boolean;
+  isPanModeActive?: boolean;
+  isPlanning?: boolean;
+  backgroundPattern?: 'dots' | 'grid' | 'cork' | 'none';
+  children: ReactNode;
+  beforeViewport?: ReactNode;
+  onMouseDown?: (e: React.MouseEvent) => void;
+  className?: string;
+  style?: React.CSSProperties;
+  viewportStyle?: React.CSSProperties;
+}
+
+/**
+ * Props para a camada de desenho sobre o Canvas.
+ */
+export interface CanvasDrawingLayerProps {
+  drawings: MesaDrawing[];
+  removeDrawing: (id: string) => void;
+  isEraserActive?: boolean;
+  isCollageActive?: boolean;
+  selectedItemIds?: string[];
+  onSelect?: (id: string) => void;
 }
 
 export interface ViewState {

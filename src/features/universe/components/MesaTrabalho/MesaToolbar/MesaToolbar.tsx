@@ -1,7 +1,7 @@
 import React from 'react';
 import { Type, MousePointer2, Hand, ZoomIn, ZoomOut, RotateCcw, ImagePlus, Pencil, Eraser, Link, Layers, Map, Settings2, Layout, LayoutPanelLeft, Save, Wallpaper } from 'lucide-react';
 import { MesaToolbarProps } from '@/shared/types';
-import styles from './MesaTrabalho.module.scss';
+import styles from '../MesaTrabalho/MesaTrabalho.module.scss';
 
 export const MesaToolbar: React.FC<MesaToolbarProps> = ({
   boardName,

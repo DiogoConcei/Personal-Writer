@@ -1,30 +1,9 @@
 import { create } from 'zustand';
-import { PdfAsset, scanWorkspacePdfs, copyFileToWorkspace, deleteItem } from '../../../tauri-bridge';
-import { ReferenceMetadata } from '@/shared/types';
+import { scanWorkspacePdfs, copyFileToWorkspace, deleteItem } from '../../../tauri-bridge';
+import { ReferenceState, PdfAsset } from '@/shared/types';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { open } from '@tauri-apps/plugin-dialog';
-
-interface ReferenceState {
-  pinnedNotes: string[];
-  metadata: Record<string, ReferenceMetadata>;
-
-  pdfs: PdfAsset[];
-  activePdfPath: string | null;
-  isLoadingPdfs: boolean;
-  referenceTab: 'backlinks' | 'metadata' | 'library';
-
-  pinNote: (path: string) => void;
-  unpinNote: (path: string) => void;
-  updateMetadata: (path: string, data: ReferenceMetadata) => void;
-  clearPins: () => void;
-  setReferenceTab: (tab: 'backlinks' | 'metadata' | 'library') => void;
-
-  fetchPdfs: (workspaceRoot: string) => Promise<void>;
-  setActivePdf: (path: string | null) => void;
-  handleUpload: (externalPaths?: string[]) => Promise<string[]>;
-  handleDelete: (pdf: PdfAsset) => Promise<boolean>;
-}
 
 export const useReferenceStore = create<ReferenceState>((set, get) => ({
   pinnedNotes: [],

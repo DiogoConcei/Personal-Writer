@@ -65,7 +65,7 @@ export interface CanvasNoteItemProps {
   onSplit: (page?: number) => void;
   onFocus: () => void;
   onPageChange?: (page: number) => void;
-  onDropEntity?: (sourceData: any) => void;
+  onDropEntity?: (sourceData: unknown) => void;
 }
 
 export interface CanvasImageItemProps {
@@ -252,7 +252,7 @@ export interface EntityRendererProps {
   onStartTransform: () => void;
   onEndTransform: (id: string) => void;
   onOpenModal: (type: CanvasModalType, data?: unknown) => void;
-  onDropEntity?: (sourceData: any) => void;
+  onDropEntity?: (sourceData: unknown) => void;
 }
 
 export interface CanvasToolbarProps {
@@ -319,5 +319,5 @@ export interface CanvasViewportProps {
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
   removeDrawing: (id: string) => void;
-  onDropEntityOnNote?: (noteEntityId: string, sourceData: any) => void;
+  onDropEntityOnNote?: (noteEntityId: string, sourceData: unknown) => void;
 }

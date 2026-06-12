@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
+import { useMesaTrabalhoStore } from '../../../store/moodBoardStore';
 import { MesaItemProps } from '@/shared/types';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { X, Tag, Check, Unlink, User, ChevronLeft, ChevronRight, Plus, Maximize2 } from 'lucide-react';
-import styles from './MesaTrabalho.module.scss';
+import styles from '../MesaTrabalho/MesaTrabalho.module.scss';
 import ConfirmModal from '@/shared/components/Modal/ConfirmModal/ConfirmModal';
-import { useMesaItemResize } from '../../hooks/useMesaItemResize';
+import { useMesaItemResize } from '../../../hooks/useMesaItemResize';
 import { useCanvasText } from '@/shared/hooks/useCanvasText';
 
 const DEFAULT_CATEGORIES = ['personagem', 'Item', 'Figurantes'];

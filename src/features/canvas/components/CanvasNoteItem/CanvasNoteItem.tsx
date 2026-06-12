@@ -5,7 +5,7 @@ import { useCanvasEntity } from '../../hooks/useCanvasEntity';
 import { CanvasNoteItemProps, NoteData } from '@/shared/types';
 import { useUIStore } from '@/store/uiStore';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { resolveImageUrl } from '@/shared/hooks/useImageManager/useImageManager';
+import { resolveMediaUrl } from '@/shared/hooks/useMediaManager/useMediaManager';
 import { CutPatch } from '../CutPatch/CutPatch';
 import styles from './CanvasNoteItem.module.scss';
 
@@ -93,7 +93,7 @@ export function CanvasNoteItem({
           const obsidianMatches = Array.from(markdown.matchAll(obsidianRegex));
           for (const match of obsidianMatches) {
             const src = match[1];
-            const resolved = await resolveImageUrl(src, rootPath);
+            const resolved = await resolveMediaUrl(src, rootPath);
             if (resolved) {
               markdown = markdown.replace(match[0], `![${src}](${resolved})`);
             }
@@ -106,7 +106,7 @@ export function CanvasNoteItem({
             const alt = match[1];
             const src = match[2];
             if (!src.startsWith('http') && !src.startsWith('asset://')) {
-              const resolved = await resolveImageUrl(src, rootPath);
+              const resolved = await resolveMediaUrl(src, rootPath);
               if (resolved) {
                 markdown = markdown.replace(match[0], `![${alt}](${resolved})`);
               }
@@ -119,7 +119,7 @@ export function CanvasNoteItem({
           for (const match of htmlImgMatches) {
             const src = match[1];
             if (!src.startsWith('http') && !src.startsWith('asset://')) {
-              const resolved = await resolveImageUrl(src, rootPath);
+              const resolved = await resolveMediaUrl(src, rootPath);
               if (resolved) {
                 const newTag = match[0].replace(src, resolved);
                 markdown = markdown.replace(match[0], newTag);

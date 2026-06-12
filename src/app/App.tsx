@@ -4,7 +4,7 @@ import FileTree from "@/features/workspace/components/FileTree/FileTree";
 import Editor from "@/features/editor/components/Core/Editor/Editor";
 import ImageViewer from "@/features/imageview/components/ImageViewer/ImageViewer";
 import Dashboard from "@/features/dashboard/components/Dashboard/Dashboard";
-import MesaTrabalho from "@/features/universe/components/MesaTrabalho/MesaTrabalho";
+import MesaTrabalho from "@/features/universe/components/MesaTrabalho/MesaTrabalho/MesaTrabalho";
 import MapaMesas from "@/features/universe/components/MapaMesas/MapaMesas";
 import AssetGallery from "@/features/imageview/components/AssetGallery/AssetGallery";
 import DocumentGallery from "@/features/docsview/components/DocumentGallery/DocumentGallery";
@@ -14,10 +14,10 @@ import { SettingsPage } from "@/features/settings/components/Settings/Settings";
 import { PluginPlaceholder } from "@/features/settings/components/PluginPlaceholder/PluginPlaceholder";
 import StatusBar from "@/features/editor/components/Core/StatusBar/StatusBar";
 import ReferenceSidebar from "@/features/references/components/ReferenceSidebar/ReferenceSidebar";
-import CommandPalette from "@/features/search/components/CommandPalette";
+import CommandPalette from "@/features/search/components/CommandPalette/CommandPalette";
 import { EntityPreview } from "@/features/editor/components/Insights/EntityPreview/EntityPreview";
 const DrawingBoard = React.lazy(
-  () => import("@/features/drawing/components/DrawingBoard"),
+  () => import("@/features/drawing/components/DrawingBoard/DrawingBoard"),
 );
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
 import { useUniverseStore } from "@/features/universe/store/universeStore";

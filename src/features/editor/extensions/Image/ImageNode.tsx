@@ -4,7 +4,7 @@ import styles from './ImageNode.module.scss';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
 import { Maximize2, AlignLeft, AlignRight, AlignCenter, StretchVertical, ImageOff } from 'lucide-react';
-import { resolveImageUrl } from '@/shared/hooks/useImageManager/useImageManager';
+import { resolveMediaUrl } from '@/shared/hooks/useMediaManager/useMediaManager';
 
 export default function ImageNode({ node, updateAttributes, selected, getPos, editor }: NodeViewProps) {
   const { rootPath } = useWorkspaceStore();
@@ -20,17 +20,11 @@ export default function ImageNode({ node, updateAttributes, selected, getPos, ed
   useEffect(() => {
     const resolve = async () => {
       const src = node.attrs.src;
-      if (!src) return;
-
-      const url = await resolveImageUrl(src, rootPath);
-      if (url) {
-        setResolvedSrc(url);
-        setHasError(false);
-      } else {
-        setHasError(true);
+      if (src) {
+        const resolved = await resolveMediaUrl(src, rootPath);
+        setResolvedSrc(resolved);
       }
     };
-
     resolve();
   }, [node.attrs.src, rootPath]);
 

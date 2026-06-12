@@ -1,45 +1,5 @@
 import { create } from 'zustand';
-import { ActivePanel, DragInfo, PreviewState, ToastNotification } from '@/shared/types';
-
-interface UIState {
-  activePanel: ActivePanel;
-  isSidebarVisible: boolean;
-  isRightSidebarVisible: boolean;
-  isZenMode: boolean;
-  isCommandPaletteOpen: boolean;
-  
-  // Editor UI State
-  editorModals: {
-    showGallery: boolean;
-    showTemplates: boolean;
-    showTemplateGallery: boolean;
-    showDocuments: boolean;
-    showHistory: boolean;
-    showTOC: boolean;
-    showRuler: boolean;
-  };
-
-  notifications: ToastNotification[];
-
-  preview: PreviewState;
-
-  dragInfo: DragInfo;
-  
-  lastFileSaveTick: number;
-
-  setActivePanel: (panel: ActivePanel) => void;
-  toggleSidebar: () => void;
-  toggleRightSidebar: () => void;
-  toggleZenMode: () => void;
-  setCommandPaletteOpen: (isOpen: boolean) => void;
-  setEditorModal: (modal: keyof UIState['editorModals'], isOpen: boolean) => void;
-  setPreview: (preview: Partial<PreviewState>) => void;
-  setDragInfo: (info: Partial<DragInfo>) => void;
-  resetDrag: () => void;
-  addNotification: (message: string, type?: ToastNotification['type']) => void;
-  removeNotification: (id: string) => void;
-  triggerFileSaveTick: () => void;
-}
+import { DragInfo, PreviewState, UIState } from '@/shared/types';
 
 const INITIAL_DRAG: DragInfo = {
   sourcePath: null,

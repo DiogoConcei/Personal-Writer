@@ -1,16 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Editor } from '@tiptap/react';
 import { getSynonyms, addToDictionary, getSpellSuggestions } from '@/tauri-bridge';
 import styles from './DictionaryContextMenu.module.scss';
 import { Languages, Plus, Check, Loader2 } from 'lucide-react';
-
-interface DictionaryContextMenuProps {
-  editor: Editor;
-  x: number;
-  y: number;
-  word: string;
-  onClose: () => void;
-}
+import { DictionaryContextMenuProps } from '@/shared/types';
 
 export function DictionaryContextMenu({ editor, x, y, word, onClose }: DictionaryContextMenuProps) {
   const [synonyms, setSynonyms] = useState<string[]>([]);

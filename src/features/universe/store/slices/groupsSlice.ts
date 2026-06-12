@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { MesaTrabalhoState } from '../moodBoardStore.types';
+import { MesaTrabalhoState } from '@/shared/types';
 import { MesaGrupo } from '@/shared/types';
 import { calculateAveragePosition, getMaxZIndex, consolidateExtraPaths } from '../utils/mesaUtils';
 

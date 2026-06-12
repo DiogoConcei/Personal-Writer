@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
 import { useUIStore } from "@/store/uiStore";
+import { useReferenceStore } from "@/features/references/store/referenceStore";
 import { useGalleryStore } from "../../store/galleryStore";
-import { resolveAssetPath, ImageAsset } from "@/tauri-bridge/fs";
-import { useImageManager } from "@/shared/hooks/useImageManager/useImageManager";
+import { resolveAssetPath } from "@/tauri-bridge/fs";
+import { useMediaManager } from "@/shared/hooks/useMediaManager/useMediaManager";
 import { useDragAndDrop } from "@/shared/hooks/useDragAndDrop/useDragAndDrop";
 import { useNativeDragDrop } from "@/shared/hooks/useNativeDragDrop/useNativeDragDrop";
-import { AssetGalleryProps } from "@/shared/types";
+import { AssetGalleryProps, GalleryItem, MediaAsset, ImageAsset } from "@/shared/types";
 import ImageViewer from "../ImageViewer/ImageViewer";
 import InputModal from "@/shared/components/Modal/InputModal/InputModal";
 import ConfirmModal from "@/shared/components/Modal/ConfirmModal/ConfirmModal";
@@ -26,26 +27,26 @@ import {
   MoreHorizontal,
   ChevronRight,
   X,
+  FileText,
 } from "lucide-react";
 
 import { VirtualMasonry } from "./components/VirtualMasonry/VirtualMasonry";
 import { LazyImage } from "./components/LazyImage";
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"];
-
-type GalleryItem =
-  | { type: "collection"; data: any }
-  | { type: "image"; data: ImageAsset };
+const ALL_EXTENSIONS = [...IMAGE_EXTENSIONS, ".pdf"];
 
 export default function AssetGallery({
   pickerMode = false,
   onSelect,
   onClose,
   disableOrganization = false,
+  assetType = 'all',
 }: AssetGalleryProps = {}) {
-  const { rootPath, isScanning, scanImages, invalidateImageCache } =
+  const { rootPath, isScanning, scanImages, scanPdfs, invalidateImageCache, invalidatePdfCache } =
     useWorkspaceStore();
-  const { addNotification } = useUIStore();
+  const { addNotification, toggleRightSidebar, isRightSidebarVisible } = useUIStore();
+  const { setActivePdf } = useReferenceStore();
   const {
     collections,
     loadCollections,
@@ -54,9 +55,10 @@ export default function AssetGallery({
     deleteCollection,
     addToCollection,
   } = useGalleryStore();
+  
   const {
-    uploadImages,
-    handleImageDrop,
+    uploadMedia,
+    handleMediaDrop,
     activeTarget,
     activeSection,
     handleSectionChange,
@@ -64,11 +66,11 @@ export default function AssetGallery({
     setFilter,
     isPickingExisting,
     setIsPickingExisting,
-    filteredImages,
+    filteredMedia,
     filteredCollections,
     handleTargetClick,
     getBreadcrumbs,
-  } = useImageManager();
+  } = useMediaManager(assetType);
 
   const [activeImage, setActiveImage] = useState<string | null>(null);
 
@@ -76,7 +78,7 @@ export default function AssetGallery({
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
 
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
-  const [inputModalMode, setInputModalOpen] = useState<"create" | "rename">(
+  const [inputModalMode, setInputModalMode] = useState<"create" | "rename">(
     "create",
   );
   const [pendingCollectionImages, setPendingCollectionImages] = useState<
@@ -97,11 +99,11 @@ export default function AssetGallery({
     isDragging,
     dropTarget,
     shouldIgnoreClick,
-  } = useDragAndDrop<ImageAsset>({
+  } = useDragAndDrop<MediaAsset>({
     onDrop: async (item, targetType, targetId) => {
       if (disableOrganization) return;
-      // Tenta usar o processador central do ImageManager
-      const handled = await handleImageDrop(
+      
+      const handled = await handleMediaDrop(
         item,
         targetType,
         targetId,
@@ -113,20 +115,20 @@ export default function AssetGallery({
           setSelectedPaths([]);
           setIsSelectionMode(false);
         }
-      } else if (targetType === "image") {
-        // Fallback específico do AssetGallery: Criar coleção virtual ao soltar imagem sobre imagem
+      } else if (targetType === "media") {
+        // Fallback: Criar coleção virtual ao soltar item sobre item
         const sourceItems = selectedPaths.includes(item.path)
           ? selectedPaths
           : [item.path];
         setPendingCollectionImages([...sourceItems, targetId]);
-        setInputModalOpen("create");
+        setInputModalMode("create");
         setIsInputModalOpen(true);
       }
     },
     isValidTarget: (item, type, id) => {
       if (disableOrganization) return false;
       if (
-        type === "image" &&
+        (type === "image" || type === "pdf" || type === "media") &&
         (id === item.path || selectedPaths.includes(id))
       ) {
         return false;
@@ -137,13 +139,14 @@ export default function AssetGallery({
 
   useEffect(() => {
     if (rootPath) {
-      scanImages();
+      if (assetType === 'image' || assetType === 'all') scanImages();
+      if (assetType === 'pdf' || assetType === 'all') scanPdfs();
       loadCollections();
     }
-  }, [rootPath, scanImages, loadCollections]);
+  }, [rootPath, assetType, scanImages, scanPdfs, loadCollections]);
 
   const handleUpload = async () => {
-    const importedPaths = await uploadImages();
+    const importedPaths = await uploadMedia();
     if (importedPaths && activeTarget?.type === "virtual") {
       await addToCollection(activeTarget.id, importedPaths);
     }
@@ -151,14 +154,14 @@ export default function AssetGallery({
 
   // Efeito para Drag & Drop Externo (Desktop -> App)
   useNativeDragDrop({
-    onDrop: async (imagePaths, position) => {
+    onDrop: async (mediaPaths, position) => {
       if (disableOrganization) return;
       const element = document.elementFromPoint(position.x, position.y);
       const folderId = element
         ?.closest('[data-drag-type="folder"]')
         ?.getAttribute("data-drag-id");
 
-      const importedPaths = await uploadImages("", imagePaths);
+      const importedPaths = await uploadMedia("", mediaPaths);
 
       if (importedPaths) {
         if (folderId) await addToCollection(folderId, importedPaths);
@@ -166,7 +169,7 @@ export default function AssetGallery({
           await addToCollection(activeTarget.id, importedPaths);
       }
     },
-    filters: IMAGE_EXTENSIONS,
+    filters: ALL_EXTENSIONS,
     disabled: !rootPath || disableOrganization,
   });
 
@@ -175,8 +178,6 @@ export default function AssetGallery({
       let parentId =
         activeTarget?.type === "virtual" ? activeTarget.id : undefined;
 
-      // KI-038: Se estivermos na raiz de um silo reservado (Colagens/Edições), 
-      // vinculamos a nova pasta ao "pai" virtual correspondente para que ela apareça na aba correta.
       if (!parentId && activeSection !== "geral") {
         const siloName = activeSection === "collages" ? "Colagens" : "Edições";
         const siloCol = collections.find((c) => c.name === siloName);
@@ -203,7 +204,7 @@ export default function AssetGallery({
   const handleOpenRename = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setCollectionToRename(id);
-    setInputModalOpen("rename");
+    setInputModalMode("rename");
     setIsInputModalOpen(true);
   };
 
@@ -227,21 +228,28 @@ export default function AssetGallery({
         type: "collection" as const,
         data: col,
       })),
-      ...filteredImages.map((img) => ({ type: "image" as const, data: img })),
+      ...filteredMedia.map((m): GalleryItem => {
+        const isPdf = m.path.toLowerCase().endsWith('.pdf');
+        if (isPdf) return { type: 'pdf', data: m };
+        return { type: 'image', data: m as ImageAsset };
+      }),
     ];
     return items;
-  }, [filteredCollections, filteredImages]);
+  }, [filteredCollections, filteredMedia]);
 
   const getItemHeight = (item: GalleryItem, width: number) => {
     if (item.type === "collection") {
-      return width / 1.4 + 60; // Aspect ratio + glassInfo height
+      return width / 1.4 + 60; 
     }
-    const img = item.data;
+    if (item.type === 'pdf') {
+      return width * 1.41; // Proporção A4
+    }
+    const img = item.data as ImageAsset;
     if (img.width && img.height) {
       const ratio = img.height / img.width;
       return width * ratio;
     }
-    return width; // Fallback quadrado
+    return width; 
   };
 
   const renderGalleryItem = (
@@ -309,7 +317,7 @@ export default function AssetGallery({
             >
               <span className={styles.folderCard__name}>{col.name}</span>
               <span className={styles.folderCard__count}>
-                {col.images.length} imagens
+                {col.images.length} itens
               </span>
             </div>
             <div className={styles.folderCard__icon}>
@@ -320,38 +328,50 @@ export default function AssetGallery({
       );
     }
 
-    const img = item.data;
+    const media = item.data;
+    const isPdf = item.type === 'pdf';
+
     return (
       <div
-        data-drag-type="image"
-        data-drag-id={img.path}
-        onMouseDown={(e) => !disableOrganization && !isSelectionMode && handleMouseDown(e, img)}
+        data-drag-type="media"
+        data-drag-id={media.path}
+        onMouseDown={(e) => !disableOrganization && !isSelectionMode && handleMouseDown(e, media)}
         onDragStart={(e) => e.preventDefault()}
-        className={`${styles.card} ${selectedPaths.includes(img.path) ? styles["card--selected"] : ""} ${draggedItem?.path === img.path ? styles["card--dragging"] : ""} ${dropTarget?.id === img.path ? styles["card--dragOver"] : ""}`}
+        className={`${styles.card} ${isPdf ? styles['card--pdf'] : ''} ${selectedPaths.includes(media.path) ? styles["card--selected"] : ""} ${draggedItem?.path === media.path ? styles["card--dragging"] : ""} ${dropTarget?.id === media.path ? styles["card--dragOver"] : ""}`}
         style={{ "--delay": `${index * 0.02}s` } as React.CSSProperties}
         onClick={() => {
           if (shouldIgnoreClick()) return;
           if (isSelectionMode) {
             setSelectedPaths((prev) =>
-              prev.includes(img.path)
-                ? prev.filter((p) => p !== img.path)
-                : [...prev, img.path],
+              prev.includes(media.path)
+                ? prev.filter((p) => p !== media.path)
+                : [...prev, media.path],
             );
           } else if (pickerMode && onSelect) {
-            onSelect(img.path);
+            onSelect(media.path);
+          } else if (isPdf) {
+            setActivePdf(media.path);
+            if (!isRightSidebarVisible) toggleRightSidebar();
           } else {
-            setActiveImage(img.full_path);
+            setActiveImage(media.full_path);
           }
         }}
       >
         <div className={styles.card__preview}>
-          <LazyImage
-            src={resolveAssetPath(img.path, rootPath) || ""}
-            alt={img.name}
-          />
+          {isPdf ? (
+            <div className={styles.pdfPlaceholder}>
+              <FileText size={48} strokeWidth={1} />
+              <span className={styles.pdfBadge}>PDF</span>
+            </div>
+          ) : (
+            <LazyImage
+              src={resolveAssetPath(media.path, rootPath) || ""}
+              alt={media.name}
+            />
+          )}
         </div>
         <div className={styles.card__overlay}>
-          <span className={styles.card__name}>{img.name}</span>
+          <span className={styles.card__name}>{media.name}</span>
         </div>
       </div>
     );
@@ -405,12 +425,12 @@ export default function AssetGallery({
                   className={styles.breadcrumbSeparator}
                 />
                 <span className={styles.breadcrumbPicking}>
-                  Adicionando imagens
+                  Adicionando itens
                 </span>
               </>
             )}
           </div>
-          <span className={styles.count}>{filteredImages.length} imagens</span>
+          <span className={styles.count}>{filteredMedia.length} itens</span>
         </div>
 
         <SectionTabs
@@ -498,8 +518,10 @@ export default function AssetGallery({
           <button
             className={styles.refreshBtn}
             onClick={() => {
-              invalidateImageCache();
-              scanImages();
+              if (assetType === 'image' || assetType === 'all') invalidateImageCache();
+              if (assetType === 'pdf' || assetType === 'all') invalidatePdfCache();
+              if (assetType === 'image' || assetType === 'all') scanImages();
+              if (assetType === 'pdf' || assetType === 'all') scanPdfs();
             }}
             disabled={isScanning}
           >
@@ -523,7 +545,7 @@ export default function AssetGallery({
           columnWidth={pickerMode ? 260 : 320}
           gap={pickerMode ? 16 : 24}
           getItemKey={(item) =>
-            item.type === "collection" ? item.data.id : item.data.full_path
+            item.type === "collection" ? item.data.id : item.data.path
           }
           getItemHeight={getItemHeight}
           renderItem={renderGalleryItem}
@@ -534,10 +556,16 @@ export default function AssetGallery({
             style={{ left: dragPosition.x, top: dragPosition.y }}
           >
             <div className={styles.dragGhost__stack}>
-              <img
-                src={resolveAssetPath(draggedItem.path, rootPath) || undefined}
-                alt=""
-              />
+              {draggedItem.path.toLowerCase().endsWith('.pdf') ? (
+                <div className={styles.pdfGhost}>
+                  <FileText size={24} />
+                </div>
+              ) : (
+                <img
+                  src={resolveAssetPath(draggedItem.path, rootPath) || undefined}
+                  alt=""
+                />
+              )}
               {selectedPaths.length > 1 && (
                 <div className={styles.dragGhost__count}>
                   <Layers size={14} /> {selectedPaths.length}
@@ -585,7 +613,7 @@ export default function AssetGallery({
                 className={`${styles.btn} ${styles["btn--primary"]}`}
                 onClick={() => {
                   setPendingCollectionImages(selectedPaths);
-                  setInputModalOpen("create");
+                  setInputModalMode("create");
                   setIsInputModalOpen(true);
                 }}
               >
@@ -625,7 +653,7 @@ export default function AssetGallery({
           collectionToDelete && handleDeleteCollection(collectionToDelete)
         }
         title="Excluir Pasta"
-        message="Tem certeza que deseja excluir esta pasta? As imagens originais não serão apagadas."
+        message="Tem certeza que deseja excluir esta pasta? Os itens originais não serão apagados."
         variant="danger"
         confirmLabel="Excluir"
       />

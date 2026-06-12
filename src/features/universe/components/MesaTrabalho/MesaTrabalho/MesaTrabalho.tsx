@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
 import { useUIStore } from '@/store/uiStore';
-import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
-import { MesaItem } from './MesaItem';
-import { MesaGrupoContainer } from './MesaGrupoContainer';
+import { useMesaTrabalhoStore } from '../../../store/moodBoardStore';
+import { MesaItem } from '../MesaItem/MesaItem';
+import { MesaGrupoContainer } from '../MesaGrupoContainer/MesaGrupoContainer';
 import { useNativeDragDrop } from '@/shared/hooks/useNativeDragDrop/useNativeDragDrop';
 import { resolveAssetPath } from '@/tauri-bridge/fs';
 import ImageGallery from '@/features/SlashMenu/components/ImageGallery/ImageGallery';
 import styles from './MesaTrabalho.module.scss';
 import { Image as ImageIcon, Plus } from 'lucide-react';
 
-import { CharacterDetailsModal } from './CharacterDetailsModal';
-import { MesaLeftToolbar } from './MesaLeftToolbar';
-import { MesaToolbar } from './MesaToolbar';
-import { MesaConnectionsLayer } from './MesaConnectionsLayer';
+import { CharacterDetailsModal } from '../CharacterDetailsModal/CharacterDetailsModal';
+import { MesaLeftToolbar } from '../MesaLeftToolbar/MesaLeftToolbar';
+import { MesaToolbar } from '../MesaToolbar/MesaToolbar';
+import { MesaConnectionsLayer } from '../MesaConnectionsLayer/MesaConnectionsLayer';
 import { CanvasDrawingLayer } from '@/shared/components/CanvasDrawingLayer/CanvasDrawingLayer';
 import { DrawingStylePanel } from '@/shared/components/DrawingStylePanel/DrawingStylePanel';
 import { useCanvasDrawing } from '@/shared/hooks/useCanvasDrawing';
@@ -23,7 +23,7 @@ const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
 import { useCanvasEngine } from '@/shared/hooks/useCanvasEngine';
 import { useCanvasTools } from '@/shared/hooks/useCanvasTools';
-import { useMesaMarquee } from '../../hooks/useMesaMarquee';
+import { useMesaMarquee } from '../../../hooks/useMesaMarquee';
 import { CanvasBase } from '@/shared/components/CanvasBase/CanvasBase';
 
 import { useCanvasInteraction } from '@/shared/hooks/useCanvasInteraction';

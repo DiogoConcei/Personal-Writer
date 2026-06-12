@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { readFile, writeFile, createSnapshot } from '@/tauri-bridge';
 import { useUniverseStore } from '@/features/universe/store/universeStore';
-import { EditorMetadata, SaveStatus, Typography, EditorMargins } from '@/shared/types';
+import { EditorMetadata, Typography, EditorMargins, EditorState } from '@/shared/types';
 import { parseMarkdownMetadata, stringifyYAML } from './metadataParser';
 import { countWords } from '@/shared/utils/string';
 
@@ -11,30 +11,6 @@ export const DEFAULT_MARGINS: EditorMargins = {
   top: 40,
   bottom: 40
 };
-
-interface EditorState {
-  metadata: EditorMetadata;
-  markdownContent: string;
-  saveStatus: SaveStatus;
-  lastSavedAt: Date | null;
-  lastSnapshotAt: Date | null;
-  typography: Typography;
-  wordCount: number;
-  wordGoal: number;
-  sessionGoal: number;
-  sessionStartWordCount: number;
-
-  loadContent: (path: string) => Promise<string>;
-  setMarkdownContent: (content: string) => void;
-  setMetadata: (metadata: EditorMetadata) => void;
-  setMargins: (margins: EditorMargins) => void;
-  save: (path: string, workspaceRoot?: string) => Promise<boolean>;
-  setTypography: (typography: Typography) => void;
-  setWordCount: (count: number) => void;
-  setWordGoal: (goal: number) => void;
-  setSessionGoal: (goal: number) => void;
-  startNewSession: () => void;
-}
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -143,6 +119,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   setTypography: (typography: Typography) => {
     set({ typography });
+  },
+
+  setGoals: (wordGoal?: number, sessionGoal?: number) => {
+    if (wordGoal !== undefined) set({ wordGoal });
+    if (sessionGoal !== undefined) set({ sessionGoal });
   },
 
   setWordCount: (count: number) => {

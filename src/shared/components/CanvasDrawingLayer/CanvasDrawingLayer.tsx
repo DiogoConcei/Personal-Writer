@@ -1,13 +1,4 @@
-import { MesaDrawing } from '@/shared/types';
-
-interface CanvasDrawingLayerProps {
-  drawings: MesaDrawing[];
-  removeDrawing: (id: string) => void;
-  isEraserActive?: boolean;
-  isCollageActive?: boolean;
-  selectedItemIds?: string[];
-  onSelect?: (id: string) => void;
-}
+import { CanvasDrawingLayerProps } from '@/shared/types';
 
 export function CanvasDrawingLayer({ 
   drawings, 

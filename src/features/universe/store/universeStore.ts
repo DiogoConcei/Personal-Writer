@@ -2,29 +2,7 @@ import { create } from 'zustand';
 import { readFile, writeFile, FileNode, exists } from '@/tauri-bridge';
 import { parseMarkdownMetadata, stringifyYAML } from '@/features/editor/store/metadataParser';
 import { useWorkspaceStore } from '@/features/workspace/store/workspaceStore';
-import { Entity } from '@/shared/types';
-
-interface UniverseSettings {
-  galleryTitle?: string;
-}
-
-interface UniverseState {
-  entities: Record<string, Entity>;
-  isIndexing: boolean;
-  lastIndexed: number | null;
-  galleryTitle: string;
-
-  indexWorkspace: (files: FileNode[]) => Promise<void>;
-  updateEntity: (path: string, content: string, lastModified?: number) => void;
-  removeEntity: (path: string) => void;
-  clearIndex: () => void;
-  getBacklinks: (targetPath: string) => Entity[];
-  updateEntitiesOrder: (paths: string[]) => Promise<void>;
-  
-  // Configurações do Universo
-  loadSettings: () => Promise<void>;
-  updateGalleryTitle: (title: string) => Promise<void>;
-}
+import { Entity, UniverseState, UniverseSettings } from '@/shared/types';
 
 const SETTINGS_FILE = '.universe.json';
 

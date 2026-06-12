@@ -1,5 +1,5 @@
-import { useMesaTrabalhoStore } from '../../store/moodBoardStore';
-import styles from './MesaTrabalho.module.scss';
+import { useMesaTrabalhoStore } from '../../../store/moodBoardStore';
+import styles from '../MesaTrabalho/MesaTrabalho.module.scss';
 
 export function MesaConnectionsLayer() {
   const { connections, items } = useMesaTrabalhoStore();
